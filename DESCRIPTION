@@ -11,3 +11,4 @@ Encoding: UTF-8
 LazyData: true
 URL: https://github.com/wruth1/MultiMedUQ
 BugReports: https://github.com/wruth1/MultiMedUQ/issues
+RoxygenNote: 7.3.0
