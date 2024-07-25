@@ -2,14 +2,20 @@
 % Please edit documentation in R/Nested_Counterfactual.R
 \name{get_gamma}
 \alias{get_gamma}
+\alias{Sigma2gamma}
+\alias{theta2gamma}
 \title{SD of REs evaluated at given vector of predictors}
 \usage{
-get_gamma(pred_vec, Sigma)
+Sigma2gamma(pred_vec, Sigma)
+
+theta2gamma(pred_vec, theta)
 }
 \arguments{
 \item{pred_vec}{Vector of predictor values.}
 
 \item{Sigma}{Covariance matrix of random effects.}
+
+\item{theta}{Covariance parameters of random effects. See details.}
 }
 \value{
 The SD of the random effects evaluated at the given vector of predictors.

@@ -71,3 +71,17 @@ d2_psi = function(mu, sigma){
   return(stats::integrate(integrand, -Inf, Inf)$value)
 }
 
+#'
+#' #' Gradient of psi, chain rule version
+#' #'
+#' #' This function computes the gradient of the function \code{psi(mu, sigma)}, where \code{mu} and \code{sigma} are themselves functions of the variable with respect to which we are differentiating.
+#' #'
+#' #' @param mu,sigma Arguments of psi
+#' #' @param grad_mu,grad_sigma Gradients of the arguments, \code{mu} and \code{sigma}.
+#' #'
+#' #' @return Total gradient of psi.
+#' #' @export
+#' grad_psi_chain <- function(mu, sigma, grad_mu, grad_sigma){
+#'   d1_psi(mu, sigma) * grad_mu + d2_psi(mu, sigma) * grad_sigma
+#' }
+#'
