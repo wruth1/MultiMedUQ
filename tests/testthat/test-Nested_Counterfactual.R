@@ -84,3 +84,29 @@ test_that("grad_psi_M works",{
   expect_equal(grad_psi_M(0, 1, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=0, x_y=1, x_m=0, w=w), tolerance = 1e-6)
   expect_equal(grad_psi_M(0, 0, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=0, x_y=0, x_m=1, w=w), tolerance = 1e-6)
 })
+
+
+
+## Gradient of ENC
+
+### Define versions of ENC for compatibility with numDeriv::grad()
+
+test_ENC <- function(x_y, x_m, w, params){
+  b_Y = params[1:5]
+  theta_Y = params[6:11]
+  b_M = params[12:15]
+  theta_M = params[16:18]
+
+  return(ENC(x_y, x_m, w, b_Y, theta_Y, b_M, theta_M))
+}
+
+
+test_that("grad_ENC works",{
+  # Order of numeric arguments is x, x_m. See also arguments to numDeriv::grad()
+
+  expect_equal(grad_ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=1, x_m=1, w=w), tolerance = 1e-6)
+  expect_equal(grad_ENC(1, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=1, x_m=0, w=w), tolerance = 1e-6)
+  expect_equal(grad_ENC(0, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=0, x_m=1, w=w), tolerance = 1e-6)
+  expect_equal(grad_ENC(0, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=0, x_m=0, w=w), tolerance = 1e-6)
+})
+
