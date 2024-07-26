@@ -51,7 +51,7 @@ theta2Sigma <- function(theta){
   # Find the size of the covariance matrix which generated theta
   l = length(theta)
   n = (sqrt(1 + 8*l) - 1)/2
-  if(!is.integer(n)){
+  if(!(n %% 1 == 0)){
     stop("theta is not the correct length for a covariance matrix")
   }
 
@@ -67,7 +67,7 @@ theta2Sigma <- function(theta){
   Sigma = Sigma_raw
   ## Fix the off-diagonals
   for(i in 1:(n-1)){
-    for(j in i+1:n){
+    for(j in (i+1):n){
       Sigma[i,j] = Sigma[i,j] * (Sigma[i,i] * Sigma[j,j])
       Sigma[j,i] = Sigma[i,j]
     }
