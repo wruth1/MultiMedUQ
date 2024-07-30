@@ -10,14 +10,14 @@
 \usage{
 grad_psi_Y(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M)
 
-grad_psi_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M)
+grad_psi_M(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M)
 
 d1_psi(mu, sigma)
 
 d2_psi(mu, sigma)
 }
 \arguments{
-\item{m}{Value of M (for \code{grad_psi_Y} only)}
+\item{m}{Value of M}
 
 \item{x, x_m}{values of X in the models for Y and M respectively}
 
