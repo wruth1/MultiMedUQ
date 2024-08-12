@@ -40,9 +40,6 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
-      - name: Update Matrix and lme4
-        run: Rscript R/Not_Run/Update_Packages.R
-
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
