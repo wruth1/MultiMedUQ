@@ -27,3 +27,29 @@ all_pars_asymp_cov_mat = function(fit_Y, fit_M){
   joint_cov = (joint_cov + t(joint_cov))/2
   return(joint_cov)
 }
+
+
+#' Joint (sample-size adjusted) covariance matrix of fixed and random effects' parameters from both models
+#'
+#' @param fit_Y Model for \code{Y}
+#' @param fit_M Model for \code{M}
+#'
+#' @return A matrix of the joint covariance matrix of fixed and random effects' parameters from both models. Obtained from asymptotic theory, then re-scaled to match the observed number of groups.
+#' @export
+#'
+#' @details
+#'
+#' Note: We assume that parameter estimators from the two models are independent. This may not be true in practice. See, e.g., Bauer, Preacher, & Gil (2006) for a method to incorporate inter-model dependence.
+#'
+all_pars_cov_mat = function(fit_Y, fit_M){
+  asymp_cov = all_pars_asymp_cov_mat(fit_Y, fit_M)
+
+  K_Y = lme4::ngrps(fit_Y)
+  K_M = lme4::ngrps(fit_M)
+  if(K_Y != K_M){
+    warning("Number of groups in models for Y and M do not match. Using the smaller to estimate covariance matrix of MLEs.")
+  }
+  K = min(K_Y, K_M)
+
+  return(asymp_cov/K)
+}

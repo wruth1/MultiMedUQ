@@ -2,7 +2,7 @@
 % Please edit documentation in R/Reg_Par_Covs.R
 \name{all_pars_cov_mat}
 \alias{all_pars_cov_mat}
-\title{Joint covariance matrix of fixed and random effects' parameters from both models}
+\title{Joint (sample-size adjusted) covariance matrix of fixed and random effects' parameters from both models}
 \usage{
 all_pars_cov_mat(fit_Y, fit_M)
 }
@@ -12,10 +12,10 @@ all_pars_cov_mat(fit_Y, fit_M)
 \item{fit_M}{Model for \code{M}}
 }
 \value{
-A matrix of the joint covariance matrix of fixed and random effects' parameters from both models
+A matrix of the joint covariance matrix of fixed and random effects' parameters from both models. Obtained from asymptotic theory, then re-scaled to match the observed number of groups.
 }
 \description{
-Joint covariance matrix of fixed and random effects' parameters from both models
+Joint (sample-size adjusted) covariance matrix of fixed and random effects' parameters from both models
 }
 \details{
 Note: We assume that parameter estimators from the two models are independent. This may not be true in practice. See, e.g., Bauer, Preacher, & Gil (2006) for a method to incorporate inter-model dependence.
