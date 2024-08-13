@@ -124,3 +124,8 @@ all_MEs <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_
     direct_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_m_ref),
     indirect_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref))
 }
+
+
+
+
+

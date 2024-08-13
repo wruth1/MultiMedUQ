@@ -7,7 +7,7 @@
 theta2Sigma(theta)
 }
 \arguments{
-\item{theta}{A vector of SDs and correlations. Order matches that of merDeriv.}
+\item{theta}{A vector of SDs and correlations. Order matches that of merDeriv (i.e. SD, cor, SD for a 2x2).}
 }
 \value{
 Sigma, a covariance matrix

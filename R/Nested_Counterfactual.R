@@ -285,3 +285,67 @@ grad_ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
   output = psi_Y_1 * grad_psi_M_1 + grad_psi_Y_1 * psi_M_1 + psi_Y_0 * grad_psi_M_0 + grad_psi_Y_0 * psi_M_0
   return(output)
 }
+
+
+
+
+
+#### Covariance matrix of all ENC estimates ####
+## I.e. All combinations of levels of X and X_M (there are only two of each)
+## Organization is (X,X_M) = (1,1), (1,0), (0,1), (0,0)
+
+
+#' "Jacobian" of expected nested counterfactuals. I.e. Gradients for every combination of \eqn{X, X_M}.
+#'
+#' @param w Level of covariates, \eqn{W}.
+#' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
+#' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
+#'
+#' @name Jacob_ENC
+#'
+#' @return Gradients for every combination of \eqn{X} and \eqn{X_M}, organized as a 4-by-many matrix. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0).
+#' @export
+#'
+Jacob_ENC_pars <- function(w, b_Y, theta_Y, b_M, theta_M){
+  grad_ENC_11 = grad_ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M)
+  grad_ENC_10 = grad_ENC(1, 0, w, b_Y, theta_Y, b_M, theta_M)
+  grad_ENC_01 = grad_ENC(0, 1, w, b_Y, theta_Y, b_M, theta_M)
+  grad_ENC_00 = grad_ENC(0, 0, w, b_Y, theta_Y, b_M, theta_M)
+
+  return(rbind(grad_ENC_11, grad_ENC_10, grad_ENC_01, grad_ENC_00))
+}
+
+#' @rdname Jacob_ENC
+#' @param fit_Y,fit_M Fitted models for Y and M.
+#'
+#' @export
+Jacob_ENC_models <- function(w, fit_Y, fit_M){
+  info_Y = get_model_pars(fit_Y)
+  info_M = get_model_pars(fit_M)
+
+  b_Y = info_Y[["b"]]
+  theta_Y = info_Y[["theta"]]
+  b_M = info_M[["b"]]
+  theta_M = info_M[["theta"]]
+
+  return(Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M))
+}
+
+
+
+#
+#' Covariance matrix of all ENC estimates
+#'
+#' @param w Level of covariates, \eqn{W}.
+#' @param fit_Y,fit_M Fitted models for Y and M.
+#'
+#' @return The covariance matrix of all ENC estimates.
+#' @export
+all_covs_ENC <- function(w, fit_Y, fit_M){
+  Sigma = all_pars_cov_mat(fit_Y, fit_M)
+  Jacob = Jacob_ENC_models(w, fit_Y, fit_M)
+  return(Jacob %*% Sigma %*% t(Jacob))
+}
+
+# Run the first few lines of "test-Med_Effs.R" to get the arguments for the following function.
+# Q = all_covs_ENC(w, fit_Y, fit_M)
