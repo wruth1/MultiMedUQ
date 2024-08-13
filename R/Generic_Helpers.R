@@ -43,7 +43,7 @@ Sigma2theta <- function(Sigma){
 
 #' Convert a vector, theta, to its corresponding covariance matrix
 #'
-#' @param theta A vector of SDs and correlations. Order matches that of merDeriv.
+#' @param theta A vector of SDs and correlations. Order matches that of merDeriv (i.e. SD, cor, SD for a 2x2).
 #'
 #' @return Sigma, a covariance matrix
 #' @export
@@ -54,6 +54,8 @@ theta2Sigma <- function(theta){
   if(!(n %% 1 == 0)){
     stop("theta is not the correct length for a covariance matrix")
   }
+
+  if(n == 1) return(matrix(theta^2))
 
   # First, create matrix of SDs and correlations
   ## Create a matrix with zeros
@@ -79,4 +81,36 @@ theta2Sigma <- function(theta){
 
   return(Sigma)
 }
+
+
+
+#' Extract fitted parameters of interest from an lme4 model.
+#'
+#' @param fit An lme4 model
+#' @param format The format of the output. Can be "list" or "vector".
+#'
+#' @return A list with elements b (fixed effects) and theta (RE SDs and correlations), or a vector with b followed by theta.
+#' @export
+#'
+get_model_pars <- function(fit, format="list"){
+  b = lme4::fixef(fit)
+
+  # Estimated raneff covariance matrix
+  warning("Confirm that order of theta is correct.")
+  info_cov = as.data.frame(lme4::VarCorr(fit))
+  info_cov_sort = info_cov[order(info_cov$var1),]
+  theta = info_cov_sort$sdcor
+
+  if(format == "list"){
+    return(list(b=b, theta=theta))
+  } else if(format == "vector"){
+    return(c(b, theta))
+  } else{
+    stop("Invalid format")
+  }
+}
+
+
+
+
 
