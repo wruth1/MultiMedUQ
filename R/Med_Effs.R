@@ -150,11 +150,13 @@ grad_TE_diff <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 }
 
 #' @rdname grad_med_effs
+#' @export
 grad_TE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   return(c(1/ENC_00, 0, 0, -ENC_11/ENC_00^2))
 }
 
 #' @rdname grad_med_effs
+#' @export
 grad_TE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   d1 = (1 / (1 - ENC_11)^2) / (ENC_00 / (1 - ENC_00))
   d2 = 0
@@ -166,16 +168,19 @@ grad_TE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 
 
 #' @rdname grad_med_effs
+#' @export
 grad_DE_diff <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   return(c(0, 1, 0, -1))
 }
 
 #' @rdname grad_med_effs
+#' @export
 grad_DE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   return(c(0, 1/ENC_00, 0, -ENC_10/ENC_00^2))
 }
 
 #' @rdname grad_med_effs
+#' @export
 grad_DE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   d1 = 0
   d2 = (1 / (1 - ENC_10)^2) / (ENC_00 / (1 - ENC_00))
@@ -186,16 +191,19 @@ grad_DE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 }
 
 #' @rdname grad_med_effs
+#' @export
 grad_IE_diff <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   return(c(1, 0, -1, 0))
 }
 
 #' @rdname grad_med_effs
+#' @export
 grad_IE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   return(c(1/ENC_00, 0, -ENC_11/ENC_01^2, 0))
 }
 
 #' @rdname grad_med_effs
+#' @export
 grad_IE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   d1 = (1 / (1 - ENC_11)^2) / (ENC_01 / (1 - ENC_01))
   d2 = 0
@@ -207,8 +215,75 @@ grad_IE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 
 
 
-# all_grad_MEs <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1, x_m_ref = 0){
-#   MEs = all_MEs(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref, x_m_ref)
-#
-#
-# }
+#' Jacobian of all mediation effects wrt all ENCs
+#'
+#' @param scale The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".
+#' @param w Level of covariates, \eqn{W}.
+#' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
+#' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
+#' @name all_grad_MEs
+#'
+#' @return A matrix of partial derivatives. Dimension is (3 * length(scale))-by-4.
+#' @export
+#'
+all_grad_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M){
+
+  ENCs = all_ENCs(w, b_Y, theta_Y, b_M, theta_M)
+
+  all_TE_grads = c()
+  all_DE_grads = c()
+  all_IE_grads = c()
+
+  if("diff" %in% scale){
+    all_TE_grads = rbind(all_TE_grads, grad_TE_diff(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_DE_grads = rbind(all_DE_grads, grad_DE_diff(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_IE_grads = rbind(all_IE_grads, grad_IE_diff(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+  }
+  if("rat" %in% scale){
+    all_TE_grads = rbind(all_TE_grads, grad_TE_rat(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_DE_grads = rbind(all_DE_grads, grad_DE_rat(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_IE_grads = rbind(all_IE_grads, grad_IE_rat(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+  }
+  if("OR" %in% scale){
+    all_TE_grads = rbind(all_TE_grads, grad_TE_or(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_DE_grads = rbind(all_DE_grads, grad_DE_or(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_IE_grads = rbind(all_IE_grads, grad_IE_or(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+  }
+
+  return(rbind(all_TE_grads, all_DE_grads, all_IE_grads))
+
+}
+
+#' @rdname all_grad_MEs
+#' @export
+all_grad_MEs_models <- function(scale, w, fit_Y, fit_M){
+  info_Y = get_model_pars(fit_Y)
+  info_M = get_model_pars(fit_M)
+
+  b_Y = info_Y[["b"]]
+  theta_Y = info_Y[["theta"]]
+  b_M = info_M[["b"]]
+  theta_M = info_M[["theta"]]
+
+  return(all_grad_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M))
+}
+
+
+
+#' Covariance matrix of all mediation effects on various scales.
+#'
+#' @param scale The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".
+#' @param w Level of covariates, \eqn{W}.
+#' @param fit_Y,fit_M Fitted models for Y and M.
+#'
+#' @return A covariance matrix for all mediation effects (total, direct and indirect) on the specified scale(s).
+#' @export
+all_cov_MEs <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M){
+  cov_ENCs = all_covs_ENC(w, fit_Y, fit_M)
+
+  grad_MEs = all_grad_MEs_models(scale, w, fit_Y, fit_M)
+
+  cov_MEs = grad_MEs %*% cov_ENCs %*% t(grad_MEs)
+
+  return(cov_MEs)
+}

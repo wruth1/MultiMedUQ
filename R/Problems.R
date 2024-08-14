@@ -11,3 +11,6 @@
 
 
 # There are some extra packages required for Generate_Sample_Data.R, which are not used elsewhere. Specifically, MASS, boot and purrr
+
+
+# There may be some issues with for loops going from 2:(i-1) with i=2. I want this to be an empty loop, but R treats it as c(2,1). Maybe this won't be an issue, but I'm not sure. This is also hard to search for.

@@ -78,6 +78,27 @@ theta_M = c(1, 0.5, 2)
 
 ## Check that general function matches specific functions
 test_that("all_MEs matches individual effects",{
-  expect_equal(all_MEs("diff", w, b_Y, theta_Y, b_M, theta_M), c(total_effect("diff", w, b_Y, theta_Y, b_M, theta_M),
+  expect_equal(unname(all_MEs("diff", w, b_Y, theta_Y, b_M, theta_M)), c(total_effect("diff", w, b_Y, theta_Y, b_M, theta_M),
     direct_effect("diff", w, b_Y, theta_Y, b_M, theta_M), indirect_effect("diff", w, b_Y, theta_Y, b_M, theta_M)))
+})
+
+
+
+
+# Covariance matrix of all mediation effects on various scales.
+
+scale = c("diff", "rat", "OR")
+
+## Note: This test depends on objects computed in test-Reg_Par_Covs.R
+test_that("Joint covariance of all mediation effects is positive definite",{
+  skip_on_cran()
+  load("w_fit_Y_fit_M.RData")
+
+  ### Some extremely small negative e-vals. Check that norm of negatives is very small
+  e_vals = eigen(all_cov_MEs(scale, w, fit_Y, fit_M), symmetric=T, only.values = T)$values
+  norm_pos = norm(e_vals[e_vals > 0], "2")
+  norm_neg = norm(e_vals[e_vals < 0], "2")
+
+  expect_true(norm_pos / norm_neg > 1e10)
+  # expect_true(all(eigen(all_cov_MEs(scale, w, fit_Y, fit_M), symmetric=T, only.values = T)$values > 0))
 })

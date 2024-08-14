@@ -59,6 +59,25 @@ ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
 }
 
 
+#' Expected nested counterfactuals for all configurations of \eqn{X} and \eqn{X_M}.
+#'
+#' @param w Level of covariates, \eqn{W}.
+#' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
+#' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
+#'
+#' @return A vector of expected nested counterfactuals for all configurations of \eqn{X} and \eqn{X_M}. Order of output is \code{ENC(1,1), ENC(1,0), ENC(0,1), ENC(0,0)}.
+#' @export
+#'
+all_ENCs <- function(w, b_Y, theta_Y, b_M, theta_M){
+  ENC_11 = ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M)
+  ENC_10 = ENC(1, 0, w, b_Y, theta_Y, b_M, theta_M)
+  ENC_01 = ENC(0, 1, w, b_Y, theta_Y, b_M, theta_M)
+  ENC_00 = ENC(0, 0, w, b_Y, theta_Y, b_M, theta_M)
+
+  return(c(ENC_11, ENC_10, ENC_01, ENC_00))
+}
+
+
 
 
 # Gradient of ENC ####
