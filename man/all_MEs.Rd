@@ -27,7 +27,7 @@ all_MEs(
 \item{x_ref, x_m_ref}{Reference values of \eqn{X}, respectively for \eqn{X} and for determining the value of \eqn{M}.}
 }
 \value{
-All mediation effects (total, direct and indirect), on the specified scale(s)
+All mediation effects (total, direct and indirect), on the specified scale(s). Order is total, direct, indirect. Within each effect, order is as specified in \code{scale}. Default is difference, ratio, odds-ratio.
 }
 \description{
 Total, direct and indirect mediation effects on the specified scale(s)

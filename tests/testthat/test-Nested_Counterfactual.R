@@ -110,3 +110,14 @@ test_that("grad_ENC works",{
   expect_equal(grad_ENC(0, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=0, x_m=0, w=w), tolerance = 1e-6)
 })
 
+
+
+
+# Covariance matrix of ENC
+
+## Note: This test depends on objects computed in test-Reg_Par_Covs.R
+test_that("Joint covariance of ENC at all input levels is positive definite",{
+  skip_on_cran()
+  load("w_fit_Y_fit_M.RData")
+  expect_true(all(eigen(all_covs_ENC(w, fit_Y, fit_M), symmetric=T, only.values = T)$values > 0))
+})

@@ -116,16 +116,99 @@ indirect_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
 #' @param x_ref,x_m_ref Reference values of \eqn{X}, respectively for \eqn{X} and for determining the value of \eqn{M}.
 #'
-#' @return All mediation effects (total, direct and indirect), on the specified scale(s)
+#' @return All mediation effects (total, direct and indirect), on the specified scale(s). Order is total, direct, indirect. Within each effect, order is as specified in \code{scale}. Default is difference, ratio, odds-ratio.
 #' @export
 #'
 all_MEs <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1, x_m_ref = 0){
-  c(total_effect(scale, w, b_Y, theta_Y, b_M, theta_M),
+  MEs = c(total_effect(scale, w, b_Y, theta_Y, b_M, theta_M),
     direct_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_m_ref),
     indirect_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref))
+
+  ME_names = as.vector(t(outer(c("total", "direct", "indirect"), scale, paste, sep = "_")))
+  names(MEs) = ME_names
+
+  return(MEs)
 }
 
 
 
 
 
+# Gradient of mediation effects as functions of ENCs (expected nested counterfactuals)
+## Recall that the order of \eqn{(X, X_M)} levels in ENC is (1,1), (1,0), (0,1), (0,0).
+
+#' Title
+#'
+#' @param ENC_11,ENC_10,ENC_01,ENC_00 Expected nested counterfactuals at specified levels of x and x_m respectively.
+#'
+#' @name grad_med_effs
+#'
+#' @return Gradient of the mediation effect of specified flavour and scale.
+#' @export
+grad_TE_diff <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  return(c(1, 0, 0, -1))
+}
+
+#' @rdname grad_med_effs
+grad_TE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  return(c(1/ENC_00, 0, 0, -ENC_11/ENC_00^2))
+}
+
+#' @rdname grad_med_effs
+grad_TE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  d1 = (1 / (1 - ENC_11)^2) / (ENC_00 / (1 - ENC_00))
+  d2 = 0
+  d3 = 0
+  d4 = (ENC_11 / (1 - ENC_11)) / (ENC_00^2)
+
+  return(c(d1, d2, d3, d4))
+}
+
+
+#' @rdname grad_med_effs
+grad_DE_diff <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  return(c(0, 1, 0, -1))
+}
+
+#' @rdname grad_med_effs
+grad_DE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  return(c(0, 1/ENC_00, 0, -ENC_10/ENC_00^2))
+}
+
+#' @rdname grad_med_effs
+grad_DE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  d1 = 0
+  d2 = (1 / (1 - ENC_10)^2) / (ENC_00 / (1 - ENC_00))
+  d3 = 0
+  d4 = (ENC_10 / (1 - ENC_10)) / (ENC_00^2)
+
+  return(c(d1, d2, d3, d4))
+}
+
+#' @rdname grad_med_effs
+grad_IE_diff <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  return(c(1, 0, -1, 0))
+}
+
+#' @rdname grad_med_effs
+grad_IE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  return(c(1/ENC_00, 0, -ENC_11/ENC_01^2, 0))
+}
+
+#' @rdname grad_med_effs
+grad_IE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
+  d1 = (1 / (1 - ENC_11)^2) / (ENC_01 / (1 - ENC_01))
+  d2 = 0
+  d3 = (ENC_11 / (1 - ENC_11)) / (ENC_01^2)
+  d4 = 0
+
+  return(c(d1, d2, d3, d4))
+}
+
+
+
+# all_grad_MEs <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1, x_m_ref = 0){
+#   MEs = all_MEs(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref, x_m_ref)
+#
+#
+# }

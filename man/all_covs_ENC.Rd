@@ -12,7 +12,7 @@ all_covs_ENC(w, fit_Y, fit_M)
 \item{fit_Y, fit_M}{Fitted models for Y and M.}
 }
 \value{
-The covariance matrix of all ENC estimates.
+The covariance matrix of all ENC estimates. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0).
 }
 \description{
 Covariance matrix of all ENC estimates

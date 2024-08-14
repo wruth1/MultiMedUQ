@@ -339,7 +339,7 @@ Jacob_ENC_models <- function(w, fit_Y, fit_M){
 #' @param w Level of covariates, \eqn{W}.
 #' @param fit_Y,fit_M Fitted models for Y and M.
 #'
-#' @return The covariance matrix of all ENC estimates.
+#' @return The covariance matrix of all ENC estimates. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0).
 #' @export
 all_covs_ENC <- function(w, fit_Y, fit_M){
   Sigma = all_pars_cov_mat(fit_Y, fit_M)
@@ -347,5 +347,5 @@ all_covs_ENC <- function(w, fit_Y, fit_M){
   return(Jacob %*% Sigma %*% t(Jacob))
 }
 
-# Run the first few lines of "test-Med_Effs.R" to get the arguments for the following function.
+# Run the first few lines of "test-Reg_Par_Covs.R" to get the arguments for the following function.
 # Q = all_covs_ENC(w, fit_Y, fit_M)

@@ -2,6 +2,8 @@
 
 # Simulated validation data ####
 
+## Initialize variables
+
 set.seed(1)
 
 data = make_validation_data(20, 100, b_Y, theta_Y, b_M, theta_M, output_list = F)
@@ -12,8 +14,16 @@ w = c(0,0)
 (fit_Y = lme4::glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))))
 (fit_M = lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))))
 
-par_asymp_covs = all_pars_asymp_cov_mat(fit_Y, fit_M)
-par_covs = all_pars_cov_mat(fit_Y, fit_M)
+par_asymp_covs <<- all_pars_asymp_cov_mat(fit_Y, fit_M)
+par_covs <<- all_pars_cov_mat(fit_Y, fit_M)
+
+
+# Save w, fit_Y and fit_M for later use, but only when not on CRAN
+test_that("Workaround to avoid saving impermissible files when on CRAN",{
+  skip_on_cran()
+  save(w, fit_Y, fit_M, file = "w_fit_Y_fit_M.RData")
+})
+
 
 # (e_vals = eigen(par_asymp_covs, symmetric=T, only.values = T)$values)
 # (norm_pos = norm(e_vals[e_vals>0], "2"))

@@ -17,6 +17,7 @@ Suggests:
     smdata,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Config/testthat/start-first: Reg_Par_Covs
 Imports: 
     boot,
     lme4,
