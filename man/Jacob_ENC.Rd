@@ -6,9 +6,21 @@
 \alias{Jacob_ENC_models}
 \title{"Jacobian" of expected nested counterfactuals. I.e. Gradients for every combination of \eqn{X, X_M}.}
 \usage{
-Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M)
+Jacob_ENC_pars(
+  w,
+  b_Y,
+  theta_Y,
+  b_M,
+  theta_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 
-Jacob_ENC_models(w, fit_Y, fit_M)
+Jacob_ENC_models(
+  w,
+  fit_Y,
+  fit_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 }
 \arguments{
 \item{w}{Level of covariates, \eqn{W}.}
@@ -17,6 +29,8 @@ Jacob_ENC_models(w, fit_Y, fit_M)
 
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
 
+\item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
+
 \item{fit_Y, fit_M}{Fitted models for Y and M.}
 }
 \value{
@@ -24,4 +38,20 @@ Gradients for every combination of \eqn{X} and \eqn{X_M}, organized as a 4-by-ma
 }
 \description{
 "Jacobian" of expected nested counterfactuals. I.e. Gradients for every combination of \eqn{X, X_M}.
+}
+\details{
+The following shorthands for random effects are available:
+\itemize{
+\item "all": All REs
+\item "Y.all": All REs for Y
+\item "M.all": All REs for M
+}
+Additionally, individual REs can be specified:
+\itemize{
+\item "Y.Int": Intercept for Y
+\item "Y.X": Slope for X in Y
+\item "Y.M": Slope for M in Y
+\item "M.Int": Intercept for M
+\item "M.X": Slope for M
+}
 }

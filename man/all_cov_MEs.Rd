@@ -19,3 +19,6 @@ A covariance matrix for all mediation effects (total, direct and indirect) on th
 \description{
 Covariance matrix of all mediation effects on various scales.
 }
+\details{
+Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
+}

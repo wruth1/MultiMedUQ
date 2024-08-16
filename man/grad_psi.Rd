@@ -8,9 +8,29 @@
 \alias{d2_psi}
 \title{Gradient of psi used to compute a probability for Y or M}
 \usage{
-grad_psi_Y(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M)
+grad_psi_Y(
+  m,
+  x,
+  x_m,
+  w,
+  b_Y,
+  theta_Y,
+  b_M,
+  theta_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 
-grad_psi_M(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M)
+grad_psi_M(
+  m,
+  x,
+  x_m,
+  w,
+  b_Y,
+  theta_Y,
+  b_M,
+  theta_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 
 d1_psi(mu, sigma)
 
@@ -27,6 +47,8 @@ d2_psi(mu, sigma)
 
 \item{theta_Y, theta_M}{SDs and correlations for Y and M models respectively}
 
+\item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
+
 \item{mu}{Mean of the latent Gaussian.}
 
 \item{sigma}{SD of the latent Gaussian.}
@@ -40,4 +62,20 @@ The gradient of the function \code{psi(mu, sigma)} with respect to \code{mu} and
 Gradient of psi used to compute a probability for Y or M
 
 Gradient of the intermediate integral function, psi
+}
+\details{
+The following shorthands for random effects are available:
+\itemize{
+\item "all": All REs
+\item "Y.all": All REs for Y
+\item "M.all": All REs for M
+}
+Additionally, individual REs can be specified:
+\itemize{
+\item "Y.Int": Intercept for Y
+\item "Y.X": Slope for X in Y
+\item "Y.M": Slope for M in Y
+\item "M.Int": Intercept for M
+\item "M.X": Slope for M
+}
 }

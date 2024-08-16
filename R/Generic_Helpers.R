@@ -114,3 +114,62 @@ get_model_pars <- function(fit, format="list"){
 
 
 
+#' Expand shorthand notation for random effects in models for Y and M
+#'
+#' @param RE_input A character vector of REs to include. May contain shorthands. See details.
+#'
+#'
+#' @return A character vector containing names of the REs to include in the models.
+#' @export
+#'
+#' @details
+#' The following shorthands for random effects are available:
+#' \itemize{
+#' \item "all": All REs
+#' \item "Y.all": All REs for Y
+#' \item "M.all": All REs for M
+#' }
+#' Additionally, individual REs can be specified:
+#' \itemize{
+#' \item "Y.Int": Intercept for Y
+#' \item "Y.X": Slope for X in Y
+#' \item "Y.M": Slope for M in Y
+#' \item "M.Int": Intercept for M
+#' \item "M.X": Slope for M
+#' }
+#'
+#'
+expand_REs <- function(RE_input){
+  all_REs = c()
+
+  if(identical(RE_input, "all")){ # All REs
+    all_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+  } else{
+    if("Y.all" %in% RE_input){ # All Y REs
+      all_REs = c(all_REs, "Y.Int", "Y.X", "Y.M")
+    } else{ # Some Y REs
+      if("Y.Int" %in% RE_input){
+        all_REs = c(all_REs, "Y.Int")
+      }
+      if("Y.X" %in% RE_input){
+        all_REs = c(all_REs, "Y.X")
+      }
+      if("Y.M" %in% RE_input){
+      all_REs = c(all_REs, "Y.M")
+      }
+    }
+
+    if("M.all" %in% RE_input){ # All M REs
+      all_REs = c(all_REs, "M.Int", "M.X")
+    } else{ # Some M REs
+      if("M.Int" %in% RE_input){
+        all_REs = c(all_REs, "M.Int")
+      }
+      if("M.X" %in% RE_input){
+        all_REs = c(all_REs, "M.X")
+      }
+    }
+  }
+
+  return(unique(all_REs))
+}

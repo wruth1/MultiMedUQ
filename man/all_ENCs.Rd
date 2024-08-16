@@ -4,7 +4,14 @@
 \alias{all_ENCs}
 \title{Expected nested counterfactuals for all configurations of \eqn{X} and \eqn{X_M}.}
 \usage{
-all_ENCs(w, b_Y, theta_Y, b_M, theta_M)
+all_ENCs(
+  w,
+  b_Y,
+  theta_Y,
+  b_M,
+  theta_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 }
 \arguments{
 \item{w}{Level of covariates, \eqn{W}.}
@@ -12,10 +19,28 @@ all_ENCs(w, b_Y, theta_Y, b_M, theta_M)
 \item{b_Y, b_M}{Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.}
 
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
+
+\item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
 }
 \value{
 A vector of expected nested counterfactuals for all configurations of \eqn{X} and \eqn{X_M}. Order of output is \code{ENC(1,1), ENC(1,0), ENC(0,1), ENC(0,0)}.
 }
 \description{
 Expected nested counterfactuals for all configurations of \eqn{X} and \eqn{X_M}.
+}
+\details{
+The following shorthands for random effects are available:
+\itemize{
+\item "all": All REs
+\item "Y.all": All REs for Y
+\item "M.all": All REs for M
+}
+Additionally, individual REs can be specified:
+\itemize{
+\item "Y.Int": Intercept for Y
+\item "Y.X": Slope for X in Y
+\item "Y.M": Slope for M in Y
+\item "M.Int": Intercept for M
+\item "M.X": Slope for M
+}
 }

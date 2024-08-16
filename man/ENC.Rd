@@ -4,7 +4,16 @@
 \alias{ENC}
 \title{Expected nested counterfactual. Binary Y, binary M.}
 \usage{
-ENC(x, x_m, w, b_Y, theta_Y, b_M, theta_M)
+ENC(
+  x,
+  x_m,
+  w,
+  b_Y,
+  theta_Y,
+  b_M,
+  theta_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 }
 \arguments{
 \item{x}{Level of exposure variable, \eqn{X}.}
@@ -16,6 +25,8 @@ ENC(x, x_m, w, b_Y, theta_Y, b_M, theta_M)
 \item{b_Y, b_M}{Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.}
 
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
+
+\item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
 }
 \value{
 The expected nested counterfactual of \eqn{Y} with \eqn{X = x} and \eqn{M = M_{x\_m}}.
@@ -27,4 +38,19 @@ Expected nested counterfactual. Binary Y, binary M.
 Contents of \code{b_Y} are \code{(b_Y_0, b_Y_X, b_Y_M, B_Y_W)}. Contents of \code{b_M} are \code{(b_M_0, b_M_X, B_M_W)}.
 
 Contents of \code{theta_Y} are \code{(s_Y_0, cor_Y_0X, cor_Y_0M, s_Y_X, cor_Y_XM, s_Y_M)}. Contents of \code{theta_M} are \code{(s_M_0, cor_M_0X, s_M_X)}.
+
+The following shorthands for random effects are available:
+\itemize{
+\item "all": All REs
+\item "Y.all": All REs for Y
+\item "M.all": All REs for M
+}
+Additionally, individual REs can be specified:
+\itemize{
+\item "Y.Int": Intercept for Y
+\item "Y.X": Slope for X in Y
+\item "Y.M": Slope for M in Y
+\item "M.Int": Intercept for M
+\item "M.X": Slope for M
+}
 }
