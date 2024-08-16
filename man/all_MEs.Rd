@@ -2,15 +2,26 @@
 % Please edit documentation in R/Med_Effs.R
 \name{all_MEs}
 \alias{all_MEs}
+\alias{all_MEs_pars}
+\alias{all_MEs_models}
 \title{Total, direct and indirect mediation effects on the specified scale(s)}
 \usage{
-all_MEs(
+all_MEs_pars(
   scale = c("diff", "rat", "OR"),
   w,
   b_Y,
   theta_Y,
   b_M,
   theta_M,
+  x_ref = 1,
+  x_m_ref = 0
+)
+
+all_MEs_models(
+  scale = c("diff", "rat", "OR"),
+  w,
+  fit_Y,
+  fit_M,
   x_ref = 1,
   x_m_ref = 0
 )
@@ -25,6 +36,8 @@ all_MEs(
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
 
 \item{x_ref, x_m_ref}{Reference values of \eqn{X}, respectively for \eqn{X} and for determining the value of \eqn{M}.}
+
+\item{fit_Y, fit_M}{Models for \eqn{Y} and \eqn{M}, respectively.}
 }
 \value{
 All mediation effects (total, direct and indirect), on the specified scale(s). Order is total, direct, indirect. Within each effect, order is as specified in \code{scale}. Default is difference, ratio, odds-ratio.

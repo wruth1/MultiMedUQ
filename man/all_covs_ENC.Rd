@@ -17,3 +17,6 @@ The covariance matrix of all ENC estimates. Order of \eqn{(X, X_M)} levels is (1
 \description{
 Covariance matrix of all ENC estimates
 }
+\details{
+Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
+}

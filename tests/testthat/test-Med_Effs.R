@@ -78,7 +78,7 @@ theta_M = c(1, 0.5, 2)
 
 ## Check that general function matches specific functions
 test_that("all_MEs matches individual effects",{
-  expect_equal(unname(all_MEs("diff", w, b_Y, theta_Y, b_M, theta_M)), c(total_effect("diff", w, b_Y, theta_Y, b_M, theta_M),
+  expect_equal(unname(all_MEs_pars("diff", w, b_Y, theta_Y, b_M, theta_M)), c(total_effect("diff", w, b_Y, theta_Y, b_M, theta_M),
     direct_effect("diff", w, b_Y, theta_Y, b_M, theta_M), indirect_effect("diff", w, b_Y, theta_Y, b_M, theta_M)))
 })
 

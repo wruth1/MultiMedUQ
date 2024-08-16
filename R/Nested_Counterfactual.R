@@ -358,6 +358,9 @@ Jacob_ENC_models <- function(w, fit_Y, fit_M){
 #' @param w Level of covariates, \eqn{W}.
 #' @param fit_Y,fit_M Fitted models for Y and M.
 #'
+#' @details
+#' Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
+#'
 #' @return The covariance matrix of all ENC estimates. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0).
 #' @export
 all_covs_ENC <- function(w, fit_Y, fit_M){

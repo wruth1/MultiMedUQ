@@ -25,6 +25,8 @@ all_grad_MEs_models(scale, w, fit_Y, fit_M)
 \item{b_Y, b_M}{Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.}
 
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
+
+\item{fit_Y, fit_M}{Models for \eqn{Y} and \eqn{M}, respectively.}
 }
 \value{
 A matrix of partial derivatives. Dimension is (3 * length(scale))-by-4.

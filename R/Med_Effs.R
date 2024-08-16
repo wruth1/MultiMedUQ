@@ -116,10 +116,12 @@ indirect_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
 #' @param x_ref,x_m_ref Reference values of \eqn{X}, respectively for \eqn{X} and for determining the value of \eqn{M}.
 #'
+#' @name all_MEs
+#'
 #' @return All mediation effects (total, direct and indirect), on the specified scale(s). Order is total, direct, indirect. Within each effect, order is as specified in \code{scale}. Default is difference, ratio, odds-ratio.
 #' @export
 #'
-all_MEs <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1, x_m_ref = 0){
+all_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1, x_m_ref = 0){
   MEs = c(total_effect(scale, w, b_Y, theta_Y, b_M, theta_M),
     direct_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_m_ref),
     indirect_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref))
@@ -131,6 +133,22 @@ all_MEs <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_
 }
 
 
+#' @param fit_Y,fit_M Models for \eqn{Y} and \eqn{M}, respectively.
+#'
+#' @rdname all_MEs
+#' @export
+#'
+all_MEs_models <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, x_ref = 1, x_m_ref = 0){
+  info_Y = get_model_pars(fit_Y)
+  info_M = get_model_pars(fit_M)
+
+  b_Y = info_Y[["b"]]
+  theta_Y = info_Y[["theta"]]
+  b_M = info_M[["b"]]
+  theta_M = info_M[["theta"]]
+
+  all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref, x_m_ref)
+}
 
 
 
@@ -254,6 +272,8 @@ all_grad_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b
 
 }
 
+#' @param fit_Y,fit_M Models for \eqn{Y} and \eqn{M}, respectively.
+#'
 #' @rdname all_grad_MEs
 #' @export
 all_grad_MEs_models <- function(scale, w, fit_Y, fit_M){
@@ -275,6 +295,9 @@ all_grad_MEs_models <- function(scale, w, fit_Y, fit_M){
 #' @param scale The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".
 #' @param w Level of covariates, \eqn{W}.
 #' @param fit_Y,fit_M Fitted models for Y and M.
+#'
+#' @details
+#' Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
 #'
 #' @return A covariance matrix for all mediation effects (total, direct and indirect) on the specified scale(s).
 #' @export

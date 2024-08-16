@@ -6,6 +6,17 @@
 
 set.seed(1)
 
+
+x = 0
+x_m = 1
+
+b_Y = c(0,0,1,0,0)
+theta_Y = c(sqrt(0.5), 0.5, 0, 1, 0.5, sqrt(0.5))
+
+b_M = c(0,0,0,0)
+theta_M = c(1, 0.5, 2)
+
+
 data = make_validation_data(20, 100, b_Y, theta_Y, b_M, theta_M, output_list = F)
 
 w = c(0,0)
