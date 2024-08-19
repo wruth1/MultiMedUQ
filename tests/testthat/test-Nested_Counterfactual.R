@@ -28,9 +28,51 @@ test_that("ENC works with a subset of REs", {
   expect_equal(ENC(0, 0, c(0,0), rep(0, times=5), rep(0, times=6), rep(0, times=4), rep(0, times=3)), ENC(0, 0, c(0,0), rep(0, times=5), rep(0, times=1), rep(0, times=4), rep(0, times=1), which_REs = c("Y.Int", "M.Int")))
 
   # Harder case: Non-zero effects
+  ## Loop over all pairs of single REs
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+  RE_pairs = expand.grid(Y_REs, M_REs)
+
+  Y_RE_inds = c(1, 4, 6)
+  M_RE_inds = c(1,3)
+  RE_ind_pairs = expand.grid(Y_RE_inds, M_RE_inds)
+
+  for (i in seq_len(nrow(RE_pairs))){
+    this_REs = as.character(unlist(RE_pairs[i,]))
+    Y_RE = this_REs[1]
+    M_RE = this_REs[2]
+
+    Y_ind = RE_ind_pairs[i,1]
+    M_ind = RE_ind_pairs[i,2]
+
+    this_theta_Y = rep(0, times = 6)
+    if(Y_RE == "Y.Int"){
+      this_theta_Y[Y_ind] = sqrt(0.5)
+    } else if(Y_RE == "Y.X"){
+      this_theta_Y[Y_ind] = 1
+    } else if(Y_RE == "Y.M"){
+      this_theta_Y[Y_ind] = sqrt(0.5)
+    }
+
+    this_theta_M = rep(0, times = 3)
+    if(M_RE == "M.Int"){
+      this_theta_M[M_ind] = 1
+    } else if(M_RE == "M.X"){
+      this_theta_M[M_ind] = 2
+    }
+
+    ENC_zeros = ENC(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M)
+    ENC_effs = ENC(x, x_m, w, b_Y, theta_Y[Y_ind], b_M, theta_M[M_ind], which_REs = this_REs)
+
+    expect_equal(ENC_zeros, ENC_effs,
+                 label = paste0(Y_RE, " with ", M_RE))
+  }
+
   expect_equal(ENC(x, x_m, w, b_Y, c(sqrt(0.5), rep(0, times=5)), b_M, c(sqrt(0.5), 0, 0)),
                ENC(x, x_m, w, b_Y, sqrt(0.5), b_M, sqrt(0.5), which_REs = c("Y.Int", "M.Int")))
 })
+
+
 
 
 
