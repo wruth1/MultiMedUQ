@@ -106,6 +106,22 @@ test_that("Joint covariance of all mediation effects is positive definite",{
 
 
 
+
+
+
+#! START HERE!!!!!!!!
+
+# TODO: Figure out why there is a discrepancy between the current implementation and the one from the Exact_Asymptotics project
+
+#* To run the following:
+library(lme4)
+library(merDeriv)
+source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
+load("w_fit_Y_fit_M.RData")
+
+
+
+
 # Compare current implementation with the one from the Exact_Asymptotics project
 ## The latter is reasonably well-validated against a Monte Carlo empirical SE
 Y_model = fit_Y
@@ -132,10 +148,52 @@ b_RE_cor = Y_model_info$correlation[2,1]
 gamma_hat = c(b_RE_sds, b_RE_cor)
 if(any(is.nan(gamma_hat))) stop("NaNs in gamma_hat")  # Skip rest of current analysis if correlation is 0/0
 Y_cov = vcov(Y_model, full=TRUE, ranpar="sd")
-# 
+#
 
 ### Translate to terminology of MultiMedUQ
 b_Y_alt = b_hat
 theta_Y_alt = gamma_hat
 b_M_alt = a_hat
 theta_M_alt = theta_hat
+
+
+### Estimate mediation effect
+#### Fixed-effects
+a_0_hat = a_hat[1]
+a_x_hat = a_hat[2]
+A_2_hat = a_hat[3:4]
+
+b_0_hat = b_hat[1]
+b_m_hat = b_hat[2]
+b_x_hat = b_hat[3]
+B_3_hat = b_hat[4:5]
+
+
+## Linear predictors
+eta_hat = as.numeric(a_0_hat + a_x_hat * 0 + w %*% A_2_hat)
+zeta_hat = as.numeric(b_0_hat + b_x_hat * 0 + w %*% B_3_hat)
+
+
+## Random effects covariances
+s_M_0 = a_RE_sds[1]
+s_M_x = a_RE_sds[2]
+rho_M = a_RE_cor
+
+s_Y_0 = b_RE_sds[1]
+s_Y_x = b_RE_sds[2]
+rho_Y = b_RE_cor
+
+
+## Sigma functions
+sigma_M1 = sigma_fun(0, s_M_0, s_M_x, rho_M)
+sigma_M2 = sigma_fun(1, s_M_x, s_M_0, rho_M)
+
+sigma_Y1 = sigma_fun(0, s_Y_0, s_Y_x, rho_Y)
+sigma_Y2 = sigma_fun(1, s_Y_x, s_Y_0, rho_Y)
+
+## Mediation effect
+### See Helpers.R for the function Phi, which computes the mediation effect on odds-ratio scale
+med_hat = Phi(eta_hat, zeta_hat, a_x_hat, b_m_hat, b_x_hat, sigma_M2, sigma_Y2, sigma_M1, sigma_Y1)
+
+
+all_MEs_models(scale = "OR", w, fit_Y, fit_M)
