@@ -12,10 +12,17 @@ all_grad_MEs_pars(
   b_Y,
   theta_Y,
   b_M,
-  theta_M
+  theta_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 
-all_grad_MEs_models(scale, w, fit_Y, fit_M)
+all_grad_MEs_models(
+  scale,
+  w,
+  fit_Y,
+  fit_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 }
 \arguments{
 \item{scale}{The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".}
@@ -26,6 +33,8 @@ all_grad_MEs_models(scale, w, fit_Y, fit_M)
 
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
 
+\item{which_REs}{Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.}
+
 \item{fit_Y, fit_M}{Models for \eqn{Y} and \eqn{M}, respectively.}
 }
 \value{
@@ -33,4 +42,20 @@ A matrix of partial derivatives. Dimension is (3 * length(scale))-by-4.
 }
 \description{
 Jacobian of all mediation effects wrt all ENCs
+}
+\details{
+The following shorthands for random effects are available:
+\itemize{
+\item "all": All REs
+\item "Y.all": All REs for Y
+\item "M.all": All REs for M
+}
+Additionally, individual REs can be specified:
+\itemize{
+\item "Y.Int": Intercept for Y
+\item "Y.X": Slope for X in Y
+\item "Y.M": Slope for M in Y
+\item "M.Int": Intercept for M
+\item "M.X": Slope for M
+}
 }

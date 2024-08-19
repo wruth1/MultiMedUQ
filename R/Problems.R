@@ -16,3 +16,4 @@
 # There may be some issues with for loops going from 2:(i-1) with i=2. I want this to be an empty loop, but R treats it as c(2,1). Maybe this won't be an issue, but I'm not sure. This is also hard to search for.
 
 
+# My documentation for the labels of the random effects is copied across many, many functions. It would be better to move this to a vignette, even a short one, which I can then link in the @parameter description of which_REs.

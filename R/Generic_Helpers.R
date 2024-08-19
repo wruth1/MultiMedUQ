@@ -89,6 +89,10 @@ theta2Sigma <- function(theta){
 #' @param fit An lme4 model
 #' @param format The format of the output. Can be "list" or "vector".
 #'
+#' @details
+#' Note: It is unnecessary to specify which random effects are required, since we extract exactly what is contained in the fitted \code{lme4} object.
+#'
+#'
 #' @return A list with elements b (fixed effects) and theta (RE SDs and correlations), or a vector with b followed by theta.
 #' @export
 #'

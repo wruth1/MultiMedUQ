@@ -1,0 +1,35 @@
+---
+title: "Specifying Random Effects"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{which_REs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(MultiMedUQ)
+```
+
+The point of our package is to allow users to do mediation analysis with random effects/multilevel models. To this end, it is convenient for me if the user specifies which random effects they have included. This is done by passing an object called `which_REs`.
+
+Available random effects are:
+
+* `Y.Int`: Intercept for Y
+* `Y.X`: Slope for X in Y
+* `Y.M`: Slope for M in Y
+* `M.Int`: Intercept for M
+* `M.X`: Slope for M
+
+Additionally, the following shortcuts are available
+
+* `all`: All REs
+* `Y.all`: All REs for Y
+* `M.all`: All REs for M

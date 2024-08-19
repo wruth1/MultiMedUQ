@@ -17,3 +17,6 @@ A list with elements b (fixed effects) and theta (RE SDs and correlations), or a
 \description{
 Extract fitted parameters of interest from an lme4 model.
 }
+\details{
+Note: It is unnecessary to specify which random effects are required, since we extract exactly what is contained in the fitted \code{lme4} object.
+}

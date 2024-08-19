@@ -19,4 +19,6 @@ Joint (sample-size adjusted) covariance matrix of fixed and random effects' para
 }
 \details{
 Note: We assume that parameter estimators from the two models are independent. This may not be true in practice. See, e.g., Bauer, Preacher, & Gil (2006) for a method to incorporate inter-model dependence.
+
+Note: It is unnecessary to specify which random effects are included because we extract all present REs from the fitted \code{lme4} model.
 }

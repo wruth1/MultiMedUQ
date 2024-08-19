@@ -239,14 +239,31 @@ grad_IE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 #' @param w Level of covariates, \eqn{W}.
 #' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
+#' @param which_REs Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.
 #' @name all_grad_MEs
+#'
+#' @details
+#' The following shorthands for random effects are available:
+#' \itemize{
+#' \item "all": All REs
+#' \item "Y.all": All REs for Y
+#' \item "M.all": All REs for M
+#' }
+#' Additionally, individual REs can be specified:
+#' \itemize{
+#' \item "Y.Int": Intercept for Y
+#' \item "Y.X": Slope for X in Y
+#' \item "Y.M": Slope for M in Y
+#' \item "M.Int": Intercept for M
+#' \item "M.X": Slope for M
+#' }
 #'
 #' @return A matrix of partial derivatives. Dimension is (3 * length(scale))-by-4.
 #' @export
 #'
-all_grad_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M){
+all_grad_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
-  ENCs = all_ENCs(w, b_Y, theta_Y, b_M, theta_M)
+  ENCs = all_ENCs(w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
   all_TE_grads = c()
   all_DE_grads = c()
@@ -276,7 +293,7 @@ all_grad_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b
 #'
 #' @rdname all_grad_MEs
 #' @export
-all_grad_MEs_models <- function(scale, w, fit_Y, fit_M){
+all_grad_MEs_models <- function(scale, w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   info_Y = get_model_pars(fit_Y)
   info_M = get_model_pars(fit_M)
 
@@ -285,7 +302,7 @@ all_grad_MEs_models <- function(scale, w, fit_Y, fit_M){
   b_M = info_M[["b"]]
   theta_M = info_M[["theta"]]
 
-  return(all_grad_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M))
+  return(all_grad_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs))
 }
 
 
@@ -295,16 +312,32 @@ all_grad_MEs_models <- function(scale, w, fit_Y, fit_M){
 #' @param scale The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".
 #' @param w Level of covariates, \eqn{W}.
 #' @param fit_Y,fit_M Fitted models for Y and M.
+#' @param which_REs Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.
 #'
 #' @details
 #' Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
 #'
+#' The following shorthands for random effects are available:
+#' \itemize{
+#' \item "all": All REs
+#' \item "Y.all": All REs for Y
+#' \item "M.all": All REs for M
+#' }
+#' Additionally, individual REs can be specified:
+#' \itemize{
+#' \item "Y.Int": Intercept for Y
+#' \item "Y.X": Slope for X in Y
+#' \item "Y.M": Slope for M in Y
+#' \item "M.Int": Intercept for M
+#' \item "M.X": Slope for M
+#' }
+#'
 #' @return A covariance matrix for all mediation effects (total, direct and indirect) on the specified scale(s).
 #' @export
-all_cov_MEs <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M){
-  cov_ENCs = all_covs_ENC(w, fit_Y, fit_M)
+all_cov_MEs <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  cov_ENCs = all_covs_ENC(w, fit_Y, fit_M, which_REs)
 
-  grad_MEs = all_grad_MEs_models(scale, w, fit_Y, fit_M)
+  grad_MEs = all_grad_MEs_models(scale, w, fit_Y, fit_M, which_REs)
 
   cov_MEs = grad_MEs %*% cov_ENCs %*% t(grad_MEs)
 

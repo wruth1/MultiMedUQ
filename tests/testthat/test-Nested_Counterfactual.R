@@ -23,6 +23,15 @@ test_that("ENC works", {
   expect_equal(ENC(x, x_m, w, b_Y, theta_Y, b_M, theta_M), (3/4) - exp(-1/2)/4)
 })
 
+test_that("ENC works with a subset of REs", {
+  # Easy case: No effects
+  expect_equal(ENC(0, 0, c(0,0), rep(0, times=5), rep(0, times=6), rep(0, times=4), rep(0, times=3)), ENC(0, 0, c(0,0), rep(0, times=5), rep(0, times=1), rep(0, times=4), rep(0, times=1), which_REs = c("Y.Int", "M.Int")))
+
+  # Harder case: Non-zero effects
+  expect_equal(ENC(x, x_m, w, b_Y, c(sqrt(0.5), rep(0, times=5)), b_M, c(sqrt(0.5), 0, 0)),
+               ENC(x, x_m, w, b_Y, sqrt(0.5), b_M, sqrt(0.5), which_REs = c("Y.Int", "M.Int")))
+})
+
 
 
 # Gradients
