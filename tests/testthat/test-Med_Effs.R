@@ -102,3 +102,40 @@ test_that("Joint covariance of all mediation effects is positive definite",{
   expect_true(norm_pos / norm_neg > 1e10)
   # expect_true(all(eigen(all_cov_MEs(scale, w, fit_Y, fit_M), symmetric=T, only.values = T)$values > 0))
 })
+
+
+
+
+# Compare current implementation with the one from the Exact_Asymptotics project
+## The latter is reasonably well-validated against a Monte Carlo empirical SE
+Y_model = fit_Y
+Y_model_info = attributes(VarCorr(Y_model)$group)
+
+M_model = fit_M
+M_model_info = attributes(VarCorr(M_model)$group)
+
+## Extract fitted parameters
+
+### M model
+a_hat = fixef(M_model)
+a_RE_sds = M_model_info$stddev
+a_RE_cor = M_model_info$correlation[2,1]
+theta_hat = c(a_RE_sds, a_RE_cor)
+if(any(is.nan(theta_hat))) stop("NaNs in theta_hat")  # Skip rest of current analysis if correlation is 0/0
+M_cov = vcov(M_model, full=TRUE, ranpar="sd")
+
+
+### Y model
+b_hat = fixef(Y_model)
+b_RE_sds = Y_model_info$stddev
+b_RE_cor = Y_model_info$correlation[2,1]
+gamma_hat = c(b_RE_sds, b_RE_cor)
+if(any(is.nan(gamma_hat))) stop("NaNs in gamma_hat")  # Skip rest of current analysis if correlation is 0/0
+Y_cov = vcov(Y_model, full=TRUE, ranpar="sd")
+# 
+
+### Translate to terminology of MultiMedUQ
+b_Y_alt = b_hat
+theta_Y_alt = gamma_hat
+b_M_alt = a_hat
+theta_M_alt = theta_hat

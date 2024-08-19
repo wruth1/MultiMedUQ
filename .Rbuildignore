@@ -5,4 +5,6 @@
 ^\.github$
 ^.*\.RData$
 ^MC_SE_Test\.R$
-^.*\.code-workspace
+^.*\.code-workspace$
+^R/Exact_Asymptotics/*$
+^\.lintr$
