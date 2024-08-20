@@ -77,7 +77,7 @@ b_M = c(0,0,0,0)
 theta_M = c(1, 0.5, 2)
 
 ## Check that general function matches specific functions
-test_that("all_MEs matches individual effects",{
+test_that("all_MEs matches individual effects", {
   expect_equal(unname(all_MEs_pars("diff", w, b_Y, theta_Y, b_M, theta_M)), c(total_effect("diff", w, b_Y, theta_Y, b_M, theta_M),
     direct_effect("diff", w, b_Y, theta_Y, b_M, theta_M), indirect_effect("diff", w, b_Y, theta_Y, b_M, theta_M)))
 })
@@ -90,7 +90,7 @@ test_that("all_MEs matches individual effects",{
 scale = c("diff", "rat", "OR")
 
 ## Note: This test depends on objects computed in test-Reg_Par_Covs.R
-test_that("Joint covariance of all mediation effects is positive definite",{
+test_that("Joint covariance of all mediation effects is positive definite", {
   skip_on_cran()
   load("w_fit_Y_fit_M.RData")
 
@@ -117,8 +117,29 @@ test_that("Joint covariance of all mediation effects is positive definite",{
 library(lme4)
 library(merDeriv)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
-load("w_fit_Y_fit_M.RData")
 
+
+# Set parameters and fit models
+set.seed(1)
+
+
+x = 0
+x_m = 1
+
+b_Y = c(0,0,1,0,0)
+theta_Y = c(sqrt(0.5), 0.5, 0, 1, 0.5, sqrt(0.5))
+
+b_M = c(0,0,0,0)
+theta_M = c(1, 0.5, 2)
+
+
+data = make_validation_data(20, 100, b_Y, theta_Y, b_M, theta_M, output_list = F)
+
+w = c(0,0)
+
+## Note: glmer wasn't converging with default values. I chose one of the default optimizers, and increased the number of function evaluations. Both bobyqa and the other default use this limiter instead of the number of iterations.
+(fit_Y = lme4::glmer(Y ~ X + M + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))))
+(fit_M = lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))))
 
 
 
@@ -148,7 +169,7 @@ b_RE_cor = Y_model_info$correlation[2,1]
 gamma_hat = c(b_RE_sds, b_RE_cor)
 if(any(is.nan(gamma_hat))) stop("NaNs in gamma_hat")  # Skip rest of current analysis if correlation is 0/0
 Y_cov = vcov(Y_model, full=TRUE, ranpar="sd")
-#
+
 
 ### Translate to terminology of MultiMedUQ
 b_Y_alt = b_hat
@@ -196,4 +217,4 @@ sigma_Y2 = sigma_fun(1, s_Y_x, s_Y_0, rho_Y)
 med_hat = Phi(eta_hat, zeta_hat, a_x_hat, b_m_hat, b_x_hat, sigma_M2, sigma_Y2, sigma_M1, sigma_Y1)
 
 
-all_MEs_models(scale = "OR", w, fit_Y, fit_M)
+all_MEs_models(scale = "OR", w, fit_Y, fit_M, which_REs = c("Y.int", "Y.X", "M.All"))

@@ -7,7 +7,15 @@
 \alias{indirect_effect}
 \title{Mediation effects of \eqn{X} on \eqn{Y} mediated by \eqn{M}}
 \usage{
-total_effect(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M)
+total_effect(
+  scale = c("diff", "rat", "OR"),
+  w,
+  b_Y,
+  theta_Y,
+  b_M,
+  theta_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 
 direct_effect(
   scale = c("diff", "rat", "OR"),
@@ -16,7 +24,8 @@ direct_effect(
   theta_Y,
   b_M,
   theta_M,
-  x_m_ref = 0
+  x_m_ref = 0,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 
 indirect_effect(
@@ -26,7 +35,8 @@ indirect_effect(
   theta_Y,
   b_M,
   theta_M,
-  x_ref = 1
+  x_ref = 1,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 }
 \arguments{
@@ -37,6 +47,8 @@ indirect_effect(
 \item{b_Y, b_M}{Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.}
 
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
+
+\item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
 
 \item{x_m_ref}{Reference value of \eqn{X} for determining the mediator level.}
 
@@ -52,4 +64,19 @@ Mediation effects of \eqn{X} on \eqn{Y} mediated by \eqn{M}
 Contents of \code{b_Y} are \code{(b_Y_0, b_Y_X, b_Y_M, B_Y_W)}. Contents of \code{b_M} are \code{(b_M_0, b_M_X, B_M_W)}.
 
 Contents of \code{theta_Y} are \code{(s_Y_0, cor_Y_0X, cor_Y_0M, s_Y_X, cor_Y_XM, s_Y_M)}. Contents of \code{theta_M} are \code{(s_M_0, cor_M_0X, s_M_X)}.
+
+The following shorthands for random effects are available:
+\itemize{
+\item "All": All REs
+\item "Y.All": All REs for Y
+\item "M.All": All REs for M
+}
+Additionally, individual REs can be specified:
+\itemize{
+\item "Y.Int": Intercept for Y
+\item "Y.X": Slope for X in Y
+\item "Y.M": Slope for M in Y
+\item "M.Int": Intercept for M
+\item "M.X": Slope for M
+}
 }

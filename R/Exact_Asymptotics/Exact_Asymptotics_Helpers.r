@@ -314,12 +314,28 @@ logit = function(x) log(x/(1-x))
     }
     
     
+
+
     
     # Total mediation effect (on odds-ratio scale)
     ## In my notation: Phi(eta, zeta, a_x, b_m, b_x, sigma_U(x+1), sigma_V(x+1), sigma_U(x), sigma_V(x))
     ## Note: eta, a and U come from the M-model, while zeta, b and V come from the Y-model
     ## eta and zeta are linear predictors
+    ##
+    ## Phi = (P(Y=1 | X=1) / P(Y=0 | X=1)) / (P(Y=1 | X=0) / P(Y=0 | X=0))
     Phi = function(eta, zeta, a1, b1, b2, s1, s2, s3, s4){
+      Y1_X1_M1 = phi(zeta + b1 + b2, s1)
+      M1_X1 = phi(eta + a1, s2)
+      Y1_X1_M0 = phi(zeta + b2, s1)
+      M0_X1 = (1 - phi(eta + a1, s2))
+
+      # These should match, but don't    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      # Y1_X1_M1 * M1_X1 + Y1_X1_M0 * M0_X1
+      # ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M, which_REs)
+
+
+      
+      
       (phi(zeta + b1 + b2, s1) * phi(eta + a1, s2) + phi(zeta + b2, s1) * (1 - phi(eta + a1, s2))) * (1 - phi(zeta, s3) + phi(eta, s4) * (phi(zeta, s3) - phi(zeta + b1, s3))) / (1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s2))) / (phi(zeta + b1, s3) * phi(eta, s3) + phi(zeta, s3) * (1 - phi(eta, s4)))
     
     }

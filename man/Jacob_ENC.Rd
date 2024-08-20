@@ -42,9 +42,9 @@ Gradients for every combination of \eqn{X} and \eqn{X_M}, organized as a 4-by-ma
 \details{
 The following shorthands for random effects are available:
 \itemize{
-\item "all": All REs
-\item "Y.all": All REs for Y
-\item "M.all": All REs for M
+\item "All": All REs
+\item "Y.All": All REs for Y
+\item "M.All": All REs for M
 }
 Additionally, individual REs can be specified:
 \itemize{

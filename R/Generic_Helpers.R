@@ -129,9 +129,9 @@ get_model_pars <- function(fit, format="list"){
 #' @details
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{
@@ -146,10 +146,12 @@ get_model_pars <- function(fit, format="list"){
 expand_REs <- function(RE_input){
   all_REs = c()
 
-  if(identical(RE_input, "all")){ # All REs
+
+
+  if(identical(RE_input, "All")){ # All REs
     all_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
   } else{
-    if("Y.all" %in% RE_input){ # All Y REs
+    if("Y.All" %in% RE_input){ # All Y REs
       all_REs = c(all_REs, "Y.Int", "Y.X", "Y.M")
     } else{ # Some Y REs
       if("Y.Int" %in% RE_input){
@@ -163,7 +165,7 @@ expand_REs <- function(RE_input){
       }
     }
 
-    if("M.all" %in% RE_input){ # All M REs
+    if("M.All" %in% RE_input){ # All M REs
       all_REs = c(all_REs, "M.Int", "M.X")
     } else{ # Some M REs
       if("M.Int" %in% RE_input){

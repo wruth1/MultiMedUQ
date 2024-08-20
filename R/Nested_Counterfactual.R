@@ -36,9 +36,9 @@ theta2gamma <- function(pred_vec, theta){
 #' @details
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{
@@ -101,9 +101,9 @@ M_vec_gamma <- function(x, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
 #'
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{
@@ -154,9 +154,9 @@ ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y
 #' @details
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{
@@ -355,9 +355,9 @@ grad_gamma_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y
 #' @details
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{
@@ -422,9 +422,9 @@ grad_psi_M <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("
 #'
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{
@@ -492,9 +492,9 @@ grad_ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int
 #' @details
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{
@@ -548,9 +548,9 @@ Jacob_ENC_models <- function(w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M
 #'
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{

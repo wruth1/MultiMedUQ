@@ -59,7 +59,8 @@ get_ME = function(ENC1, ENC2, scale = c("diff", "rat", "OR")){
 #' @param w Level of covariates, \eqn{W}.
 #' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
-#'
+#' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
+#' 
 #' @name Med_Effs
 #'
 #' @return The specified mediation effect of \eqn{X} on \eqn{Y} mediated by \eqn{M}.
@@ -69,11 +70,26 @@ get_ME = function(ENC1, ENC2, scale = c("diff", "rat", "OR")){
 #' Contents of \code{b_Y} are \code{(b_Y_0, b_Y_X, b_Y_M, B_Y_W)}. Contents of \code{b_M} are \code{(b_M_0, b_M_X, B_M_W)}.
 #'
 #' Contents of \code{theta_Y} are \code{(s_Y_0, cor_Y_0X, cor_Y_0M, s_Y_X, cor_Y_XM, s_Y_M)}. Contents of \code{theta_M} are \code{(s_M_0, cor_M_0X, s_M_X)}.
+#' 
+#' The following shorthands for random effects are available:
+#' \itemize{
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
+#' }
+#' Additionally, individual REs can be specified:
+#' \itemize{
+#' \item "Y.Int": Intercept for Y
+#' \item "Y.X": Slope for X in Y
+#' \item "Y.M": Slope for M in Y
+#' \item "M.Int": Intercept for M
+#' \item "M.X": Slope for M
+#' }
 #'
-total_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M){
+total_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
-  ENC1 = ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M)
-  ENC2 = ENC(0, 0, w, b_Y, theta_Y, b_M, theta_M)
+  ENC1 = ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M, which_REs)
+  ENC2 = ENC(0, 0, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
   return(get_ME(ENC1, ENC2, scale))
 }
@@ -84,10 +100,10 @@ total_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, t
 #' @param x_m_ref Reference value of \eqn{X} for determining the mediator level.
 #'
 #' @export
-direct_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_m_ref = 0){
+direct_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_m_ref = 0, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
-  ENC1 = ENC(1, x_m_ref, w, b_Y, theta_Y, b_M, theta_M)
-  ENC2 = ENC(0, x_m_ref, w, b_Y, theta_Y, b_M, theta_M)
+  ENC1 = ENC(1, x_m_ref, w, b_Y, theta_Y, b_M, theta_M, which_REs)
+  ENC2 = ENC(0, x_m_ref, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
   return(get_ME(ENC1, ENC2, scale))
 }
@@ -98,10 +114,10 @@ direct_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, 
 #' @param x_ref Reference value of \eqn{X}.
 #'
 #' @export
-indirect_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1){
+indirect_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
-  ENC1 = ENC(x_ref, 1, w, b_Y, theta_Y, b_M, theta_M)
-  ENC2 = ENC(x_ref, 0, w, b_Y, theta_Y, b_M, theta_M)
+  ENC1 = ENC(x_ref, 1, w, b_Y, theta_Y, b_M, theta_M, which_REs)
+  ENC2 = ENC(x_ref, 0, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
   return(get_ME(ENC1, ENC2, scale))
 }
@@ -115,16 +131,33 @@ indirect_effect <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M
 #' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
 #' @param x_ref,x_m_ref Reference values of \eqn{X}, respectively for \eqn{X} and for determining the value of \eqn{M}.
-#'
+#' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
+#' 
 #' @name all_MEs
+#' 
+#' @details 
+#' The following shorthands for random effects are available:
+#' \itemize{
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
+#' }
+#' Additionally, individual REs can be specified:
+#' \itemize{
+#' \item "Y.Int": Intercept for Y
+#' \item "Y.X": Slope for X in Y
+#' \item "Y.M": Slope for M in Y
+#' \item "M.Int": Intercept for M
+#' \item "M.X": Slope for M
+#' }
 #'
 #' @return All mediation effects (total, direct and indirect), on the specified scale(s). Order is total, direct, indirect. Within each effect, order is as specified in \code{scale}. Default is difference, ratio, odds-ratio.
 #' @export
 #'
-all_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1, x_m_ref = 0){
-  MEs = c(total_effect(scale, w, b_Y, theta_Y, b_M, theta_M),
-    direct_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_m_ref),
-    indirect_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref))
+all_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, theta_M, x_ref = 1, x_m_ref = 0, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  MEs = c(total_effect(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs),
+    direct_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_m_ref, which_REs),
+    indirect_effect(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref, which_REs))
 
   ME_names = as.vector(t(outer(c("total", "direct", "indirect"), scale, paste, sep = "_")))
   names(MEs) = ME_names
@@ -138,7 +171,7 @@ all_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, b_Y, theta_Y, b_M, t
 #' @rdname all_MEs
 #' @export
 #'
-all_MEs_models <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, x_ref = 1, x_m_ref = 0){
+all_MEs_models <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, x_ref = 1, x_m_ref = 0, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   info_Y = get_model_pars(fit_Y)
   info_M = get_model_pars(fit_M)
 
@@ -147,7 +180,7 @@ all_MEs_models <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, x_re
   b_M = info_M[["b"]]
   theta_M = info_M[["theta"]]
 
-  all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref, x_m_ref)
+  all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, x_ref, x_m_ref, which_REs)
 }
 
 
@@ -245,9 +278,9 @@ grad_IE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 #' @details
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{
@@ -319,9 +352,9 @@ all_grad_MEs_models <- function(scale, w, fit_Y, fit_M, which_REs = c("Y.Int", "
 #'
 #' The following shorthands for random effects are available:
 #' \itemize{
-#' \item "all": All REs
-#' \item "Y.all": All REs for Y
-#' \item "M.all": All REs for M
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
 #' }
 #' Additionally, individual REs can be specified:
 #' \itemize{

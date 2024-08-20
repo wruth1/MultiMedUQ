@@ -42,9 +42,9 @@ Contents of \code{theta_Y} are \code{(s_Y_0, cor_Y_0X, cor_Y_0M, s_Y_X, cor_Y_XM
 
 The following shorthands for random effects are available:
 \itemize{
-\item "all": All REs
-\item "Y.all": All REs for Y
-\item "M.all": All REs for M
+\item "All": All REs
+\item "Y.All": All REs for Y
+\item "M.All": All REs for M
 }
 Additionally, individual REs can be specified:
 \itemize{

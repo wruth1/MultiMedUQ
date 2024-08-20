@@ -18,9 +18,9 @@ Expand shorthand notation for random effects in models for Y and M
 \details{
 The following shorthands for random effects are available:
 \itemize{
-\item "all": All REs
-\item "Y.all": All REs for Y
-\item "M.all": All REs for M
+\item "All": All REs
+\item "Y.All": All REs for Y
+\item "M.All": All REs for M
 }
 Additionally, individual REs can be specified:
 \itemize{
