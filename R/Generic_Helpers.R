@@ -32,7 +32,7 @@ expit <- function(x){
 #'
 #' @param Sigma A covariance matrix
 #'
-#' @return theta, a vector of SDs and correlations. Order matches that of merDeriv.
+#' @return theta, a vector of SDs and correlations. Order matches that of merDeriv (i.e. SD, cor, SD for a 2x2).
 #' @export
 Sigma2theta <- function(Sigma){
   # Extract lower triangle of Sigma

@@ -10,6 +10,7 @@
 #' @return The SD of the random effects evaluated at the given vector of predictors.
 #' @export
 Sigma2gamma <- function(pred_vec, Sigma){
+
   gamma = sqrt(pred_vec %*% Sigma %*% pred_vec)
   return(as.numeric(gamma))
 }
@@ -49,7 +50,7 @@ theta2gamma <- function(pred_vec, theta){
 #' \item "M.X": Slope for M
 #' }
 #'
-Y_vec_gamma <- function(x, m, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+Y_vec_gamma <- function(x = NULL, m = NULL, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   RE_names = expand_REs(which_REs)
 
   Y_vec = c()
@@ -67,7 +68,7 @@ Y_vec_gamma <- function(x, m, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X
 }
 
 #' @rdname gamma_vecs
-M_vec_gamma <- function(x, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+M_vec_gamma <- function(x = NULL, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   RE_names = expand_REs(which_REs)
 
   M_vec = c()
@@ -135,10 +136,10 @@ ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y
   M_vec = M_vec_gamma(x_m, which_REs)
   gamma_M = theta2gamma(M_vec, theta_M)
 
-  psi_Y_1 = psi(mu_Y + b_Y[3], gamma_Y_1) # P(Y=1 | M=1)
-  psi_Y_0 = psi(mu_Y, gamma_Y_0)          # P(Y=1 | M=0)
-  psi_M_1 = psi(mu_M, gamma_M)            # P(M=1)
-  psi_M_0 = psi(-mu_M, gamma_M)           # P(M=0)
+  psi_Y_1 = psi(mu_Y + b_Y[3], gamma_Y_1) # P(Y=1 | M=1, X=x)
+  psi_Y_0 = psi(mu_Y, gamma_Y_0)          # P(Y=1 | M=0, X=x)
+  psi_M_1 = psi(mu_M, gamma_M)            # P(M=1 | X=x_m)
+  psi_M_0 = psi(-mu_M, gamma_M)           # P(M=0 | X=x_m)
 
   return(psi_Y_1 * psi_M_1 + psi_Y_0 * psi_M_0)
 }

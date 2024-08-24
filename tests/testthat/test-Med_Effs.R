@@ -185,8 +185,8 @@ a_x_hat = a_hat[2]
 A_2_hat = a_hat[3:4]
 
 b_0_hat = b_hat[1]
-b_m_hat = b_hat[2]
-b_x_hat = b_hat[3]
+b_m_hat = b_hat[3]
+b_x_hat = b_hat[2]
 B_3_hat = b_hat[4:5]
 
 
@@ -207,14 +207,15 @@ rho_Y = b_RE_cor
 
 ## Sigma functions
 sigma_M1 = sigma_fun(0, s_M_0, s_M_x, rho_M)
-sigma_M2 = sigma_fun(1, s_M_x, s_M_0, rho_M)
+sigma_M2 = sigma_fun(1, s_M_0, s_M_x, rho_M)
+
 
 sigma_Y1 = sigma_fun(0, s_Y_0, s_Y_x, rho_Y)
-sigma_Y2 = sigma_fun(1, s_Y_x, s_Y_0, rho_Y)
+sigma_Y2 = sigma_fun(1, s_Y_0, s_Y_x, rho_Y)
 
 ## Mediation effect
 ### See Helpers.R for the function Phi, which computes the mediation effect on odds-ratio scale
-med_hat = Phi(eta_hat, zeta_hat, a_x_hat, b_m_hat, b_x_hat, sigma_M2, sigma_Y2, sigma_M1, sigma_Y1)
+med_hat = Phi(eta_hat, zeta_hat, a_x_hat, b_m_hat, b_x_hat, sigma_Y2, sigma_M2, sigma_Y1, sigma_M1)
 
 
-all_MEs_models(scale = "OR", w, fit_Y, fit_M, which_REs = c("Y.int", "Y.X", "M.All"))
+all_MEs_models(scale = "OR", w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "M.All")) 

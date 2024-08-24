@@ -6,9 +6,13 @@
 \alias{M_vec_gamma}
 \title{Vectors used to compute gamma}
 \usage{
-Y_vec_gamma(x, m, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
+Y_vec_gamma(
+  x = NULL,
+  m = NULL,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 
-M_vec_gamma(x, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
+M_vec_gamma(x = NULL, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
 }
 \arguments{
 \item{x, m}{Values of X and M at which gamma is evaluated.}
