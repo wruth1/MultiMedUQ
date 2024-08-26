@@ -258,7 +258,9 @@ grad_b_Y_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
 # Note the additional argument, m, at the front.
 grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
-  Y_vec = Y_vec_gamma(x, m, which_REs)
+  RE_names = expand_REs(which_REs)
+
+  Y_vec = Y_vec_gamma(x, m, RE_names)
   divisor = 2 * theta2gamma(Y_vec, theta_Y)
 
   # Fixed effects for Y
@@ -266,20 +268,51 @@ grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c
 
 
   # Random effect parameters for Y
-  ## Check which random effects are included. Exclude any that aren't from future calculations
-  s_Y_0 = ifelse("Y.Int" %in% which_REs, theta_Y[1], 0)                     # SD of intercept
-  cor_Y_0X = ifelse(all(c("Y.Int", "Y.X") %in% which_REs), theta_Y[2], 0)   # Corr between intercept and X coeff
-  cor_Y_0M = ifelse(all(c("Y.Int", "Y.M") %in% which_REs), theta_Y[3], 0)   # Corr between intercept and M coeff
-  s_Y_X = ifelse("Y.X" %in% which_REs, theta_Y[4], 0)                       # SD of X coeff
-  cor_Y_XM = ifelse(all(c("Y.X", "Y.M") %in% which_REs), theta_Y[5], 0)     # Corr between X and M coeffs
-  s_Y_M = ifelse("Y.M" %in% which_REs, theta_Y[6], 0)                       # SD of M coeff
 
-  d_s_Y_0 = ifelse("Y.Int" %in% which_REs, 2 * s_Y_0 + 2* x * s_Y_X * cor_Y_0X + 2*m * s_Y_M * cor_Y_0M, NULL)
-  d_cor_Y_0X = ifelse(all(c("Y.Int", "Y.X") %in% which_REs), 2*x * s_Y_0 * s_Y_X, NULL)
-  d_cor_Y_0M = ifelse(all(c("Y.Int", "Y.M") %in% which_REs), 2*m * s_Y_0 * s_Y_M, NULL)
-  d_s_Y_X = ifelse("Y.X" %in% which_REs, 2 * x^2 * s_Y_X + 2 * x * s_Y_0 * cor_Y_0X + 2 * x * m * s_Y_M * cor_Y_XM, NULL)
-  d_cor_Y_XM = ifelse(all(c("Y.X", "Y.M") %in% which_REs), 2*x*m * s_Y_X * s_Y_M, NULL)
-  d_s_Y_M = ifelse("Y.M" %in% which_REs, 2 * m^2 * s_Y_M + 2 * m * s_Y_0 * cor_Y_0M + 2 * x * m * s_Y_X * cor_Y_XM, NULL)
+  ## Extract parameters. It will be convenient later if we set any not included to zero
+  ### Note: Logistically easier if we remove parameters from the list as we account for them
+  running_Y_pars = theta_Y
+
+  if("Y.Int" %in% RE_names){
+    s_Y_0 = running_Y_pars[1]
+    running_Y_pars = running_Y_pars[-1]
+  } else s_Y_0 = 0
+
+  if(all(c("Y.Int", "Y.X") %in% RE_names)){
+    cor_Y_X = running_Y_pars[1]
+    running_Y_pars = running_Y_pars[-1]
+  } else cor_Y_X = 0
+
+  if(all(c("Y.Int", "Y.M") %in% RE_names)){
+    cor_Y_M = running_Y_pars[1]
+    running_Y_pars = running_Y_pars[-1]
+  } else cor_Y_M = 0
+
+  if("Y.X" %in% RE_names){
+    s_Y_X = running_Y_pars[1]
+    running_Y_pars = running_Y_pars[-1]
+  } else s_Y_X = 0
+
+  if(all(c("Y.X", "Y.M") %in% RE_names)){
+    cor_Y_XM = running_Y_pars[1]
+    running_Y_pars = running_Y_pars[-1]
+  } else cor_Y_XM = 0
+
+  if("Y.M" %in% RE_names){
+    s_Y_M = running_Y_pars[1]
+    running_Y_pars = running_Y_pars[-1]
+  } else s_Y_M = 0
+
+
+  ## Actually compute partial derivatives
+  if ("Y.Int" %in% which_REs) d_s_Y_0 = 2 * s_Y_0 + 2* x * s_Y_X * cor_Y_0X + 2*m * s_Y_M * cor_Y_0M else d_s_Y_0 = NULL
+  if (all(c("Y.Int", "Y.X") %in% which_REs)) d_cor_Y_0X = 2*x * s_Y_0 * s_Y_X else d_cor_Y_0X = NULL
+  if (all(c("Y.Int", "Y.M") %in% which_REs)) d_cor_Y_0M = 2*m * s_Y_0 * s_Y_M else d_cor_Y_0M = NULL
+  if ("Y.X" %in% which_REs) d_s_Y_X = 2 * x^2 * s_Y_X + 2 * x * s_Y_0 * cor_Y_0X + 2 * x * m * s_Y_M * cor_Y_XM else d_s_Y_X = NULL
+  if (all(c("Y.X", "Y.M") %in% which_REs)) d_cor_Y_XM = 2*x*m * s_Y_X * s_Y_M else d_cor_Y_XM = NULL
+  if ("Y.M" %in% which_REs) d_s_Y_M = 2 * m^2 * s_Y_M + 2 * m * s_Y_0 * cor_Y_0M + 2 * x * m * s_Y_X * cor_Y_XM else d_s_Y_M = NULL
+
+  
 
   d_theta_Y = c(d_s_Y_0, d_cor_Y_0X, d_cor_Y_0M, d_s_Y_X, d_cor_Y_XM, d_s_Y_M)
 

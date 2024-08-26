@@ -108,11 +108,6 @@ test_that("Joint covariance of all mediation effects is positive definite", {
 
 
 
-
-#! START HERE!!!!!!!!
-
-# TODO: Figure out why there is a discrepancy between the current implementation and the one from the Exact_Asymptotics project
-
 #* To run the following:
 library(lme4)
 library(merDeriv)
