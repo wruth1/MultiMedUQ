@@ -127,7 +127,8 @@ x = 0
 x_m = 1
 
 b_Y = c(0,0,1,0,0)
-theta_Y = c(sqrt(0.5), 0.5, 0, 1, 0.5, sqrt(0.5))
+# theta_Y = c(sqrt(0.5), 0.5, 0, 1, 0.5, sqrt(0.5))
+theta_Y = c(sqrt(0.5), 0, 1)
 
 b_M = c(0,0,0,0)
 theta_M = c(1, 0.5, 2)
@@ -171,11 +172,11 @@ if(any(is.nan(gamma_hat))) stop("NaNs in gamma_hat")  # Skip rest of current ana
 Y_cov = vcov(Y_model, full=TRUE, ranpar="sd")
 
 
-### Translate to terminology of MultiMedUQ
-b_Y_alt = b_hat
-theta_Y_alt = gamma_hat
-b_M_alt = a_hat
-theta_M_alt = theta_hat
+# ### Translate to terminology of MultiMedUQ
+# b_Y = b_hat
+# theta_Y = gamma_hat
+# b_M = a_hat
+# theta_M = theta_hat
 
 
 ### Estimate mediation effect
@@ -218,4 +219,6 @@ sigma_Y2 = sigma_fun(1, s_Y_0, s_Y_x, rho_Y)
 med_hat = Phi(eta_hat, zeta_hat, a_x_hat, b_m_hat, b_x_hat, sigma_Y2, sigma_M2, sigma_Y1, sigma_M1)
 
 
-all_MEs_models(scale = "OR", w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "M.All")) 
+new_med_hats = all_MEs_models(scale = "OR", w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "M.All")) 
+
+abs(med_hat - new_med_hats[1]) / abs(med_hat)

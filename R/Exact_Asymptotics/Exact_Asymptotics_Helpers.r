@@ -341,6 +341,8 @@ d2_phi = function(mu, sigma){
   ENC(1, 0, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
 
+
+
 # Total mediation effect (on odds-ratio scale)
 ## In my notation: Phi(eta, zeta, a_x, b_m, b_x, sigma_U(x+1), sigma_V(x+1), sigma_U(x), sigma_V(x))
 ## Note: eta, a and U come from the M-model, while zeta, b and V come from the Y-model
@@ -350,9 +352,20 @@ d2_phi = function(mu, sigma){
 Phi = function(eta, zeta, a1, b1, b2, s1, s2, s3, s4){
   
 
+p_Y1_X1 = phi(zeta + b1 + b2, s1) * phi(eta + a1, s2) + phi(zeta + b2, s1) * (1 - phi(eta + a1, s2))
+p_Y0_X1 = 1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s1))
+p_Y1_X0 = (phi(zeta + b1, s3) * phi(eta, s4) + phi(zeta, s3) * (1 - phi(eta, s4)))
+p_Y0_X0 = 1 - phi(zeta, s3) + phi(eta, s4) * (phi(zeta, s3) - phi(zeta + b1, s3))
+
+num = p_Y1_X1 / p_Y0_X1
+denom = p_Y1_X0 / p_Y0_X0
+return(num/denom)
+}
+
+# [1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s2))] * [(phi(zeta + b1, s3) * phi(eta, s3) + phi(zeta, s3) * (1 - phi(eta, s4)))]
   
   
-  (phi(zeta + b1 + b2, s1) * phi(eta + a1, s2) + phi(zeta + b2, s1) * (1 - phi(eta + a1, s2))) * (1 - phi(zeta, s3) + phi(eta, s4) * (phi(zeta, s3) - phi(zeta + b1, s3))) / (1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s2))) / (phi(zeta + b1, s3) * phi(eta, s3) + phi(zeta, s3) * (1 - phi(eta, s4)))
+#   (phi(zeta + b1 + b2, s1) * phi(eta + a1, s2) + phi(zeta + b2, s1) * (1 - phi(eta + a1, s2))) * (1 - phi(zeta, s3) + phi(eta, s4) * (phi(zeta, s3) - phi(zeta + b1, s3))) / (1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s2))) / (phi(zeta + b1, s3) * phi(eta, s3) + phi(zeta, s3) * (1 - phi(eta, s4)))
 
 }
 
@@ -369,6 +382,19 @@ Phi = function(eta, zeta, a1, b1, b2, s1, s2, s3, s4){
 
 ## Most of the formula comes directly from Maple. However, there is one piece of Maple syntax that I wasn't able to fully accommodate: expressing some phi derivatives as, e.g., diff(phi(a, s4), a). Specifically, Maple uses different syntax for the a-derivative of phi(a, g(b)) vs the a-derivative of phi(f(a), g(b)). I could fix the latter within Maple, but couldn't find a good solution for the former.
 ## To solve this, I did some find/replace in VSCode using regular expressions with groups. One such pattern was: diff\(phi\(a, (\w+)\), a\) -> d1_phi(a, $1), which creates a "group" consisting of whatever is matched by the \w+, and inserts this group into the replacement string as indicated by the $1.
+
+
+
+
+
+
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#! Old formula for Phi was wrong (a couple typos). It's been fixed, but the partial derivatives have not been updated.
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
 
 
 ## d Phi / d a
