@@ -279,14 +279,14 @@ grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c
   } else s_Y_0 = 0
 
   if(all(c("Y.Int", "Y.X") %in% RE_names)){
-    cor_Y_X = running_Y_pars[1]
+    cor_Y_0X = running_Y_pars[1]
     running_Y_pars = running_Y_pars[-1]
-  } else cor_Y_X = 0
+  } else cor_Y_0X = 0
 
   if(all(c("Y.Int", "Y.M") %in% RE_names)){
-    cor_Y_M = running_Y_pars[1]
+    cor_Y_0M = running_Y_pars[1]
     running_Y_pars = running_Y_pars[-1]
-  } else cor_Y_M = 0
+  } else cor_Y_0M = 0
 
   if("Y.X" %in% RE_names){
     s_Y_X = running_Y_pars[1]
@@ -335,7 +335,12 @@ grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c
 
 }
 
+
+#! Start here. Update structure to match that of grad_gamma_Y
 grad_gamma_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+
+
+  RE_names = expand_REs(which_REs)
 
   M_vec = M_vec_gamma(x_m, which_REs)
   divisor = 2 * theta2gamma(M_vec, theta_M)
@@ -350,13 +355,33 @@ grad_gamma_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y
   d_b_M = rep(0, times = length(b_M))
 
   # Random effect parameters for M
-  s_M_0 = ifelse("M.Int" %in% which_REs, theta_M[1], 0)
-  cor_M_0X = ifelse(all(c("M.Int", "M.X") %in% which_REs), theta_M[2], 0)
-  s_M_X = ifelse("M.X" %in% which_REs, theta_M[3], 0)
 
-  d_s_M_0 = ifelse("M.Int" %in% which_REs, 2 * s_M_0 + 2*x_m * s_M_X * cor_M_0X, NULL)
-  d_cor_M_0X = ifelse(all(c("M.Int", "M.X") %in% which_REs), 2*x_m * s_M_0 * s_M_X, NULL)
-  d_s_M_X = ifelse("M.X" %in% which_REs, 2 * x_m^2 * s_M_X + 2 * x_m * s_M_0 * cor_M_0X, NULL)
+  ## Extract parameters. It will be convenient later if we set any not included to zero
+  ### Note: Logistically easier if we remove parameters from the list as we account for them
+  running_M_pars = theta_M
+
+  if("M.Int" %in% RE_names){
+    s_M_0 = running_M_pars[1]
+    running_M_pars = running_M_pars[-1]
+  } else s_M_0 = 0
+
+  if(all(c("M.Int", "M.X") %in% RE_names)){
+    cor_M_0X = running_M_pars[1]
+    running_M_pars = running_M_pars[-1]
+  } else cor_M_0X = 0
+
+  if("M.X" %in% RE_names){
+    s_M_X = running_M_pars[1]
+    running_M_pars = running_M_pars[-1]
+  } else s_M_X = 0
+
+
+  ## Actually compute partial derivatives
+  if("M.Int" %in% RE_names) d_s_M_0 = 2 * s_M_0 + 2*x_m * s_M_X * cor_M_0X else d_s_M_0 = NULL
+  if(all(c("M.Int", "M.X") %in% RE_names)) d_cor_M_0X = 2*x_m * s_M_0 * s_M_X else d_cor_M_0X = NULL
+  if("M.X" %in% RE_names) d_s_M_X = 2 * x_m^2 * s_M_X + 2 * x_m * s_M_0 * cor_M_0X else d_s_M_X = NULL
+
+
 
   d_theta_M = c(d_s_M_0, d_cor_M_0X, d_s_M_X)
 
