@@ -590,7 +590,7 @@ Jacob_ENC_models <- function(w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M
   b_M = info_M[["b"]]
   theta_M = info_M[["theta"]]
 
-  return(Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M))
+  return(Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M, which_REs))
 }
 
 
