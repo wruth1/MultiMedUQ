@@ -64,7 +64,7 @@ for(j in seq_along(all_Ks)){
         print(paste0("Rep ", i, " of ", num_reps, ", K number ", j, " of ", length(all_Ks)))
 
         data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F)   #!!!!!!!!! Does this get the REs right?
-                                                                                         #! No!!! Start here!!!
+                                                                                         #! No!!! #! Start here!!!
                                                                                          #! Needs to pass which_REs
 
         w = c(0,0)
@@ -132,7 +132,9 @@ for(j in seq_along(all_Ks)){
 
 
 
-# Compute summary statistics of ratios of diagonal elements
+# Compute summary statistics of ratios of diagonal elements across pairs of K-levels
+
+## Empirical variances
 info_rats = data.frame()
 for(i in (1:(length(all_Ks)-1))){
     for(j in (i+1):length(all_Ks)){
@@ -146,11 +148,87 @@ for(i in (1:(length(all_Ks)-1))){
         mean_rats = mean(this_rats)
         SD_rats = sd(this_rats)
 
-        this_info = c(K1, K2, mean_rats, SD_rats, K2/K1)
+        this_info = c(K1, K2, mean_rats, SD_rats, K2/K1, SD_rats / mean_rats)
 
         info_rats = rbind(info_rats, this_info)
     }
 }
-colnames(info_rats) = c("K1", "K2", "Mean", "SD", "Expected")
+colnames(info_rats) = c("K1", "K2", "Mean", "SD", "Expected", "COV")
 
 info_rats
+
+## Mean estimated variances
+info_rats_mean = data.frame()
+for(i in (1:(length(all_Ks)-1))){
+    for(j in (i+1):length(all_Ks)){
+        K1 = all_Ks[i]
+        K2 = all_Ks[j]
+        
+        this_rat_mat = list_mean_covs[[i]] / list_mean_covs[[j]]
+
+        this_rats = diag(this_rat_mat)
+
+        mean_rats = mean(this_rats)
+        SD_rats = sd(this_rats)
+
+        this_info = c(K1, K2, mean_rats, SD_rats, K2/K1, SD_rats / mean_rats)
+
+        info_rats_mean = rbind(info_rats_mean, this_info)
+    }
+}
+colnames(info_rats_mean) = c("K1", "K2", "Mean", "SD", "Expected", "COV")
+
+info_rats_mean
+
+
+
+info_rel_diffs = data.frame()
+for(i in seq_along(all_Ks)){
+
+    # Compare empirical and estimated covariances
+    this_emp_mat = list_emp_covs[[i]]
+    this_mean_mat = list_mean_covs[[i]]
+
+    this_diff_mat = this_emp_mat - this_mean_mat
+    this_rel_diff_mat = this_diff_mat / this_emp_mat
+
+    this_diffs = diag(this_diff_mat)
+    this_rel_diffs = diag(this_rel_diff_mat)
+
+    mean_diffs = mean(this_diffs)
+    SD_diffs = sd(this_diffs)
+
+    mean_rel_diffs = mean(this_rel_diffs)
+    SD_rel_diffs = sd(this_rel_diffs)
+
+    this_info = c(all_Ks[i], mean_diffs, SD_diffs, mean_rel_diffs, SD_rel_diffs)
+
+    info_rel_diffs = rbind(info_rel_diffs, this_info)
+}
+colnames(info_rel_diffs) = c("K", "Mean-Diff", "SD-Diff", "Mean-Rel", "SD-Rel")
+
+info_rel_diffs
+
+
+
+data_covs = data.frame()
+for(i in seq_along(all_Ks)){
+
+    # Extract empirical and estimated variances
+    this_emp_mat = list_emp_covs[[i]]
+    this_mean_mat = list_mean_covs[[i]]
+
+    this_emp_vars = diag(this_emp_mat)
+    # this_mean_vars = diag(this_mean_mat)
+    this_mean_vars = all_Ks[i] * diag(this_mean_mat)
+
+    this_diff = abs(this_emp_vars - this_mean_vars)
+    this_rel_diff = this_diff / this_emp_vars
+
+    this_info = cbind(all_Ks[i], this_emp_vars, this_mean_vars, this_diff, this_rel_diff)
+
+    data_covs = rbind(data_covs, this_info)
+}
+colnames(data_covs) = c("K", "Emp", "Mean", "Diff", "Rel-Diff")
+
+data_covs
