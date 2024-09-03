@@ -9,7 +9,6 @@ source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 devtools::load_all()
 
 
-cond_num_thresh = 300   # Threshold for removal of sigma hat due to large condition number
 
 
 
@@ -103,8 +102,6 @@ for(j in seq_along(all_Ks)){
         all_par_hats = rbind(all_par_hats, par_hat)
         all_par_cov_hats[[i]] = par_cov_hat
 
-        if(kappa(par_cov_hat) > cond_num_thresh) some_bad_data[[i]] = data
-
 
         }, error = function(e){
             all_par_cov_hats[[i]] = NULL
@@ -153,10 +150,6 @@ num_pars = ncol(list_par_hats[[1]])
 list_emp_covs = list()
 list_mean_covs = list()
 
-list_par_cov_hats_clean = list()
-
-#* Occasionally, the estimated covariance has an astronomical condition number. I suspect that this is due to poor convergence of the glmer function, but I haven't checked this.
-#* I'm going to drop any covariance estimates that are too ill-conditioned (i.e. kappa > 300).
 
 
 for(j in seq_along(all_Ks)){
@@ -170,24 +163,16 @@ for(j in seq_along(all_Ks)){
     this_sum_covs = matrix(0, num_pars, num_pars)
     this_num_covs = 0
 
-    for(i in 1:num_reps){
-        print(i)
-        this_cov_hat = list_par_cov_hats[[j]][[i]]
+    some_cov_hats = list_par_cov_hats[[j]]
+    some_cov_hats_clean = some_cov_hats[lengths(some_cov_hats) > 0]
 
-        if(kappa(this_cov_hat, exact = T) <= cond_num_thresh){
-            this_sum_covs = this_sum_covs + list_par_cov_hats[[j]][[i]]
-            this_num_covs = this_num_covs + 1
+    this_mean_cov = Reduce("+", some_cov_hats_clean) / length(some_cov_hats_clean)
 
-            this_par_cov_hats_clean[[this_num_covs]] = this_cov_hat
-        }
-    }
-    list_mean_covs[[j]] = this_sum_covs / num_reps
+    list_mean_covs[[j]] = this_mean_cov
 
 
-    list_par_cov_hats_clean[[j]] = this_par_cov_hats_clean
 }
 
-sapply(list_par_cov_hats_clean, length)
 
 
 # Compute summary statistics of ratios of diagonal elements across pairs of K-levels
@@ -238,87 +223,6 @@ colnames(info_rats_mean) = c("K1", "K2", "Mean", "SD", "Expected", "COV")
 
 info_rats_mean
 
-
-#* Explore problematic covariances
-##* Problem is with estimated covs for K = 100
-
-q50 = list_mean_covs[[1]]
-q100 = list_mean_covs[[2]]
-q200 = list_mean_covs[[3]]
-q400 = list_mean_covs[[4]]
-
-eigen(q50, only.values = T)$values
-eigen(q100, only.values = T)$values
-eigen(q200, only.values = T)$values
-eigen(q400, only.values = T)$values
-
-kappa(q50)
-kappa(q100)
-kappa(q200)
-kappa(q400)
-
-
-
-bad_covs = list_par_cov_hats[[2]]
-bad_cond_nums = sapply(bad_covs, kappa, exact=T)
-
-sapply(list_par_cov_hats, function(some_covs) sum(sapply(some_covs, is.null)))
-
-list_cond_nums = lapply(list_par_cov_hats, function(some_covs){
-    sapply(some_covs, function(this_cov){
-        if(!is.null(this_cov)){
-            return(kappa(this_cov, exact = T))
-        } else{
-            return(-1)
-        }
-    })
-} )
-sapply(seq_along(list_cond_nums), function(i){
-    some_cond_nums = list_cond_nums[[i]]
-    return(c(all_Ks[i],mean(some_cond_nums), sd(some_cond_nums), max(some_cond_nums)))
-})
-
-
-
-### Investigate dataset leading to largest condition number
-j_bad = which.max(list_cond_nums[[2]])
-data_bad = list_bad_data[[2]][[j_bad]]
-
-(fit_Y = lme4::glmer(Y ~ X + M + C1 + C2 + (X | group), data = data_bad, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6), tolPwrss = 1e-8)))
-(fit_M = lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data_bad, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e6), tolPwrss = 1e-8)))
-
-bad_par_cov_hat = all_pars_cov_mat(fit_Y, fit_M)
-kappa(bad_par_cov_hat)
-
-
-
-par(mfrow = c(2,2))
-for(i in seq_along(list_cond_nums)){
-    hist(list_cond_nums[[i]], main = paste0("K = ", all_Ks[i]), xlab = "Condition number")
-}
-par(mfrow = c(1,1))
-
-
-## Plot condition number vs difference between estimated and empirical covariance
-### Note: There is only one empirical covariance for each K. We're exploring deviations of estimates around that fixed reference
-### Note: Matrix difference can be quantified in several ways. One is mean absolute difference along the diagonal. Another is norm of the difference.
-
-par(mfrow = c(2,2))
-for(i in seq_along(all_Ks)){
-        
-    this_emp_cov = list_emp_covs[[i]]
-    some_cov_hats = list_par_cov_hats[[i]]
-    some_diff_mats = lapply(some_cov_hats, function(X) X - this_emp_cov)
-
-    some_diag_diffs = sapply(some_diff_mats, function(X) mean(abs(diag(X))))
-    some_norm_diffs = sapply(some_diff_mats, function(X) norm(X, type = "2"))
-
-    cor(some_diag_diffs, some_norm_diffs)
-    cor(list_cond_nums[[i]], some_norm_diffs)
-
-    plot(list_cond_nums[[i]], some_norm_diffs, xlab = "Condition number", ylab = "2-Norm Difference", main = paste0("K = ", all_Ks[i], ", Corr = ", round(cor(list_cond_nums[[i]], some_norm_diffs), 2)))
-}
-par(mfrow = c(1,1))
 
 
 # Summary statistics of absolute and relative errors in estimating variances (i.e. diagonal elements of the cov mat)
