@@ -12,7 +12,8 @@ make_validation_data(
   b_M,
   theta_M,
   output_list = FALSE,
-  return_REs = FALSE
+  return_REs = FALSE,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 }
 \arguments{
@@ -27,6 +28,8 @@ make_validation_data(
 \item{output_list}{Should output be formatted as a list with one component per group (of size n-by-5) or a single data.frame of size (Kn)-by-6 with a column labelled `group`?}
 
 \item{return_REs}{Should random effects also be returned? If TRUE, output is a list containing two components: `data` and `REs`.}
+
+\item{which_REs}{Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.}
 }
 \value{
 A simulated dataset, optionally inside a list which also contains random effects.

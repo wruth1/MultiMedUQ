@@ -600,7 +600,12 @@ Jacob_ENC_models <- function(w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M
 #'
 #' @param w Level of covariates, \eqn{W}.
 #' @param fit_Y,fit_M Fitted models for Y and M.
+#' @param Sigma Covariance matrix of the model parameters.
+#' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
+#' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
 #' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
+#' 
+#' @name ENC_covariances
 #'
 #' @details
 #' Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
@@ -630,3 +635,19 @@ all_covs_ENC <- function(w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "
 
 # Run the first few lines of "test-Reg_Par_Covs.R" to get the arguments for the following function.
 # Q = all_covs_ENC(w, fit_Y, fit_M)
+
+
+#' @rdname ENC_covariances
+#' @export 
+all_covs_ENC_Sigma <- function(w, Sigma, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  Jacob = Jacob_ENC_models(w, fit_Y, fit_M, which_REs)
+  return(Jacob %*% Sigma %*% t(Jacob))
+}
+
+#' @rdname ENC_covariances
+#' @export 
+all_covs_ENC_pars <- function(w, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  Jacob = Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M, which_REs)
+  return(Jacob %*% Sigma %*% t(Jacob))
+}
+

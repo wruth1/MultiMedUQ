@@ -352,14 +352,14 @@ d2_phi = function(mu, sigma){
 Phi = function(eta, zeta, a1, b1, b2, s1, s2, s3, s4){
   
 
-p_Y1_X1 = phi(zeta + b1 + b2, s1) * phi(eta + a1, s2) + phi(zeta + b2, s1) * (1 - phi(eta + a1, s2))
-p_Y0_X1 = 1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s1))
-p_Y1_X0 = (phi(zeta + b1, s3) * phi(eta, s4) + phi(zeta, s3) * (1 - phi(eta, s4)))
-p_Y0_X0 = 1 - phi(zeta, s3) + phi(eta, s4) * (phi(zeta, s3) - phi(zeta + b1, s3))
+  p_Y1_X1 = phi(zeta + b1 + b2, s1) * phi(eta + a1, s2) + phi(zeta + b2, s1) * (1 - phi(eta + a1, s2))
+  p_Y0_X1 = 1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s1))
+  p_Y1_X0 = (phi(zeta + b1, s3) * phi(eta, s4) + phi(zeta, s3) * (1 - phi(eta, s4)))
+  p_Y0_X0 = 1 - phi(zeta, s3) + phi(eta, s4) * (phi(zeta, s3) - phi(zeta + b1, s3))
 
-num = p_Y1_X1 / p_Y0_X1
-denom = p_Y1_X0 / p_Y0_X0
-return(num/denom)
+  num = p_Y1_X1 / p_Y0_X1
+  denom = p_Y1_X0 / p_Y0_X0
+  return(num/denom)
 }
 
 # [1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s2))] * [(phi(zeta + b1, s3) * phi(eta, s3) + phi(zeta, s3) * (1 - phi(eta, s4)))]
@@ -367,7 +367,7 @@ return(num/denom)
   
 #   (phi(zeta + b1 + b2, s1) * phi(eta + a1, s2) + phi(zeta + b2, s1) * (1 - phi(eta + a1, s2))) * (1 - phi(zeta, s3) + phi(eta, s4) * (phi(zeta, s3) - phi(zeta + b1, s3))) / (1 - phi(zeta + b2, s1) + phi(eta + a1, s2) * (phi(zeta + b2, s1) - phi(zeta + b1 + b2, s2))) / (phi(zeta + b1, s3) * phi(eta, s3) + phi(zeta, s3) * (1 - phi(eta, s4)))
 
-}
+
 
 # args2
 #
