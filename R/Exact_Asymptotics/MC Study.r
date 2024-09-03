@@ -46,7 +46,6 @@ theta_M = c(1, 0.5, 2)
 list_par_hats = list()
 list_par_cov_hats = list()
 
-list_bad_data = list()
 
 all_runtimes = c()
 
@@ -62,7 +61,6 @@ for(j in seq_along(all_Ks)){
     all_par_hats = c()
     all_par_cov_hats = list()
 
-    some_bad_data = list()
 
 
     # all_med_hats = c()
@@ -122,12 +120,13 @@ for(j in seq_along(all_Ks)){
     }
 
     list_par_hats[[j]] = all_par_hats
-    list_par_cov_hats[[j]] = all_par_cov_hats
-    list_bad_data[[j]] = some_bad_data
+    list_par_cov_hats[[j]] = all_par_cov_hats[lengths(all_par_cov_hats) > 0] # Remove the NULL entries
 
     this_runtime = toc()
     all_runtimes = c(all_runtimes, this_runtime$toc - this_runtime$tic)
 }
+
+
 
 all_runtimes / all_Ks
 
@@ -150,8 +149,16 @@ num_pars = ncol(list_par_hats[[1]])
 list_emp_covs = list()
 list_mean_covs = list()
 
+## Remove any runs with NA parameter estimates
+for(j in seq_along(all_Ks)){
+    # Covariance matrices first to preserve information in parameter estimates
+    list_par_cov_hats[[j]] = list_par_cov_hats[[j]][complete.cases(list_par_hats[[j]])]
+    list_par_hats[[j]] = na.omit(list_par_hats[[j]])
+}
 
 
+
+# Extract empirical covariance and mean estimated covariance.
 for(j in seq_along(all_Ks)){
 
     num_pars = ncol(list_par_hats[[1]])
@@ -164,7 +171,6 @@ for(j in seq_along(all_Ks)){
     this_num_covs = 0
 
     some_cov_hats = list_par_cov_hats[[j]]
-    some_cov_hats_clean = some_cov_hats[lengths(some_cov_hats) > 0]
 
     this_mean_cov = Reduce("+", some_cov_hats_clean) / length(some_cov_hats_clean)
 
@@ -258,6 +264,8 @@ info_rel_diffs
 
 
 
+
+# Absolute and relative matrix norms of empirical vs estimated covariances
 
 info_rel_norms = data.frame()
 for(i in seq_along(all_Ks)){
