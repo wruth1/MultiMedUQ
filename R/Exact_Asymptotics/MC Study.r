@@ -53,6 +53,9 @@ set.seed(1)
 
 # tic()
 
+
+
+
 for(j in seq_along(all_Ks)){
     tic()
 
@@ -119,8 +122,8 @@ for(j in seq_along(all_Ks)){
 
     }
 
-    list_par_hats[[j]] = all_par_hats
-    list_par_cov_hats[[j]] = all_par_cov_hats[lengths(all_par_cov_hats) > 0] # Remove the NULL entries
+    list_par_hats[[j]] = all_par_hats   # Runs with errors were never added to all_par_hats
+    list_par_cov_hats[[j]] = all_par_cov_hats[lengths(all_par_cov_hats) > 0] # Remove the NULL entries from all_par_cov_hats
 
     this_runtime = toc()
     all_runtimes = c(all_runtimes, this_runtime$toc - this_runtime$tic)
@@ -146,8 +149,6 @@ load("Par_Hat_MC-Large_K.RData", verbose = TRUE)
 
 num_pars = ncol(list_par_hats[[1]])
 
-list_emp_covs = list()
-list_mean_covs = list()
 
 ## Remove any runs with NA parameter estimates
 for(j in seq_along(all_Ks)){
@@ -156,23 +157,20 @@ for(j in seq_along(all_Ks)){
     list_par_hats[[j]] = na.omit(list_par_hats[[j]])
 }
 
+lengths(list_par_cov_hats)
+sapply(list_par_hats, nrow)
 
+
+list_emp_covs = list()
+list_mean_covs = list()
 
 # Extract empirical covariance and mean estimated covariance.
 for(j in seq_along(all_Ks)){
 
-    num_pars = ncol(list_par_hats[[1]])
-
-    this_par_cov_hats_clean = list()
-
     list_emp_covs[[j]] = cov(list_par_hats[[j]])
 
-    this_sum_covs = matrix(0, num_pars, num_pars)
-    this_num_covs = 0
-
     some_cov_hats = list_par_cov_hats[[j]]
-
-    this_mean_cov = Reduce("+", some_cov_hats_clean) / length(some_cov_hats_clean)
+    this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
 
     list_mean_covs[[j]] = this_mean_cov
 
@@ -286,6 +284,8 @@ colnames(info_rel_norms) = c("K", "Norm-Diff", "Norm-Rel")
 info_rel_norms
 
 
+
+# Absolute and relative difference for each parameter at each level of K
 data_covs = data.frame()
 for(i in seq_along(all_Ks)){
 
@@ -429,4 +429,26 @@ cov_decomp = function(Sigma){
 }
 
 
+list_emp_decomps = lapply(list_emp_covs, cov_decomp)
+list_mean_decomps = lapply(list_mean_covs, cov_decomp)
 
+data_decomp = data.frame()
+
+for(i in seq_along(all_Ks)){
+
+    this_emp_decomp = list_emp_decomps[[i]]
+    this_mean_decomp = list_mean_decomps[[i]]
+
+    for(j in seq_along(this_emp_decomp)){
+
+        abs_diff = norm(this_emp_decomp[[j]] - this_mean_decomp[[j]])
+        rel_diff = abs_diff / norm(this_emp_decomp[[j]])
+
+
+        this_info = c(all_Ks[i], names(this_emp_decomp)[j], abs_diff, rel_diff)
+        data_decomp = rbind(data_decomp, this_info)
+    }
+}
+colnames(data_decomp) = c("K", "Component", "Abs-Diff", "Rel-Diff")
+
+data_decomp
