@@ -5,6 +5,7 @@
 library(lme4)
 library(merDeriv)
 library(tictoc)
+library(pbapply)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 devtools::load_all()
 
@@ -47,35 +48,26 @@ list_par_hats = list()
 list_par_cov_hats = list()
 
 
-all_runtimes = c()
 
 set.seed(1)
 
-# tic()
 
 
 
 
 for(j in seq_along(all_Ks)){
-    tic()
 
     K = all_Ks[j]
-
-    all_par_hats = c()
-    all_par_cov_hats = list()
 
 
 
     # all_med_hats = c()
     # all_cov_hats = list()
+    
+    
+    print(paste0("K = ", K, "; number ", j, " of ", length(all_Ks)))
 
-
-
-    for(i in 1:num_reps){
-
-        # print(paste0("Rep ", i, " of ", num_reps))
-        print(paste0("Rep ", i, " of ", num_reps, ", K number ", j, " of ", length(all_Ks)))
-
+    some_info_par = pblapply(1:num_reps, function(i) {
         data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
 
         w = c(0,0)
@@ -86,8 +78,8 @@ for(j in seq_along(all_Ks)){
             
 
         ## Note: glmer wasn't converging with default values. I chose one of the default optimizers, and increased the number of function evaluations. Both bobyqa and the other default use this limiter instead of the number of iterations.
-        (fit_Y = lme4::glmer(Y ~ X + M + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))))
-        (fit_M = lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))))
+        (fit_Y = suppressMessages(lme4::glmer(Y ~ X + M + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
+        (fit_M = suppressMessages(lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
 
         # Explore covariances
 
@@ -100,46 +92,27 @@ for(j in seq_along(all_Ks)){
         par_cov_hat = all_pars_cov_mat(fit_Y, fit_M)
 
 
-        all_par_hats = rbind(all_par_hats, par_hat)
-        all_par_cov_hats[[i]] = par_cov_hat
-
-
+        this_output = list(par_hat = par_hat, par_cov_hat = par_cov_hat)
         }, error = function(e){
-            all_par_cov_hats[[i]] = NULL
+            this_output = NULL
         })
 
+        return(this_output)
+    })
 
 
-        ## Mediation effects
-        # med_hats = all_MEs_models(scale = "OR", w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "M.All")) 
-
-        # cov_hat = all_cov_MEs(scale = "OR", w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "M.All"))
+    some_par_hats = t(sapply(some_info_par, function(x) x$par_hat))
+    some_par_cov_hats = lapply(some_info_par, function(x) x$par_cov_hat)
 
 
-
-        # all_med_hats = rbind(all_med_hats, med_hats)
-        # all_cov_hats[[i]] = cov_hat
-
-    }
-
-    list_par_hats[[j]] = all_par_hats   # Runs with errors were never added to all_par_hats
-    list_par_cov_hats[[j]] = all_par_cov_hats[lengths(all_par_cov_hats) > 0] # Remove the NULL entries from all_par_cov_hats
-
-    this_runtime = toc()
-    all_runtimes = c(all_runtimes, this_runtime$toc - this_runtime$tic)
+    list_par_hats[[j]] = some_par_hats
+    list_par_cov_hats[[j]] = some_par_cov_hats
 }
 
 
 
-all_runtimes / all_Ks
 
-# runtimes_5 = all_runtimes
-# runtimes_10 = all_runtimes
-# runtimes_10 / runtimes_5
 
-runtimes_5[2] / runtimes_5[1]
-runtimes_10[2] / runtimes_10[1]
-# toc()
 
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC.RData")
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K.RData")
