@@ -6,6 +6,9 @@ library(lme4)
 library(merDeriv)
 library(tictoc)
 library(pbapply)
+library(parallel)
+library(magrittr)
+library(dplyr)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 devtools::load_all()
 
@@ -19,14 +22,14 @@ devtools::load_all()
 # N = 20
 N = 200
 
-# all_Ks = c(50, 100, 200, 400, 800)
+all_Ks = c(50, 100, 200, 400, 800)
 # all_Ks = c(50, 100, 200)
-all_Ks = c(50, 100)
+# all_Ks = c(50, 100)
 # K = 50
 
 # num_reps = 50
-num_reps = 10
-# num_reps = 5
+num_reps = 200
+# num_reps = 20
 
 
 which_REs = c("Y.Int", "Y.X", "M.All")
@@ -42,6 +45,8 @@ theta_Y = c(sqrt(0.5), 0, 1)
 b_M = c(0,1,0,0) * 2
 theta_M = c(1, 0.5, 2)
 
+w = c(0,0)
+
 
 
 list_par_hats = list()
@@ -52,12 +57,30 @@ list_par_cov_hats = list()
 set.seed(1)
 
 
+# Setup cluster
+# cl = makeCluster(detectCores() - 2)
+cl = makeCluster(10)
+# cl = makeCluster(5)
+clusterExport(cl, c("N", "b_Y", "theta_Y", "b_M", "theta_M", "which_REs"))
+clusterEvalQ(cl, {
+    library(lme4)
+    library(merDeriv)
+    library(tictoc)
+    library(pbapply)
+    # library(parallel)
+    source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
+    devtools::load_all()
+})
 
 
 
+
+
+# Run MC study
 for(j in seq_along(all_Ks)){
 
     K = all_Ks[j]
+    if(nrow(showConnections()) > 0) clusterExport(cl, "K") # Only run if there is an active cluster
 
 
 
@@ -98,7 +121,8 @@ for(j in seq_along(all_Ks)){
         })
 
         return(this_output)
-    })
+    }, cl=cl)
+    # })
 
 
     some_par_hats = t(sapply(some_info_par, function(x) x$par_hat))
@@ -109,6 +133,26 @@ for(j in seq_along(all_Ks)){
     list_par_cov_hats[[j]] = some_par_cov_hats
 }
 
+stopCluster(cl)
+
+
+# Explore timings
+# # times_15 = c(8,14,34,50,107) # N = 20
+# times_15 = c(9,15,29,56,109) # N = 200
+# # times_10 = c(4, 12, 23, 38, 88) # N = 20
+# times_10 = c(6,12,21,33,95) # N = 200
+# times_5 = c(2, 4, 12, 21, 31)
+
+# times_15 / times_5
+# times_10 / times_5
+# times_15 / times_10
+
+# per_iteration = c(sum(times_15)/15, sum(times_10)/10, sum(times_5)/5)
+# per_iteration = c(sum(times_15)/15, sum(times_10)/10)
+
+# sum(times_15) / sum(times_5)
+# sum(times_10) / sum(times_5)
+# sum(times_15) / sum(times_10)
 
 
 
@@ -252,9 +296,12 @@ for(i in seq_along(all_Ks)){
 
     info_rel_norms = rbind(info_rel_norms, this_info)
 }
-colnames(info_rel_norms) = c("K", "Norm-Diff", "Norm-Rel")
+colnames(info_rel_norms) = c("K", "Norm_Diff", "Norm_Rel")
 
 info_rel_norms
+info_rel_norms %>% mutate(scale_abs_norm = Norm_Diff * K, scale_rel_norm = Norm_Rel * sqrt(K))
+
+
 
 
 
@@ -332,6 +379,8 @@ for(i in seq_along(all_Ks)){
 }
 
 
+### Estimated
+
 list_ENC_mean_covs = list()
 
 for(i in seq_along(all_Ks)){
@@ -354,9 +403,11 @@ for(i in seq_along(all_Ks)){
 
     info_var_diffs = rbind(info_var_diffs, this_info)
 }
-colnames(info_var_diffs) = c("K", "Mean-Diff", "SD-Diff", "Mean-Rel-Diff", "SD-Rel-Diff")
+colnames(info_var_diffs) = c("K", "Mean_Diff", "SD_Diff", "Mean_Rel_Diff", "SD_Rel_Diff")
 
 info_var_diffs
+
+info_var_diffs %>% mutate(scale_abs_diff = Mean_Diff * K) %>% select(-"Mean_Rel_Diff", -"SD_Rel_Diff")
 
 
 ### Harder: Matrix norms
@@ -370,9 +421,115 @@ for(i in seq_along(all_Ks)){
     this_info = c(all_Ks[i], diff_mat_norm, rel_norm)
     info_ENC_norms = rbind(info_ENC_norms, this_info)
 }
-colnames(info_ENC_norms) = c("K", "Norm-Diff", "Rel-Norm-Diff")
+colnames(info_ENC_norms) = c("K", "Norm_Diff", "Rel_Norm_Diff")
 
 info_ENC_norms
+
+info_ENC_norms %>% mutate(scale_abs_diff = Norm_Diff * K) %>% select(-"Rel_Norm_Diff")
+
+
+
+
+# Covariances of mediation effects
+
+
+list_ME_hats = list()
+list_ME_cov_hats = list()
+
+this_scale = c("diff", "rat", "OR")
+
+for(i in seq_along(all_Ks)){
+    print(paste0("K = ", all_Ks[i], "; number ", i, " of ", length(all_Ks)))
+
+    some_ME_hats = data.frame()
+    some_ME_cov_hats = list()
+
+    for(j in seq_len(num_reps)){
+
+        this_par_hat = list_par_hats[[i]][j,]
+
+        this_b_Y = this_par_hat[1:5]
+        this_theta_Y = this_par_hat[6:8]
+        this_b_M = this_par_hat[9:12]
+        this_theta_M = this_par_hat[13:15]
+
+
+        this_ME_hat = all_MEs_pars(this_scale, w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+        some_ME_hats = rbind(some_ME_hats, this_ME_hat)
+
+
+        this_Sigma = list_par_cov_hats[[i]][[j]]
+        this_ME_cov_hat = all_covs_MEs_pars(this_scale, w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+        some_ME_cov_hats[[j]] = this_ME_cov_hat
+
+    }
+
+    colnames(some_ME_hats) = c("11", "10", "01", "00")
+    list_ME_hats[[i]] = some_ME_hats
+    list_ME_cov_hats[[i]] = some_ME_cov_hats
+}
+
+
+## Summarize covariance estimates
+
+### Empirical
+
+list_ME_emp_covs = list()
+
+for(i in seq_along(all_Ks)){
+    list_ME_emp_covs[[i]] = cov(list_ME_hats[[i]])
+}
+
+
+### Estimated
+
+list_ME_mean_covs = list()
+
+for(i in seq_along(all_Ks)){
+    some_ME_cov_hats = list_ME_cov_hats[[i]]
+    this_mean_ME_cov_hat = Reduce("+", some_ME_cov_hats) / num_reps
+    list_ME_mean_covs[[i]] = this_mean_ME_cov_hat
+}
+
+
+
+## Compare covariance estimates
+
+### Easier: Variances (i.e. diagonal elements)
+info_var_diffs = data.frame()
+for(i in seq_along(all_Ks)){
+    some_var_diffs = diag(list_ME_emp_covs[[i]] - list_ME_mean_covs[[i]])
+    some_rel_var_diffs = some_var_diffs / diag(list_ME_emp_covs[[i]])
+
+    this_info = c(all_Ks[i], mean(some_var_diffs), sd(some_var_diffs), mean(some_rel_var_diffs), sd(some_rel_var_diffs))
+
+    info_var_diffs = rbind(info_var_diffs, this_info)
+}
+colnames(info_var_diffs) = c("K", "Mean_Diff", "SD_Diff", "Mean_Rel_Diff", "SD_Rel_Diff")
+
+info_var_diffs
+
+info_var_diffs %>% mutate(scale_abs_diff = Mean_Diff * K) %>% select(-"Mean_Rel_Diff", -"SD_Rel_Diff")
+
+
+### Harder: Matrix norms
+info_ME_norms = data.frame()
+for(i in seq_along(all_Ks)){
+    diff_mat = list_ME_emp_covs[[i]] - list_ME_mean_covs[[i]]
+    diff_mat_norm = norm(diff_mat, type = "2")
+
+    rel_norm = diff_mat_norm / norm(list_ME_emp_covs[[i]], type = "2")
+
+    this_info = c(all_Ks[i], diff_mat_norm, rel_norm)
+    info_ME_norms = rbind(info_ME_norms, this_info)
+}
+colnames(info_ME_norms) = c("K", "Norm_Diff", "Rel_Norm_Diff")
+
+info_ME_norms
+
+info_ME_norms %>% mutate(scale_abs_diff = Norm_Diff * K) %>% select(-"Rel_Norm_Diff")
+
+
 
 
 
@@ -414,14 +571,30 @@ for(i in seq_along(all_Ks)){
 
     for(j in seq_along(this_emp_decomp)){
 
-        abs_diff = norm(this_emp_decomp[[j]] - this_mean_decomp[[j]])
-        rel_diff = abs_diff / norm(this_emp_decomp[[j]])
+        abs_diff = norm(this_emp_decomp[[j]] - this_mean_decomp[[j]], type = "2")
+        rel_diff = abs_diff / norm(this_emp_decomp[[j]], type = "2")
 
 
         this_info = c(all_Ks[i], names(this_emp_decomp)[j], abs_diff, rel_diff)
         data_decomp = rbind(data_decomp, this_info)
     }
 }
-colnames(data_decomp) = c("K", "Component", "Abs-Diff", "Rel-Diff")
+colnames(data_decomp) = c("K", "Component", "Abs_Diff", "Rel_Diff")
+data_decomp %<>% mutate(across(c(1,3,4), as.numeric))
 
 data_decomp
+
+data_decomp %>% 
+    arrange(Component)
+
+
+
+flavour_decomp = data_decomp %>% 
+    mutate(diag = ifelse(Component %in% c("cross_Y", "cross_M"), F, T)) %>% 
+    group_by(K, diag) %>% 
+    summarize(mean_abs = mean(Abs_Diff), mean_rel = mean(Rel_Diff), .groups = "drop")
+
+flavour_decomp %>%
+    arrange(diag)
+
+

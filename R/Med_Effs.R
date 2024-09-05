@@ -346,6 +346,8 @@ all_grad_MEs_models <- function(scale, w, fit_Y, fit_M, which_REs = c("Y.Int", "
 #' @param w Level of covariates, \eqn{W}.
 #' @param fit_Y,fit_M Fitted models for Y and M.
 #' @param which_REs Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.
+#' 
+#' @name ME_covariances
 #'
 #' @details
 #' Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
@@ -375,4 +377,24 @@ all_cov_MEs <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, which_R
   cov_MEs = grad_MEs %*% cov_ENCs %*% t(grad_MEs)
 
   return(cov_MEs)
+}
+
+#' @rdname ME_covariances
+#' @export
+all_covs_MEs_models <- function(scale = c("diff", "rat", "OR"), w, Sigma, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+  Jacob_ENCs = Jacob_ENC_models(w, fit_Y, fit_M, which_REs)             # Parameters to ENCs
+  Jacob_MEs = all_grad_MEs_models(scale, w, fit_Y, fit_M, which_REs)    # ENCs to MEs
+  Jacob = Jacob_MEs %*% Jacob_ENCs                                      # Parameters to MEs
+
+  return(Jacob %*% Sigma %*% t(Jacob))
+}
+
+#' @rdname ME_covariances
+#' @export
+all_covs_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+  Jacob_ENCs = Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M, which_REs)           # Parameters to ENCs
+  Jacob_MEs = all_grad_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs)  # ENCs to MEs
+  Jacob = Jacob_MEs %*% Jacob_ENCs                                                # Parameters to MEs
+
+  return(Jacob %*% Sigma %*% t(Jacob))
 }

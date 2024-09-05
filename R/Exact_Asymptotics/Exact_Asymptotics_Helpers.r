@@ -316,29 +316,29 @@ d2_phi = function(mu, sigma){
 
 
 
-  a1 = b_M[2]
-  b1 = b_Y[3]
-  b2 = b_Y[2]
+  # a1 = b_M[2]
+  # b1 = b_Y[3]
+  # b2 = b_Y[2]
 
-  s1 = sigma_fun(1, theta_Y[1], theta_Y[3], theta_Y[2])
-  s2 = sigma_fun(1, theta_M[1], theta_M[3], theta_M[2])
+  # s1 = sigma_fun(1, theta_Y[1], theta_Y[3], theta_Y[2])
+  # s2 = sigma_fun(1, theta_M[1], theta_M[3], theta_M[2])
 
-  x = 1
-  x_m = 1
-  w = c(0,0)
+  # x = 1
+  # x_m = 1
+  # w = c(0,0)
 
-  zeta = b_Y[1]  + b_Y[4] * w[1] + b_Y[5] * w[2]  
-  eta = b_M[1]  + b_M[3] * w[1] + b_M[4] * w[2]
+  # zeta = b_Y[1]  + b_Y[4] * w[1] + b_Y[5] * w[2]  
+  # eta = b_M[1]  + b_M[3] * w[1] + b_M[4] * w[2]
   
-  Y1_X1_M1 = phi(zeta + b1 + b2, s1)  # P(Y=1 | X=1, M=1)
-  M1_X1 = phi(eta + a1, s2)           # P(M=1 | X=1)
-  Y1_X1_M0 = phi(zeta + b2, s1)       # P(Y=1 | X=1, M=0)
-  M0_X1 = (1 - phi(eta + a1, s2))     # P(M=0 | X=1)
+  # Y1_X1_M1 = phi(zeta + b1 + b2, s1)  # P(Y=1 | X=1, M=1)
+  # M1_X1 = phi(eta + a1, s2)           # P(M=1 | X=1)
+  # Y1_X1_M0 = phi(zeta + b2, s1)       # P(Y=1 | X=1, M=0)
+  # M0_X1 = (1 - phi(eta + a1, s2))     # P(M=0 | X=1)
 
-  # These should match, but don't    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  Y1_X1_M1 * M1_X1 + Y1_X1_M0 * M0_X1
-  ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M, which_REs)
-  ENC(1, 0, w, b_Y, theta_Y, b_M, theta_M, which_REs)
+  # # These match
+  # Y1_X1_M1 * M1_X1 + Y1_X1_M0 * M0_X1
+  # ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M, which_REs)
+  # ENC(1, 0, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
 
 
