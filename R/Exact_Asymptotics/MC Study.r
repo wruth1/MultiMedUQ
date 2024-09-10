@@ -9,6 +9,7 @@ library(pbapply)
 library(parallel)
 library(magrittr)
 library(dplyr)
+library(kableExtra)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 devtools::load_all()
 
@@ -28,7 +29,7 @@ all_Ks = c(50, 100, 200, 400, 800)
 # K = 50
 
 # num_reps = 50
-num_reps = 200
+num_reps = 500
 # num_reps = 20
 
 
@@ -54,7 +55,7 @@ list_par_cov_hats = list()
 
 
 
-set.seed(1)
+set.seed(11111111)
 
 
 # Setup cluster
@@ -160,8 +161,41 @@ stopCluster(cl)
 
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC.RData")
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K.RData")
-load("Par_Hat_MC.RData", verbose = TRUE)
-load("Par_Hat_MC-Large_K.RData", verbose = TRUE)
+# save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_2.RData")
+# save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_Many_Reps.RData")
+# load("Par_Hat_MC.RData", verbose = TRUE)
+# load("Par_Hat_MC-Large_K.RData", verbose = TRUE)
+# load("Par_Hat_MC-Large_K_2.RData", verbose = TRUE)
+load("Par_Hat_MC-Large_K_Many_Reps.RData", verbose = TRUE)
+
+
+# Concatenate parameter estimates from multiple MC studies
+
+
+all_files = c("Par_Hat_MC-Large_K.RData", "Par_Hat_MC-Large_K_2.RData", "Par_Hat_MC-Large_K_Many_Reps.RData")
+
+load(all_files[1], verbose = TRUE)
+
+large_list_par_hats = list_par_hats
+large_list_par_cov_hats = list_par_cov_hats
+
+for(file in all_files[2:3]){
+
+    load(file, verbose = TRUE)
+
+    for(i in seq_along(all_Ks)){
+
+        large_list_par_hats[[i]] = rbind(large_list_par_hats[[i]], list_par_hats[[i]])
+
+        large_list_par_cov_hats[[i]] = c(large_list_par_cov_hats[[i]], list_par_cov_hats[[i]])
+    }
+}
+
+list_par_hats = large_list_par_hats
+list_par_cov_hats = large_list_par_cov_hats
+
+
+
 # Extract empirical and average estimated covariances for each value of K
 
 num_pars = ncol(list_par_hats[[1]])
@@ -180,17 +214,20 @@ sapply(list_par_hats, nrow)
 
 list_emp_covs = list()
 list_mean_covs = list()
+list_all_errs = list()
 
 # Extract empirical covariance and mean estimated covariance.
 for(j in seq_along(all_Ks)){
 
-    list_emp_covs[[j]] = cov(list_par_hats[[j]])
+    this_emp_cov = cov(list_par_hats[[j]])
+    list_emp_covs[[j]] = this_emp_cov
 
     some_cov_hats = list_par_cov_hats[[j]]
     this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
 
     list_mean_covs[[j]] = this_mean_cov
 
+    list_all_errs[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
 
 }
 
@@ -289,8 +326,11 @@ for(i in seq_along(all_Ks)){
     this_emp_mat = list_emp_covs[[i]]
     this_mean_mat = list_mean_covs[[i]]
 
-    this_norm_diff = norm(this_emp_mat - this_mean_mat, type = "2")
-    this_norm_rel = this_norm_diff / norm(this_emp_mat, type = "2")
+    # this_norm_diff = norm(this_emp_mat - this_mean_mat, type = "2")
+    # this_norm_rel = this_norm_diff / norm(this_emp_mat, type = "2")
+
+    this_norm_diff = norm(this_emp_mat - this_mean_mat, type = "F")
+    this_norm_rel = this_norm_diff / norm(this_emp_mat, type = "F")
 
     this_info = c(all_Ks[i], this_norm_diff, this_norm_rel)
 
@@ -299,10 +339,40 @@ for(i in seq_along(all_Ks)){
 colnames(info_rel_norms) = c("K", "Norm_Diff", "Norm_Rel")
 
 info_rel_norms
-info_rel_norms %>% mutate(scale_abs_norm = Norm_Diff * K, scale_rel_norm = Norm_Rel * sqrt(K))
+scaled_rel_norms = info_rel_norms %>% mutate(scale_abs_norm = Norm_Diff * K, scale_rel_norm = Norm_Rel * sqrt(K))
+scaled_rel_norms %>% 
+    dplyr::mutate_if(is.numeric, funs(as.character(signif(., 3)))) %>%
+    kbl(., format = "latex", booktabs = T, 
+        caption = "Absolute and relative error between the mean estimated covariance and the (Monte Carlo) empirical covariance matrix of the estimated parameter values, as well as those same values multiplied by $K$.",
+        label = "tab:err_scaled_ENC",
+        col.names = c("K", "Abs", "Rel", "Scaled-Abs", "Scaled-Rel"),
+        align = "c"
+    )
 
 
+## Mean error vs error of mean in estimating empirical covariance
+info_all_err_norms = data.frame()
+for(i in seq_along(all_Ks)){
+    this_all_errs = list_all_errs[[i]]
+    this_all_err_norms = sapply(this_all_errs, norm, type = "2")
+    this_mean_err_norm = mean(this_all_err_norms)
+    this_SD_err_norm = sd(this_all_err_norms)
 
+    this_emp_mat = list_emp_covs[[i]]
+    this_mean_mat = list_mean_covs[[i]]
+    this_err_mean = norm(this_emp_mat - this_mean_mat, type = "2")
+
+    this_info = c(all_Ks[i], this_mean_err_norm, this_SD_err_norm, this_err_mean)
+    info_all_err_norms = rbind(info_all_err_norms, this_info)
+}
+colnames(info_all_err_norms) = c("K", "Mean_Error", "SD_Error", "Error_of_Mean")
+
+info_all_err_norms
+
+info_all_err_norms_scaled = info_all_err_norms %>% 
+    mutate(Mean_Error = Mean_Error * K, Error_of_Mean = Error_of_Mean * K) %>%
+    select(-SD_Error)
+info_all_err_norms_scaled
 
 
 # Absolute and relative difference for each parameter at each level of K
@@ -414,9 +484,11 @@ info_var_diffs %>% mutate(scale_abs_diff = Mean_Diff * K) %>% select(-"Mean_Rel_
 info_ENC_norms = data.frame()
 for(i in seq_along(all_Ks)){
     diff_mat = list_ENC_emp_covs[[i]] - list_ENC_mean_covs[[i]]
-    diff_mat_norm = norm(diff_mat, type = "2")
+    # diff_mat_norm = norm(diff_mat, type = "2")
+    diff_mat_norm = norm(diff_mat, type = "F")
 
-    rel_norm = diff_mat_norm / norm(list_ENC_emp_covs[[i]], type = "2")
+    # rel_norm = diff_mat_norm / norm(list_ENC_emp_covs[[i]], type = "2")
+    rel_norm = diff_mat_norm / norm(list_ENC_emp_covs[[i]], type = "F")
 
     this_info = c(all_Ks[i], diff_mat_norm, rel_norm)
     info_ENC_norms = rbind(info_ENC_norms, this_info)
@@ -425,7 +497,7 @@ colnames(info_ENC_norms) = c("K", "Norm_Diff", "Rel_Norm_Diff")
 
 info_ENC_norms
 
-info_ENC_norms %>% mutate(scale_abs_diff = Norm_Diff * K) %>% select(-"Rel_Norm_Diff")
+scaled_ENC_norms = info_ENC_norms %>% mutate(scale_abs_diff = Norm_Diff * K) %>% select(-"Rel_Norm_Diff")
 
 
 
@@ -518,7 +590,8 @@ for(i in seq_along(all_Ks)){
     diff_mat = list_ME_emp_covs[[i]] - list_ME_mean_covs[[i]]
     diff_mat_norm = norm(diff_mat, type = "2")
 
-    rel_norm = diff_mat_norm / norm(list_ME_emp_covs[[i]], type = "2")
+    # rel_norm = diff_mat_norm / norm(list_ME_emp_covs[[i]], type = "2")
+    rel_norm = diff_mat_norm / norm(list_ME_emp_covs[[i]], type = "F")
 
     this_info = c(all_Ks[i], diff_mat_norm, rel_norm)
     info_ME_norms = rbind(info_ME_norms, this_info)
@@ -527,11 +600,30 @@ colnames(info_ME_norms) = c("K", "Norm_Diff", "Rel_Norm_Diff")
 
 info_ME_norms
 
-info_ME_norms %>% mutate(scale_abs_diff = Norm_Diff * K) %>% select(-"Rel_Norm_Diff")
+scaled_ME_norms = info_ME_norms %>% mutate(scale_abs_diff = Norm_Diff * K) %>% select(-"Rel_Norm_Diff")
 
 
 
+# Summarize errors for all covariance estimates
 
+theta_mat = scaled_rel_norms %>% select(-Norm_Rel, -scale_rel_norm)
+ENC_mat = scaled_ENC_norms
+ME_mat = scaled_ME_norms
+
+colnames(theta_mat) = c("K", "theta-abs", "theta-scaled")
+colnames(ENC_mat) = c("K", "ENC-abs", "ENC-scaled")
+colnames(ME_mat) = c("K", "ME-abs", "ME-scaled")
+
+summary_mat = cbind(theta_mat, ENC_mat[,-1], ME_mat[,-1])
+
+summary_mat %>% 
+    dplyr::mutate_if(is.numeric, funs(as.character(signif(., 3)))) %>%
+    kbl(., format = "latex", booktabs = F, 
+        caption = "Raw and scaled absolute errors in estimating empirical covariance matrices of estimators for the parameters, ENCs and mediation effects.",
+        label = "tab:err_summary",
+        col.names = c("K", "Abs $\\theta$", "Scaled $\\theta$", "Abs ENC", "Scaled ENC", "Abs ME", "Scaled ME"),
+        align = "c", escape = F
+    )
 
 
 
@@ -598,3 +690,131 @@ flavour_decomp %>%
     arrange(diag)
 
 
+
+
+
+
+# Trajectory of errors across increasing MC sizes
+
+list_emp_covs
+list_all_errs
+# Extract empirical covariance and mean estimated covariance.
+for(j in seq_along(all_Ks)){
+
+    this_emp_cov = cov(list_par_hats[[j]])
+    list_emp_covs[[j]] = this_emp_cov
+
+    some_cov_hats = list_par_cov_hats[[j]]
+    this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
+
+    list_mean_covs[[j]] = this_mean_cov
+
+    list_all_errs[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
+
+}
+
+
+
+norms_by_MC_size = data.frame()
+
+total_num_reps = nrow(list_par_hats[[1]])
+# all_Bs = seq(100, 200, by=10)
+all_Bs = seq(100, total_num_reps, by=20)
+
+counter = 0
+
+for(i in seq_along(all_Ks)){
+    for(r in seq_along(all_Bs)){
+        this_B = all_Bs[r]
+
+        # this_emp_cov = cov(list_par_hats2[[i]][1:this_B,])
+        # this_mean_cov = Reduce("+", list_par_cov_hats2[[i]][1:this_B]) / this_B
+
+        # # Pool both simulations' results
+        this_emp_cov = cov(large_list_par_hats[[i]][1:this_B,])
+        this_mean_cov = Reduce("+", large_list_par_cov_hats[[i]][1:this_B]) / this_B
+
+        this_err = norm(this_emp_cov - this_mean_cov, type = "2")
+
+        this_err_scaled = this_err * all_Ks[i]
+        this_err_extra_scaled = this_err_scaled * sqrt(all_Ks[i])
+
+        this_info = c(all_Ks[i], this_B, this_err, this_err_scaled, this_err_extra_scaled)
+
+
+        counter = counter + 1
+        norms_by_MC_size = rbind(norms_by_MC_size, this_info)
+    }
+}
+colnames(norms_by_MC_size) = c("K", "MC_Size", "Abs_Error", "Scaled_Error", "Extra_Scaled_Error")
+
+norms_by_MC_size
+
+# Sort norms_by_MC size by K
+norms_by_MC_size %>% arrange(K)
+
+
+library(ggplot2)
+
+
+norms_by_MC_size %>% 
+    ggplot(aes(x = MC_Size, y = Scaled_Error, color = as.factor(K))) +
+    geom_line() +
+    geom_point() +
+    theme_bw()
+
+# Grid of plots
+# Absolute error scaled by K
+pdf("Plots/Abs_Error_by_MC_Size.pdf", width = 10, height = 10)
+norms_by_MC_size %>%
+    ggplot(aes(x = MC_Size, y = Abs_Error, color = as.factor(K))) +
+    geom_line() +
+    geom_point() +
+    facet_wrap(~K, scales="free") +
+    theme_bw()
+dev.off()
+
+# ## Both scales on same axes. Redundant, since scale is constant in B
+# scale_factor = 15
+# norms_by_MC_size %>%
+#     ggplot(aes(x = MC_Size)) +
+#     geom_line(aes(y = Scaled_Error), color = "blue") +
+#     geom_line(aes(y = Extra_Scaled_Error / scale_factor), color = "red") +
+#     facet_wrap(~K) +
+#     theme_bw() +
+#     # legend for colors
+#     theme(legend.position = "right") +
+#     scale_color_manual(values = c("blue", "red")) +
+#     scale_y_continuous(name = "K Times Absolute Error", sec.axis = sec_axis(trans =~./scale_factor, name = "K^3/2 Times Absolute Error"))
+
+
+# Plot scaled error vs K for maximum MC size
+norms_by_MC_size %>%
+    filter(MC_Size == max(MC_Size)) %>%
+    ggplot(aes(x = K, y = Abs_Error)) +
+    geom_line() +
+    geom_point() +
+    theme_bw()
+
+
+# Estimate rate at which errors scale with K
+best_err_estimates = norms_by_MC_size %>%
+    filter(MC_Size == max(MC_Size)) %>%
+    mutate(log_K = log(K), log_err = log(Abs_Error))
+
+fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates[-1,])
+summary(fit_err_rate)
+
+plot(fit_err_rate, 1)
+
+
+pdf("Plots/log_Abs_Err_vs_log_K.pdf", width = 10, height = 10)
+norms_by_MC_size %>%
+    filter(MC_Size == max(MC_Size)) %>%
+    ggplot(aes(x = log(K), y = log(Abs_Error))) +
+    geom_line() +
+    geom_point() +
+    theme_bw()
+dev.off()
+
+filter(norms_by_MC_size, MC_Size == max(MC_Size))
