@@ -72,67 +72,450 @@ test_that("ENC works with a subset of REs", {
 })
 
 
+# Sizes of gradients
+library(rje)        # For the powerSetCond function, which returns the power set, minus the empty set
 
 
+test_that("Dimensions of gradients are correct for subsets of REs", {
 
-# Gradients
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
 
-## Define versions psi for compatibility with numDeriv::grad()
-test_psi_Y <- function(m_val, x_y, x_m, w, params){
-  b_Y = params[1:5]
-  theta_Y = params[6:11]
-  b_M = params[12:15]
-  theta_M = params[16:18]
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
 
-  mu_Y = as.numeric(b_Y[1] + x_y * b_Y[2] + w %*% b_Y[4:length(b_Y)])
-  gamma_Y = theta2gamma(c(1, x_y, m_val), theta_Y)
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
 
-  return(psi(mu_Y + m_val*b_Y[3], gamma_Y))
-}
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
 
-test_psi_M <- function(m_val, x_y, x_m, w, params){
-  b_Y = params[1:5]
-  theta_Y = params[6:11]
-  b_M = params[12:15]
-  theta_M = params[16:18]
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
 
-  mu_M = as.numeric(b_M[1] + x_m * b_M[2] + w %*% b_M[3:length(b_M)])
-  gamma_M = theta2gamma(c(1, x_m), theta_M)
-
-  return(psi((2*m_val - 1)*mu_M, gamma_M))
-}
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
 
 
+      ## grad_mu_Y
+      this_grad_mu_Y = grad_mu_Y(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+      expect_equal(length(this_grad_mu_Y), this_num_pars)
 
-params = c(b_Y, theta_Y, b_M, theta_M)
+      ## grad_mu_M
+      this_grad_mu_M = grad_mu_M(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+      expect_equal(length(this_grad_mu_M), this_num_pars)
 
+      ## grad_b_Y_M
+      this_grad_b_Y_M = grad_b_Y_M(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+      expect_equal(length(this_grad_b_Y_M), this_num_pars)
 
+      ## grad_gamma_Y
+      this_grad_gamma_Y = grad_gamma_Y(m, x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+      expect_equal(length(this_grad_gamma_Y), this_num_pars)
 
-test_that("grad_psi_Y works",{
-  # Order of numeric arguments is m, x, x_m. See also arguments to numDeriv::grad()
-
-  expect_equal(grad_psi_Y(1, 1, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_Y, params, m_val=1, x_y=1, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_Y(1, 1, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_Y, params, m_val=1, x_y=1, x_m=0, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_Y(1, 0, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_Y, params, m_val=1, x_y=0, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_Y(1, 0, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_Y, params, m_val=1, x_y=0, x_m=0, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_Y(0, 1, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_Y, params, m_val=0, x_y=1, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_Y(0, 1, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_Y, params, m_val=0, x_y=1, x_m=0, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_Y(0, 0, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_Y, params, m_val=0, x_y=0, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_Y(0, 0, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_Y, params, m_val=0, x_y=0, x_m=0, w=w), tolerance = 1e-6)
-
+      ## grad_gamma_M
+      this_grad_gamma_M = grad_gamma_M(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+      expect_equal(length(this_grad_gamma_M), this_num_pars)
+    }
+  }
 })
 
 
-test_that("grad_psi_M works",{
-  # Order of numeric arguments is m, x, x_m. See also arguments to numDeriv::grad()
 
-  expect_equal(grad_psi_M(1, 1, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=1, x_y=1, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_M(1, 1, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=1, x_y=1, x_m=0, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_M(1, 0, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=1, x_y=0, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_M(1, 0, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=1, x_y=0, x_m=0, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_M(0, 1, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=0, x_y=1, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_M(0, 1, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=0, x_y=1, x_m=0, w=w), tolerance = 1e-6)
-  expect_equal(grad_psi_M(0, 0, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_psi_M, params, m_val=0, x_y=0, x_m=1, w=w), tolerance = 1e-6)
+
+
+
+# Values of gradients
+
+test_that("Values of grad_mu_Y are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
+
+
+      ## grad_mu_Y
+      params = c(b_Y, this_theta_Y, b_M, this_theta_M)
+
+      test_mu_Y = function(x_val, w, len_theta_Y, params){
+        b_Y = params[1:5]
+        theta_Y = params[6:(5 + len_theta_Y)]
+        b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
+        theta_M = params[(10 + len_theta_Y):length(params)]
+
+        mu_Y = as.numeric(b_Y[1] + x_val * b_Y[2] + w %*% b_Y[4:length(b_Y)])
+        return(mu_Y)
+      }
+
+      for(x in c(0,1)){
+        for(x_m in c(0,1)){
+          
+          expect_equal(grad_mu_Y(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs), numDeriv::grad(test_mu_Y, params, x_val=x, w=w, len_theta_Y = length(this_theta_Y)))
+        }
+      
+      }
+
+    }
+  }
+})
+
+test_that("Values of grad_mu_M are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
+
+
+      ## grad_mu_Y
+      params = c(b_Y, this_theta_Y, b_M, this_theta_M)
+
+      test_mu_M = function(x_val, w, len_theta_Y, params){
+        b_Y = params[1:5]
+        theta_Y = params[6:(5 + len_theta_Y)]
+        b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
+        theta_M = params[(10 + len_theta_Y):length(params)]
+
+        mu_M = as.numeric(b_M[1] + x_val * b_M[2] + w %*% b_M[3:length(b_M)])
+        return(mu_M)
+      }
+
+      for(x in c(0,1)){
+        for(x_m in c(0,1)){
+          expect_equal(grad_mu_M(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs), numDeriv::grad(test_mu_M, params, x_val=x_m, w=w, len_theta_Y = length(this_theta_Y)))
+        }
+      }
+
+    }
+  }
+})
+
+
+test_that("Values of grad_b_Y_M are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
+
+
+      ## grad_mu_Y
+      params = c(b_Y, this_theta_Y, b_M, this_theta_M)
+
+      test_b_Y_M = function(len_theta_Y, params){
+        b_Y = params[1:5]
+        theta_Y = params[6:(5 + len_theta_Y)]
+        b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
+        theta_M = params[(10 + len_theta_Y):length(params)]
+
+        b_Y_M = b_Y[3]
+        return(b_Y_M)
+      }
+
+      for(x in c(0,1)){
+        for(x_m in c(0,1)){
+          
+          expect_equal(grad_b_Y_M(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs), numDeriv::grad(test_b_Y_M, params, len_theta_Y = length(this_theta_Y)))
+        }
+      
+      }
+
+    }
+  }
+})
+
+test_that("Values of grad_gamma_Y are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
+
+
+      ## grad_mu_Y
+      params = c(b_Y, this_theta_Y, b_M, this_theta_M)
+
+      test_gamma_Y = function(x_val, m_val, this_REs, len_theta_Y, params){
+        b_Y = params[1:5]
+        theta_Y = params[6:(5 + len_theta_Y)]
+        b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
+        theta_M = params[(10 + len_theta_Y):length(params)]
+
+        Y_vec = Y_vec_gamma(x_val, m, this_REs)
+        gamma_Y = theta2gamma(Y_vec, theta_Y)
+
+        return(gamma_Y)
+      }
+
+      for(x in c(0,1)){
+        for(x_m in c(0,1)){
+          for(m in c(0,1)){
+            expect_equal(grad_gamma_Y(m, x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs), numDeriv::grad(test_gamma_Y, params, x_val=x, m_val=m, this_REs = this_REs, len_theta_Y = length(this_theta_Y)))
+          }
+        }
+      }
+
+    }
+  }
+})
+
+
+test_that("Values of grad_gamma_M are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
+
+
+      ## grad_mu_Y
+      params = c(b_Y, this_theta_Y, b_M, this_theta_M)
+
+      test_gamma_M = function(x_m, this_REs, len_theta_Y, params){
+        b_Y = params[1:5]
+        theta_Y = params[6:(5 + len_theta_Y)]
+        b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
+        theta_M = params[(10 + len_theta_Y):length(params)]
+
+        M_vec = M_vec_gamma(x_m, this_REs)
+        gamma_M = theta2gamma(M_vec, theta_M)
+
+        return(gamma_M)
+      }
+
+      for(x in c(0,1)){
+        for(x_m in c(0,1)){
+          expect_equal(grad_gamma_M(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs), numDeriv::grad(test_gamma_M, params, x_m=x_m, this_REs = this_REs, len_theta_Y = length(this_theta_Y)))
+        }
+      }
+
+    }
+  }
+})
+
+
+test_that("Values of grad_psi_Y are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
+
+
+      ## grad_mu_Y
+      params = c(b_Y, this_theta_Y, b_M, this_theta_M)
+
+      test_psi_Y = function(x_val, x_m, m_val, w, this_REs, len_theta_Y, params){
+        b_Y = params[1:5]
+        theta_Y = params[6:(5 + len_theta_Y)]
+        b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
+        theta_M = params[(10 + len_theta_Y):length(params)]
+
+        mu_Y = as.numeric(b_Y[1] + x * b_Y[2] + w %*% b_Y[4:length(b_Y)])
+
+        Y_vec = Y_vec_gamma(x_val, m_val, this_REs)
+        gamma_Y = theta2gamma(Y_vec, theta_Y)
+
+        this_psi = psi(mu_Y + m_val * b_Y[3], gamma_Y)
+
+        return(this_psi)
+      }
+
+      for(x in c(0,1)){
+        for(x_m in c(0,1)){
+          for(m in c(0,1)){
+            expect_equal(grad_psi_Y(m, x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs), numDeriv::grad(test_psi_Y, params, x_val = x, x_m=x_m, m_val = m, w=w, this_REs = this_REs, len_theta_Y = length(this_theta_Y)),
+            tolerance = 1e-6)
+          }
+        }
+      }
+
+    }
+  }
+})
+
+
+test_that("Values of grad_psi_M are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
+
+
+      ## grad_mu_Y
+      params = c(b_Y, this_theta_Y, b_M, this_theta_M)
+
+
+      test_psi_M = function(x_val, x_m, m_val, w, this_REs, len_theta_Y, params){
+        b_Y = params[1:5]
+        theta_Y = params[6:(5 + len_theta_Y)]
+        b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
+        theta_M = params[(10 + len_theta_Y):length(params)]
+
+        mu_M = as.numeric(b_M[1] + x_m * b_M[2] + w %*% b_M[3:length(b_M)])
+  
+        M_vec = M_vec_gamma(x_m, this_REs)
+        gamma_M = theta2gamma(M_vec, theta_M)
+
+        this_psi = psi(mu_M * (2*m - 1), gamma_M)  # (1 - 2*m) = 1 if m=1, -1 if m=0
+
+        return(this_psi)
+      }
+
+      for(x in c(0,1)){
+        for(x_m in c(0,1)){
+          for(m in c(0,1)){
+            expect_equal(grad_psi_M(m, x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs), numDeriv::grad(test_psi_M, params, x_val = x, x_m=x_m, m_val = m, w=w, this_REs = this_REs, len_theta_Y = length(this_theta_Y)),
+            tolerance = 1e-6)
+          }
+        }
+      }
+
+    }
+  }
+})
+
+
+test_that("Values of grad_ENC are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = powerSetCond(Y_REs)
+  all_M_sets = powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+
+      this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
+
+
+      ## grad_mu_Y
+      params = c(b_Y, this_theta_Y, b_M, this_theta_M)
+
+
+      test_ENC = function(x_val, x_m, w, this_REs, len_theta_Y, params){
+        b_Y = params[1:5]
+        theta_Y = params[6:(5 + len_theta_Y)]
+        b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
+        theta_M = params[(10 + len_theta_Y):length(params)]
+
+        this_ENC = ENC(x_val, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+
+        return(this_ENC)
+      }
+
+      for(x in c(0,1)){
+        for(x_m in c(0,1)){
+          for(m in c(0,1)){
+            expect_equal(grad_ENC(x, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs), numDeriv::grad(test_ENC, params, x_val = x, x_m=x_m, w=w, this_REs = this_REs, len_theta_Y = length(this_theta_Y)),
+            tolerance = 1e-6)
+          }
+        }
+      }
+
+    }
+  }
 })
 
 
@@ -168,8 +551,6 @@ test_that("grad_ENC works",{
 
 test_that("grad_ENC works with a subset of REs", {
 
-
-  # Harder case: Non-zero effects
   ## Loop over all pairs of single REs
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")

@@ -10,6 +10,9 @@
 #' @return The SD of the random effects evaluated at the given vector of predictors.
 #' @export
 Sigma2gamma <- function(pred_vec, Sigma){
+  if(length(pred_vec) != nrow(Sigma)){
+    stop("pred_vec and Sigma have incompatible dimensions")
+  }
 
   gamma = sqrt(pred_vec %*% Sigma %*% pred_vec)
   return(as.numeric(gamma))
@@ -189,7 +192,9 @@ all_ENCs <- function(w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X"
 
 ### Means
 
-grad_mu_Y <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
+grad_mu_Y <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+
+  RE_names = expand_REs(which_REs)
 
   # Fixed effects for Y
   d_b_Y_0 = 1
@@ -199,25 +204,30 @@ grad_mu_Y <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
   d_b_Y = c(d_b_Y_0, d_b_Y_X, d_b_Y_M, d_B_Y_W)
 
   # Random effect parameters for Y
-  d_theta_Y = rep(0, times = length(theta_Y))
+  num_Y_REs = sum(grepl("^Y\\.", RE_names))
+  d_theta_Y = rep(0, times = num_REs2theta_length(num_Y_REs))
 
   # Fixed effects for M
   d_b_M = rep(0, times = length(b_M))
 
   # Random effect parameters for M
-  d_theta_M = rep(0, times = length(theta_M))
+  num_M_REs = sum(grepl("^M\\.", RE_names))
+  d_theta_M = rep(0, times = num_REs2theta_length(num_M_REs))
 
   return(c(d_b_Y, d_theta_Y, d_b_M, d_theta_M))
 }
 
 
-grad_mu_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
+grad_mu_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+
+  RE_names = expand_REs(which_REs)
 
   # Fixed effects for Y
   d_b_Y = rep(0, times = length(b_Y))
 
   # Random effect parameters for Y
-  d_theta_Y = rep(0, times = length(theta_Y))
+  num_Y_REs = sum(grepl("^Y\\.", RE_names))
+  d_theta_Y = rep(0, times = num_REs2theta_length(num_Y_REs))
 
   # Fixed effects for M
   d_b_M_0 = 1
@@ -226,12 +236,15 @@ grad_mu_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
   d_b_M = c(d_b_M_0, d_b_M_X, d_B_M_W)
 
   # Random effect parameters for M
-  d_theta_M = rep(0, times = length(theta_M))
+  num_M_REs = sum(grepl("^M\\.", RE_names))
+  d_theta_M = rep(0, times = num_REs2theta_length(num_M_REs))
 
   return(c(d_b_Y, d_theta_Y, d_b_M, d_theta_M))
 }
 
-grad_b_Y_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
+grad_b_Y_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+
+  RE_names = expand_REs(which_REs)
 
   # Fixed effects for Y
   d_b_Y_0 = 0
@@ -241,13 +254,15 @@ grad_b_Y_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
   d_b_Y = c(d_b_Y_0, d_b_Y_X, d_b_Y_M, d_B_Y_W)
 
   # Random effect parameters for Y
-  d_theta_Y = rep(0, times = length(theta_Y))
+  num_Y_REs = sum(grepl("^Y\\.", RE_names))
+  d_theta_Y = rep(0, times = num_REs2theta_length(num_Y_REs))
 
   # Fixed effects for M
   d_b_M = rep(0, times = length(b_M))
 
   # Random effect parameters for M
-  d_theta_M = rep(0, times = length(theta_M))
+  num_M_REs = sum(grepl("^M\\.", RE_names))
+  d_theta_M = rep(0, times = num_REs2theta_length(num_M_REs))
 
   return(c(d_b_Y, d_theta_Y, d_b_M, d_theta_M))
 }
@@ -313,12 +328,12 @@ grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c
 
 
   ## Actually compute partial derivatives
-  if ("Y.Int" %in% which_REs) d_s_Y_0 = 2 * s_Y_0 + 2* x * s_Y_X * cor_Y_0X + 2*m * s_Y_M * cor_Y_0M else d_s_Y_0 = NULL
-  if (all(c("Y.Int", "Y.X") %in% which_REs)) d_cor_Y_0X = 2*x * s_Y_0 * s_Y_X else d_cor_Y_0X = NULL
-  if (all(c("Y.Int", "Y.M") %in% which_REs)) d_cor_Y_0M = 2*m * s_Y_0 * s_Y_M else d_cor_Y_0M = NULL
-  if ("Y.X" %in% which_REs) d_s_Y_X = 2 * x^2 * s_Y_X + 2 * x * s_Y_0 * cor_Y_0X + 2 * x * m * s_Y_M * cor_Y_XM else d_s_Y_X = NULL
-  if (all(c("Y.X", "Y.M") %in% which_REs)) d_cor_Y_XM = 2*x*m * s_Y_X * s_Y_M else d_cor_Y_XM = NULL
-  if ("Y.M" %in% which_REs) d_s_Y_M = 2 * m^2 * s_Y_M + 2 * m * s_Y_0 * cor_Y_0M + 2 * x * m * s_Y_X * cor_Y_XM else d_s_Y_M = NULL
+  if ("Y.Int" %in% RE_names) d_s_Y_0 = 2 * s_Y_0 + 2* x * s_Y_X * cor_Y_0X + 2*m * s_Y_M * cor_Y_0M else d_s_Y_0 = NULL
+  if (all(c("Y.Int", "Y.X") %in% RE_names)) d_cor_Y_0X = 2*x * s_Y_0 * s_Y_X else d_cor_Y_0X = NULL
+  if (all(c("Y.Int", "Y.M") %in% RE_names)) d_cor_Y_0M = 2*m * s_Y_0 * s_Y_M else d_cor_Y_0M = NULL
+  if ("Y.X" %in% RE_names) d_s_Y_X = 2 * x^2 * s_Y_X + 2 * x * s_Y_0 * cor_Y_0X + 2 * x * m * s_Y_M * cor_Y_XM else d_s_Y_X = NULL
+  if (all(c("Y.X", "Y.M") %in% RE_names)) d_cor_Y_XM = 2*x*m * s_Y_X * s_Y_M else d_cor_Y_XM = NULL
+  if ("Y.M" %in% RE_names) d_s_Y_M = 2 * m^2 * s_Y_M + 2 * m * s_Y_0 * cor_Y_0M + 2 * x * m * s_Y_X * cor_Y_XM else d_s_Y_M = NULL
 
   
 
@@ -339,7 +354,7 @@ grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c
 
   ## determine number of elements in RE_names that start with "M."
   num_M_REs = sum(grepl("^M\\.", RE_names))
-  d_theta_M = rep(0, times = num_M_REs)
+  d_theta_M = rep(0, times = num_REs2theta_length(num_M_REs))
 
   ## I used to hold the length of the gradient fixed. Upon reflection, it's better to adjust based on which_REs.
   # d_theta_M = rep(0, times = length(theta_M))
@@ -369,11 +384,13 @@ grad_gamma_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y
   d_b_Y = rep(0, times = length(b_Y))
 
   # Random effect parameters for Y
-  d_theta_Y = rep(0, times = length(theta_Y))
+  num_Y_REs = sum(grepl("^Y\\.", RE_names))
+  d_theta_Y = rep(0, times = num_REs2theta_length(num_Y_REs))
 
-  ## I considered shortening the gradient, but this conflicts with other functions and doesn't actually increase correctness.
-  # num_Y_REs = sum(grepl("^Y\\.", RE_names))
-  # d_theta_Y = rep(0, times = num_Y_REs)
+  ## I used to hold the length of the gradient fixed. Upon reflection, it's better to adjust based on which_REs.
+  # d_theta_Y = rep(0, times = length(theta_Y))
+
+  
 
   # Fixed effects for M
   d_b_M = rep(0, times = length(b_M))
@@ -459,8 +476,8 @@ grad_psi_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("
   Y_vec = Y_vec_gamma(x, m, which_REs)
   gamma_Y = theta2gamma(Y_vec, theta_Y)
 
-  grad_mu = grad_mu_Y(x, x_m, w, b_Y, theta_Y, b_M, theta_M)
-  grad_M_contrib = m * grad_b_Y_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M)
+  grad_mu = grad_mu_Y(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
+  grad_M_contrib = m * grad_b_Y_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
   grad_gamma = grad_gamma_Y(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
   return(d1_psi(mu_Y + m*b_Y[3], gamma_Y) * (grad_mu +  grad_M_contrib) + d2_psi(mu_Y + m*b_Y[3], gamma_Y) * grad_gamma)
@@ -477,7 +494,7 @@ grad_psi_M <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("
   M_vec = M_vec_gamma(x_m, which_REs)
   gamma_M = theta2gamma(M_vec, theta_M)
 
-  grad_mu = (2*m - 1) * grad_mu_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M)
+  grad_mu = (2*m - 1) * grad_mu_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
   grad_gamma = grad_gamma_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
   return(d1_psi(mu_M, gamma_M) * grad_mu + d2_psi(mu_M, gamma_M) * grad_gamma)

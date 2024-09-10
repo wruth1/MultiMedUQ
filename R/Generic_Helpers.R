@@ -179,3 +179,18 @@ expand_REs <- function(RE_input){
 
   return(unique(all_REs))
 }
+
+
+
+# Number of parameters required to encode the joint distribution of the specified list of REs
+## Note: This is just the sum of the first r positive integers, where r is the number of REs.
+REs2theta_length = function(REs){
+  num_REs = length(REs)
+
+  num_pars = num_REs * (num_REs + 1) / 2
+}
+
+# Similar to the previous function, but this one takes the number of random effects.
+num_REs2theta_length = function(num_REs){
+  num_pars = num_REs * (num_REs + 1) / 2
+}
