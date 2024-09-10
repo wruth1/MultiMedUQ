@@ -166,33 +166,35 @@ stopCluster(cl)
 # load("Par_Hat_MC.RData", verbose = TRUE)
 # load("Par_Hat_MC-Large_K.RData", verbose = TRUE)
 # load("Par_Hat_MC-Large_K_2.RData", verbose = TRUE)
-load("Par_Hat_MC-Large_K_Many_Reps.RData", verbose = TRUE)
+# load("Par_Hat_MC-Large_K_Many_Reps.RData", verbose = TRUE)
+load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
 
 
-# Concatenate parameter estimates from multiple MC studies
+# # Concatenate parameter estimates from multiple MC studies
+# ## Alternatively, load the Pooled version of the saved data.
 
 
-all_files = c("Par_Hat_MC-Large_K.RData", "Par_Hat_MC-Large_K_2.RData", "Par_Hat_MC-Large_K_Many_Reps.RData")
+# all_files = c("Par_Hat_MC-Large_K.RData", "Par_Hat_MC-Large_K_2.RData", "Par_Hat_MC-Large_K_Many_Reps.RData")
 
-load(all_files[1], verbose = TRUE)
+# load(all_files[1], verbose = TRUE)
 
-large_list_par_hats = list_par_hats
-large_list_par_cov_hats = list_par_cov_hats
+# large_list_par_hats = list_par_hats
+# large_list_par_cov_hats = list_par_cov_hats
 
-for(file in all_files[2:3]){
+# for(file in all_files[2:3]){
 
-    load(file, verbose = TRUE)
+#     load(file, verbose = TRUE)
 
-    for(i in seq_along(all_Ks)){
+#     for(i in seq_along(all_Ks)){
 
-        large_list_par_hats[[i]] = rbind(large_list_par_hats[[i]], list_par_hats[[i]])
+#         large_list_par_hats[[i]] = rbind(large_list_par_hats[[i]], list_par_hats[[i]])
 
-        large_list_par_cov_hats[[i]] = c(large_list_par_cov_hats[[i]], list_par_cov_hats[[i]])
-    }
-}
+#         large_list_par_cov_hats[[i]] = c(large_list_par_cov_hats[[i]], list_par_cov_hats[[i]])
+#     }
+# }
 
-list_par_hats = large_list_par_hats
-list_par_cov_hats = large_list_par_cov_hats
+# list_par_hats = large_list_par_hats
+# list_par_cov_hats = large_list_par_cov_hats
 
 
 

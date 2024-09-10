@@ -256,12 +256,20 @@ grad_b_Y_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M){
 ### SDs
 
 # Note the additional argument, m, at the front.
+## Note:  Length of return vector is influenced by which random effects are included in which_REs.
 grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
   RE_names = expand_REs(which_REs)
 
   Y_vec = Y_vec_gamma(x, m, RE_names)
   divisor = 2 * theta2gamma(Y_vec, theta_Y)
+
+  ## It's possible to have gamma_M identically equal zero for the given combination of x_m and theta_M
+  ## In this case, we can set the whole gradient to zero.
+  if(divisor == 0){
+    return(rep(0, times = length(b_Y) + length(theta_Y) + length(b_M) + length(theta_M)))
+  }
+
 
   # Fixed effects for Y
   d_b_Y = rep(0, times = length(b_Y))
@@ -328,15 +336,21 @@ grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c
 
 
   # Random effect parameters for M
-  d_theta_M = rep(0, times = length(theta_M))
+
+  ## determine number of elements in RE_names that start with "M."
+  num_M_REs = sum(grepl("^M\\.", RE_names))
+  d_theta_M = rep(0, times = num_M_REs)
+
+  ## I used to hold the length of the gradient fixed. Upon reflection, it's better to adjust based on which_REs.
+  # d_theta_M = rep(0, times = length(theta_M))
+
 
 
   return(c(d_b_Y, d_theta_Y, d_b_M, d_theta_M) / divisor)
 
 }
 
-
-#! Start here. Update structure to match that of grad_gamma_Y
+# Note:  Length of return vector is influenced by which random effects are included in which_REs.
 grad_gamma_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
 
@@ -345,11 +359,21 @@ grad_gamma_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y
   M_vec = M_vec_gamma(x_m, which_REs)
   divisor = 2 * theta2gamma(M_vec, theta_M)
 
+  ## It's possible to have gamma_M identically equal zero for the given combination of x_m and theta_M
+  ## In this case, we can set the whole gradient to zero.
+  if(divisor == 0){
+    return(rep(0, times = length(b_Y) + length(theta_Y) + length(b_M) + length(theta_M)))
+  }
+
   # Fixed effects for Y
   d_b_Y = rep(0, times = length(b_Y))
 
   # Random effect parameters for Y
   d_theta_Y = rep(0, times = length(theta_Y))
+
+  ## I considered shortening the gradient, but this conflicts with other functions and doesn't actually increase correctness.
+  # num_Y_REs = sum(grepl("^Y\\.", RE_names))
+  # d_theta_Y = rep(0, times = num_Y_REs)
 
   # Fixed effects for M
   d_b_M = rep(0, times = length(b_M))
@@ -427,7 +451,7 @@ grad_gamma_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y
 #' \item "M.X": Slope for M
 #' }
 #'
-#' @return Gradient of the function \code{psi(mu, sigma)} with respect to \code{b_Y}, \code{theta_Y}, \code{b_M}, and \code{theta_M}.
+#' @return Gradient of the function \code{psi(mu, sigma)} with respect to \code{b_Y}, \code{theta_Y}, \code{b_M}, and \code{theta_M}. Length of return vector is influenced by which random effects are included in which_REs.
 #' @export
 grad_psi_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
@@ -470,7 +494,7 @@ grad_psi_M <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
 #' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
 #'
-#' @return Gradient of the expected nested counterfactual of \eqn{Y} with \eqn{X = x} and \eqn{M = M_{x\_m}}.
+#' @return Gradient of the expected nested counterfactual of \eqn{Y} with \eqn{X = x} and \eqn{M = M_{x\_m}}. Length of return vector is influenced by which random effects are included in which_REs.
 #' @export
 #'
 #' @details
@@ -565,7 +589,7 @@ grad_ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int
 #' }
 #'
 #'
-#' @return Gradients for every combination of \eqn{X} and \eqn{X_M}, organized as a 4-by-many matrix. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0).
+#' @return Gradients for every combination of \eqn{X} and \eqn{X_M}, organized as a 4-by-many matrix. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0). Length of each gradient (i.e. number of columns) is adjusted to match which_REs.
 #' @export
 #'
 Jacob_ENC_pars <- function(w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
