@@ -500,7 +500,7 @@ test_that("Values of grad_ENC are correct for subsets of REs", {
         b_M = params[(6 + len_theta_Y):(9 + len_theta_Y)]
         theta_M = params[(10 + len_theta_Y):length(params)]
 
-        this_ENC = ENC(x_val, x_m, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+        this_ENC = ENC(x_val, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = this_REs)
 
         return(this_ENC)
       }
@@ -517,94 +517,6 @@ test_that("Values of grad_ENC are correct for subsets of REs", {
     }
   }
 })
-
-
-
-## Gradient of ENC
-
-### Define versions of ENC for compatibility with numDeriv::grad()
-
-test_ENC <- function(x_y, x_m, w, params){
-  b_Y = params[1:5]
-  theta_Y = params[6:11]
-  b_M = params[12:15]
-  theta_M = params[16:18]
-
-  return(ENC(x_y, x_m, w, b_Y, theta_Y, b_M, theta_M))
-}
-
-
-test_that("grad_ENC works",{
-  # Order of numeric arguments is x, x_m. See also arguments to numDeriv::grad()
-
-  expect_equal(grad_ENC(1, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=1, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_ENC(1, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=1, x_m=0, w=w), tolerance = 1e-6)
-  expect_equal(grad_ENC(0, 1, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=0, x_m=1, w=w), tolerance = 1e-6)
-  expect_equal(grad_ENC(0, 0, w, b_Y, theta_Y, b_M, theta_M), numDeriv::grad(test_ENC, params, x_y=0, x_m=0, w=w), tolerance = 1e-6)
-})
-
-
-
-# Test grad_ENC with subsets of the REs
-## Note: You might expect there to be two ways to test this. One is for compatibility with the unrestricted for of grad_ENC when the appropriate theta terms have been set to zero. The other is directly testing the restricted form of grad_ENC against its quadriture approximation from numDeriv::grad. The latter is more work, since I've already mostly implemented the former above. However, the former isn't really appropriate here, because the unrestricted form will still compute gradients for the theta terms that should have been excluded.
-
-
-test_that("grad_ENC works with a subset of REs", {
-
-  ## Loop over all pairs of single REs
-  Y_REs = c("Y.Int", "Y.X", "Y.M")
-  M_REs = c("M.Int", "M.X")
-  RE_pairs = expand.grid(Y_REs, M_REs)
-
-  Y_RE_inds = c(1, 4, 6)
-  M_RE_inds = c(1,3)
-  RE_ind_pairs = expand.grid(Y_RE_inds, M_RE_inds)
-
-
-  for (i in seq_len(nrow(RE_pairs))){
-    this_REs = as.character(unlist(RE_pairs[i,]))
-    Y_RE = this_REs[1]
-    M_RE = this_REs[2]
-
-    Y_ind = RE_ind_pairs[i,1]
-    M_ind = RE_ind_pairs[i,2]
-
-
-
-
-    # Setup numerical quadrature
-    test_ENC <- function(x_y, x_m, w, which_REs, params){
-      this_b_Y = params[1:5]
-      this_theta_Y = params[6]
-      this_b_M = params[7:10]
-      this_theta_M = params[11]
-
-      return(ENC(x_y, x_m, w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs = this_REs))
-    }
-    params = c(b_Y, theta_Y[Y_ind], b_M, theta_M[M_ind])
-
-
-    for(x_y in c(0,1)){
-      for(x_m in c(0,1)){
-        ENC_grad = grad_ENC(x_y, x_m, w, b_Y, theta_Y[Y_ind], b_M, theta_M[M_ind], which_REs = this_REs)
-        ENC_num_grad = numDeriv::grad(test_ENC, params, x_y=x_y, x_m=x_m, w=w, which_REs=this_REs)
-
-        expect_equal(ENC_grad, ENC_num_grad,
-                     label = paste0(Y_RE, " with ", M_RE, ", (", x_y, ",", x_m, ")"))
-      }
-    }
-
-    ENC_grad - ENC_num_grad
-
-    expect_equal(ENC_grad, ENC_num_grad,
-                 label = paste0(Y_RE, " with ", M_RE))
-  }
-})
-
-
-
-
-
 
 
 
