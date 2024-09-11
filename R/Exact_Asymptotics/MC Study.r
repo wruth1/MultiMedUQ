@@ -10,9 +10,9 @@ library(parallel)
 library(magrittr)
 library(dplyr)
 library(kableExtra)
+library(ggplot2)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 devtools::load_all()
-
 
 
 
@@ -21,16 +21,18 @@ devtools::load_all()
 
 # N = 100
 # N = 20
+# N = 40
+# N = 60
 N = 200
 
 all_Ks = c(50, 100, 200, 400, 800)
 # all_Ks = c(50, 100, 200)
-# all_Ks = c(50, 100)
+# all_Ks = 50 * (2:6)
 # K = 50
 
-# num_reps = 50
-num_reps = 500
-# num_reps = 20
+# num_reps = 30
+# num_reps = 300
+num_reps = 1200
 
 
 which_REs = c("Y.Int", "Y.X", "M.All")
@@ -55,13 +57,13 @@ list_par_cov_hats = list()
 
 
 
-set.seed(11111111)
+set.seed(22222222)
 
 
 # Setup cluster
 # cl = makeCluster(detectCores() - 2)
-cl = makeCluster(10)
-# cl = makeCluster(5)
+cl = makeCluster(15)
+# cl = makeCluster(10)
 clusterExport(cl, c("N", "b_Y", "theta_Y", "b_M", "theta_M", "which_REs"))
 clusterEvalQ(cl, {
     library(lme4)
@@ -162,26 +164,27 @@ stopCluster(cl)
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC.RData")
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K.RData")
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_2.RData")
+# save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_3.RData")
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_Many_Reps.RData")
+# save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_Pooled.RData")
 # load("Par_Hat_MC.RData", verbose = TRUE)
 # load("Par_Hat_MC-Large_K.RData", verbose = TRUE)
 # load("Par_Hat_MC-Large_K_2.RData", verbose = TRUE)
+# load("Par_Hat_MC-Large_K_3.RData", verbose = TRUE) #! Merge this into the pooled version
 # load("Par_Hat_MC-Large_K_Many_Reps.RData", verbose = TRUE)
 load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
 
 
-# # Concatenate parameter estimates from multiple MC studies
-# ## Alternatively, load the Pooled version of the saved data.
-
-
-# all_files = c("Par_Hat_MC-Large_K.RData", "Par_Hat_MC-Large_K_2.RData", "Par_Hat_MC-Large_K_Many_Reps.RData")
+# # # Concatenate parameter estimates from multiple MC studies
+# # ## Alternatively, load the Pooled version of the saved data.
+# all_files = c("Par_Hat_MC-Large_K_3.RData", "Par_Hat_MC-Large_K_Pooled.RData")
 
 # load(all_files[1], verbose = TRUE)
 
 # large_list_par_hats = list_par_hats
 # large_list_par_cov_hats = list_par_cov_hats
 
-# for(file in all_files[2:3]){
+# for(file in all_files[2:length(all_files)]){
 
 #     load(file, verbose = TRUE)
 
@@ -698,8 +701,9 @@ flavour_decomp %>%
 
 # Trajectory of errors across increasing MC sizes
 
-list_emp_covs
-list_all_errs
+# list_emp_covs
+# list_all_errs
+
 # Extract empirical covariance and mean estimated covariance.
 for(j in seq_along(all_Ks)){
 
@@ -723,7 +727,6 @@ total_num_reps = nrow(list_par_hats[[1]])
 # all_Bs = seq(100, 200, by=10)
 all_Bs = seq(100, total_num_reps, by=20)
 
-counter = 0
 
 for(i in seq_along(all_Ks)){
     for(r in seq_along(all_Bs)){
@@ -744,7 +747,6 @@ for(i in seq_along(all_Ks)){
         this_info = c(all_Ks[i], this_B, this_err, this_err_scaled, this_err_extra_scaled)
 
 
-        counter = counter + 1
         norms_by_MC_size = rbind(norms_by_MC_size, this_info)
     }
 }
@@ -756,7 +758,6 @@ norms_by_MC_size
 norms_by_MC_size %>% arrange(K)
 
 
-library(ggplot2)
 
 
 norms_by_MC_size %>% 
@@ -800,15 +801,6 @@ norms_by_MC_size %>%
 
 
 # Estimate rate at which errors scale with K
-best_err_estimates = norms_by_MC_size %>%
-    filter(MC_Size == max(MC_Size)) %>%
-    mutate(log_K = log(K), log_err = log(Abs_Error))
-
-fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates[-1,])
-summary(fit_err_rate)
-
-plot(fit_err_rate, 1)
-
 
 pdf("Plots/log_Abs_Err_vs_log_K.pdf", width = 10, height = 10)
 norms_by_MC_size %>%
@@ -819,4 +811,140 @@ norms_by_MC_size %>%
     theme_bw()
 dev.off()
 
+
+best_err_estimates = norms_by_MC_size %>%
+    filter(MC_Size == max(MC_Size)) %>%
+    mutate(log_K = log(K), log_err = log(Abs_Error))
+
+fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates[-1,])
+summary(fit_err_rate)
+
+plot(fit_err_rate, 1)
+
+
+
+
 filter(norms_by_MC_size, MC_Size == max(MC_Size))
+
+
+
+
+
+#* Simple timing study
+
+# some_Ks = rep(all_Ks, each=3)
+# some_Ns = rep(c(20, 40, 60), times = length(all_Ks))
+
+# times = c(14, 19, 26, 19, 41, 37, 29, 37, 56, 33, 57, 78, 40, 56, 86)
+
+# data_times = data.frame(K = some_Ks, N = some_Ns, time = times)
+
+# fit_times = lm(time ~ K + N, data = data_times)
+# summary(fit_times)
+
+# plot(data_times$K, data_times$time)
+# plot(data_times$N, data_times$time)
+
+# data_times %>% group_by(N) %>% summarize(mean_time = mean(time), sd_time = sd(time))
+# data_times %>% group_by(K) %>% summarize(mean_time = mean(time), sd_time = sd(time))
+
+# # plot time vs K for each level of N
+# ggplot(data = data_times, aes(x = K, y = time)) +
+#     geom_point() +
+#     geom_line() +
+#     facet_wrap(~N)
+
+# ggplot(data = data_times, aes(x = N, y = time)) +
+#     geom_point() +
+#     geom_line() +
+#     facet_wrap(~K)
+
+# data_pred = data.frame(N=rep(200, times=length(all_Ks)), K=all_Ks)
+# sum(predict(fit_times, newdata = data_pred)) / 360
+
+
+#* Explore distribution of errors
+
+data_all_errs = data.frame()
+
+for(i in seq_along(all_Ks)){
+    some_errs = list_all_errs[[i]]
+
+    this_data_errs = data.frame()
+    for(j in seq_along(some_errs)){
+
+        if(j %% 100 == 0) print(paste("On K = ", all_Ks[i], ", iteration ", j, " out of ", length(some_errs),  sep=""))
+
+        this_err = some_errs[[j]]
+
+        # Extract upper triangle of this_err with diagonal
+        this_triangle = this_err[upper.tri(this_err, diag = T)]
+
+        this_data_errs = rbind(this_data_errs, data.frame(K = all_Ks[i], t(this_triangle)))
+    }
+
+    data_all_errs = rbind(data_all_errs, this_data_errs)
+}
+
+
+library(ggmulti)
+
+pdf("Plots/Visualize_All_Errors_Theta_Hat.pdf", width = 10, height = 10)
+ggplot(data_all_errs, aes(X1=X1, X2=X2, X3=X3, X4=X4, X5=X5, X6=X6, X7=X7, X8=X8, X9=X9, X10=X10, X11=X11, X12=X12, X13=X13, X14=X14, X15=X15, X16=X16, X17=X17, X18=X18, X19=X19, X20=X20, X21=X21, X22=X22, X23=X23, X24=X24, X25=X25, X26=X26, X27=X27, X28=X28, X29=X29, X30=X30, X31=X31, X32=X32, X33=X33, X34=X34, X35=X35, X36=X36, X37=X37, X38=X38, X39=X39, X40=X40, X41=X41, X42=X42, X43=X43, X44=X44, X45=X45, X46=X46, X47=X47, X48=X48, X49=X49, X50=X50, X51=X51, X52=X52, X53=X53, X54=X54, X55=X55, X56=X56, X57=X57, X58=X58, X59=X59, X60=X60, X61=X61, X62=X62, X63=X63, 
+X64=X64, X65=X65, X66=X66, X67=X67, X68=X68, X69=X69, X70=X70, X71=X71, X72=X72, X73=X73, X74=X74, X75=X75, X76=X76, X77=X77, X78=X78, X79=X79, X80=X80, X81=X81, X82=X82, X83=X83, X84=X84, X85=X85, X86=X86, X87=X87, X88=X88, X89=X89, X90=X90, X91=X91, X92=X92, X93=X93, X94=X94, X95=X95, X96=X96, X97=X97, X98=X98, X99=X99, X100=X100, X101=X101, X102=X102, X103=X103, X104=X104, X105=X105, X106=X106, X107=X107, X108=X108, X109=X109, X110=X110, X111=X111, X112=X112, X113=X113, X114=X114, X115=X115, X116=X116, X117=X117, X118=X118, X119=X119, X120=X120)) + 
+    geom_path(alpha=0.1) + coord_serialaxes() + facet_wrap(~K, scales = "free_y") #+ geom_histogram()
+dev.off()
+
+data_all_errs %>%
+  filter(K == 800) %>% slice(-c(bad_rows)) %>%
+    ggplot(aes(X1=X1, X2=X2, X3=X3, X4=X4, X5=X5, X6=X6, X7=X7, X8=X8, X9=X9, X10=X10, X11=X11, X12=X12, X13=X13, X14=X14, X15=X15, X16=X16, X17=X17, X18=X18, X19=X19, X20=X20, X21=X21, X22=X22, X23=X23, X24=X24, X25=X25, X26=X26, X27=X27, X28=X28, X29=X29, X30=X30, X31=X31, X32=X32, X33=X33, X34=X34, X35=X35, X36=X36, X37=X37, X38=X38, X39=X39, X40=X40, X41=X41, X42=X42, X43=X43, X44=X44, X45=X45, X46=X46, X47=X47, X48=X48, X49=X49, X50=X50, X51=X51, X52=X52, X53=X53, X54=X54, X55=X55, X56=X56, X57=X57, X58=X58, X59=X59, X60=X60, X61=X61, X62=X62, X63=X63, 
+    X64=X64, X65=X65, X66=X66, X67=X67, X68=X68, X69=X69, X70=X70, X71=X71, X72=X72, X73=X73, X74=X74, X75=X75, X76=X76, X77=X77, X78=X78, X79=X79, X80=X80, X81=X81, X82=X82, X83=X83, X84=X84, X85=X85, X86=X86, X87=X87, X88=X88, X89=X89, X90=X90, X91=X91, X92=X92, X93=X93, X94=X94, X95=X95, X96=X96, X97=X97, X98=X98, X99=X99, X100=X100, X101=X101, X102=X102, X103=X103, X104=X104, X105=X105, X106=X106, X107=X107, X108=X108, X109=X109, X110=X110, X111=X111, X112=X112, X113=X113, X114=X114, X115=X115, X116=X116, X117=X117, X118=X118, X119=X119, X120=X120)) + 
+    geom_path(alpha=0.1) + coord_serialaxes()
+
+
+
+data_errs_800_full %>%
+     slice(-c(bad_rows)) %>%
+    ggplot(aes(X1=X1, X2=X2, X3=X3, X4=X4, X5=X5, X6=X6, X7=X7, X8=X8, X9=X9, X10=X10, X11=X11, X12=X12, X13=X13, X14=X14, X15=X15, X16=X16, X17=X17, X18=X18, X19=X19, X20=X20, X21=X21, X22=X22, X23=X23, X24=X24, X25=X25, X26=X26, X27=X27, X28=X28, X29=X29, X30=X30, X31=X31, X32=X32, X33=X33, X34=X34, X35=X35, X36=X36, X37=X37, X38=X38, X39=X39, X40=X40, X41=X41, X42=X42, X43=X43, X44=X44, X45=X45, X46=X46, X47=X47, X48=X48, X49=X49, X50=X50, X51=X51, X52=X52, X53=X53, X54=X54, X55=X55, X56=X56, X57=X57, X58=X58, X59=X59, X60=X60, X61=X61, X62=X62, X63=X63, 
+    X64=X64, X65=X65, X66=X66, X67=X67, X68=X68, X69=X69, X70=X70, X71=X71, X72=X72, X73=X73, X74=X74, X75=X75, X76=X76, X77=X77, X78=X78, X79=X79, X80=X80, X81=X81, X82=X82, X83=X83, X84=X84, X85=X85, X86=X86, X87=X87, X88=X88, X89=X89, X90=X90, X91=X91, X92=X92, X93=X93, X94=X94, X95=X95, X96=X96, X97=X97, X98=X98, X99=X99, X100=X100, X101=X101, X102=X102, X103=X103, X104=X104, X105=X105, X106=X106, X107=X107, X108=X108, X109=X109, X110=X110, X111=X111, X112=X112, X113=X113, X114=X114, X115=X115, X116=X116, X117=X117, X118=X118, X119=X119, X120=X120)) + 
+    geom_path(alpha=0.1) + coord_serialaxes()
+
+
+
+# Remove row 1118 because it corresponds to the most egregious outlier on multiple variables
+data_errs_800_full = data_all_errs %>% filter(K == 800) %>% dplyr::select(-K)
+
+SD_errs_800_full = data_errs_800_full %>% summarise_all(sd)
+
+hist(unlist(SD_errs_800_full))
+
+bad_cols = which(unlist(SD_errs_800_full) > 2e-04)
+
+
+hist(data_errs_800_full[,bad_cols[1]])
+hist(data_errs_800_full[,bad_cols[1]], breaks = 100)
+bad_rows = which(data_errs_800_full[,bad_cols[1]] < -4e-3)
+
+hist(unlist(data_errs_800_full[bad_cols[2]]), breaks = 100)
+bad_rows = c(bad_rows, which(unlist(data_errs_800_full[bad_cols[2]]) < -1.2e-3)) 
+# bad_rows = c(bad_rows, which(unlist(data_errs_800_full[bad_cols[2]]) < -5e-4 | unlist(data_errs_800_full[bad_cols[2]]) > 0)) # Verify that removing lots of rows does decrease the SD
+
+# data_errs_800_full %>% slice(-c(bad_rows)) %>% dplyr::select(X55) %>% unlist() %>% hist(breaks = 100)
+
+hist(unlist(data_errs_800_full[bad_cols[3]]), breaks=100)
+bad_rows = c(bad_rows, which(unlist(data_errs_800_full[bad_cols[3]]) < -1e-3 | unlist(data_errs_800_full[bad_cols[3]]) > 5e-4)) 
+# bad_rows = c(bad_rows, which(unlist(data_errs_800_full[bad_cols[3]]) < -7e-4 | unlist(data_errs_800_full[bad_cols[3]]) > 0))# Verify that removing lots of rows does decrease the SD
+
+
+bad_rows %<>% unique()
+
+
+data_errs_800 = data_all_errs %>% filter(K == 800) %>% dplyr::select(-K) %>% slice(-c(bad_rows))
+SD_errs_800 = data_errs_800 %>% summarise_all(sd)
+hist(unlist(SD_errs_800))
+which(SD_errs_800 > 2e-04)
+
+
+
+hist(unlist(data_errs_800_full[10]))#, breaks=100)
+

@@ -50,90 +50,90 @@ w = c(0,0)
 
 
 
-load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
+# load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
 
 
 
 
-# Extract empirical and average estimated covariances for each value of K
+# # Extract empirical and average estimated covariances for each value of K
 
-num_pars = ncol(list_par_hats[[1]])
-
-
-## Remove any runs with NA parameter estimates
-for(j in seq_along(all_Ks)){
-    # Covariance matrices first to preserve information in parameter estimates
-    list_par_cov_hats[[j]] = list_par_cov_hats[[j]][complete.cases(list_par_hats[[j]])]
-    list_par_hats[[j]] = na.omit(list_par_hats[[j]])
-}
-
-lengths(list_par_cov_hats)
-sapply(list_par_hats, nrow)
+# num_pars = ncol(list_par_hats[[1]])
 
 
-list_emp_covs = list()
-list_mean_covs = list()
-list_all_errs = list()
+# ## Remove any runs with NA parameter estimates
+# for(j in seq_along(all_Ks)){
+#     # Covariance matrices first to preserve information in parameter estimates
+#     list_par_cov_hats[[j]] = list_par_cov_hats[[j]][complete.cases(list_par_hats[[j]])]
+#     list_par_hats[[j]] = na.omit(list_par_hats[[j]])
+# }
 
-# Extract empirical covariance and mean estimated covariance.
-for(j in seq_along(all_Ks)){
-
-    this_emp_cov = cov(list_par_hats[[j]])
-    list_emp_covs[[j]] = this_emp_cov
-
-    some_cov_hats = list_par_cov_hats[[j]]
-    this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
-
-    list_mean_covs[[j]] = this_mean_cov
-
-    list_all_errs[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
-
-}
+# lengths(list_par_cov_hats)
+# sapply(list_par_hats, nrow)
 
 
+# list_emp_covs = list()
+# list_mean_covs = list()
+# list_all_errs = list()
 
-# Covariances of ENCs
+# # Extract empirical covariance and mean estimated covariance.
+# for(j in seq_along(all_Ks)){
 
-list_ENC_hats = list()
-list_ENC_cov_hats = list()
+#     this_emp_cov = cov(list_par_hats[[j]])
+#     list_emp_covs[[j]] = this_emp_cov
 
-num_reps = nrow(list_par_hats[[1]])
+#     some_cov_hats = list_par_cov_hats[[j]]
+#     this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
 
-for(i in seq_along(all_Ks)){
+#     list_mean_covs[[j]] = this_mean_cov
 
-    some_ENC_hats = data.frame()
-    some_ENC_cov_hats = list()
+#     list_all_errs[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
 
-    for(j in seq_len(num_reps)){
-        if(j %% 50 == 0) {
-            print(paste0("j = ", j, " of ", num_reps, ", K = ", all_Ks[i], " (number ", i, " of ", length(all_Ks), ")"))
-        }
-
-        this_par_hat = list_par_hats[[i]][j,]
-
-        this_b_Y = this_par_hat[1:5]
-        this_theta_Y = this_par_hat[6:8]
-        this_b_M = this_par_hat[9:12]
-        this_theta_M = this_par_hat[13:15]
-
-
-        this_ENC_hat = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-        some_ENC_hats = rbind(some_ENC_hats, this_ENC_hat)
-
-
-        this_Sigma = list_par_cov_hats[[i]][[j]]
-        this_ENC_cov_hat = all_covs_ENC_pars(w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-        some_ENC_cov_hats[[j]] = this_ENC_cov_hat
-
-    }
-
-    colnames(some_ENC_hats) = c("11", "10", "01", "00")
-    list_ENC_hats[[i]] = some_ENC_hats
-    list_ENC_cov_hats[[i]] = some_ENC_cov_hats
-}
+# }
 
 
 
+# #* Covariances of ENCs
+
+# list_ENC_hats = list()
+# list_ENC_cov_hats = list()
+
+# num_reps = nrow(list_par_hats[[1]])
+
+# for(i in seq_along(all_Ks)){
+
+#     some_ENC_hats = data.frame()
+#     some_ENC_cov_hats = list()
+
+#     for(j in seq_len(num_reps)){
+#         if(j %% 50 == 0) {
+#             print(paste0("j = ", j, " of ", num_reps, ", K = ", all_Ks[i], " (number ", i, " of ", length(all_Ks), ")"))
+#         }
+
+#         this_par_hat = list_par_hats[[i]][j,]
+
+#         this_b_Y = this_par_hat[1:5]
+#         this_theta_Y = this_par_hat[6:8]
+#         this_b_M = this_par_hat[9:12]
+#         this_theta_M = this_par_hat[13:15]
+
+
+#         this_ENC_hat = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+#         some_ENC_hats = rbind(some_ENC_hats, this_ENC_hat)
+
+
+#         this_Sigma = list_par_cov_hats[[i]][[j]]
+#         this_ENC_cov_hat = all_covs_ENC_pars(w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+#         some_ENC_cov_hats[[j]] = this_ENC_cov_hat
+
+#     }
+
+#     colnames(some_ENC_hats) = c("11", "10", "01", "00")
+#     list_ENC_hats[[i]] = some_ENC_hats
+#     list_ENC_cov_hats[[i]] = some_ENC_cov_hats
+# }
+
+# save(all_Ks, num_reps, list_ENC_hats, list_ENC_cov_hats, file = "ENC_Cov_Hats.RData")
+load("ENC_Cov_Hats.RData", verbose = TRUE)
 
 
 
@@ -186,36 +186,14 @@ scaled_ENC_norms = info_ENC_norms
 
 # Trajectory of errors across increasing MC sizes
 
-list_ENC_hats
-list_ENC_cov_hats
 
+# i = 5
+# (Sigma_emp = list_emp_covs[[i]] * all_Ks[i])
+# (Sigma_mean = list_mean_covs[[i]] * all_Ks[i])
+# (Delta = Sigma_emp - Sigma_mean)
 
-# Extract empirical covariance and mean estimated covariance.
-list_emp_covs = list()
-list_mean_covs = list()
-list_all_errs = list()
-
-for(j in seq_along(all_Ks)){
-
-    this_emp_cov = cov(list_ENC_hats[[j]])
-    list_emp_covs[[j]] = this_emp_cov
-
-    some_cov_hats = list_ENC_cov_hats[[j]]
-    this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
-
-    list_mean_covs[[j]] = this_mean_cov
-
-    list_all_errs[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
-
-}
-
-i = 5
-(Sigma_emp = list_emp_covs[[i]] * all_Ks[i])
-(Sigma_mean = list_mean_covs[[i]] * all_Ks[i])
-(Delta = Sigma_emp - Sigma_mean)
-
-eigen(Sigma_emp, symmetric=T, only.values = T)$values
-eigen(Sigma_mean, symmetric=T, only.values = T)$values
+# eigen(Sigma_emp, symmetric=T, only.values = T)$values
+# eigen(Sigma_mean, symmetric=T, only.values = T)$values
 
 
 
@@ -302,6 +280,17 @@ norms_by_MC_size %>%
 
 
 # Estimate rate at which errors scale with K
+
+# pdf("Plots/log_Abs_Err_vs_log_K.pdf", width = 10, height = 10)
+norms_by_MC_size %>%
+    filter(MC_Size == max(MC_Size)) %>%
+    ggplot(aes(x = log(K), y = log(Abs_Error))) +
+    geom_line() +
+    geom_point() +
+    theme_bw()
+# dev.off()
+
+
 best_err_estimates = norms_by_MC_size %>%
     filter(MC_Size == max(MC_Size)) %>%
     mutate(log_K = log(K), log_err = log(Abs_Error))
@@ -312,14 +301,7 @@ summary(fit_err_rate)
 plot(fit_err_rate, 1)
 
 
-# pdf("Plots/log_Abs_Err_vs_log_K.pdf", width = 10, height = 10)
-norms_by_MC_size %>%
-    filter(MC_Size == max(MC_Size)) %>%
-    ggplot(aes(x = log(K), y = log(Abs_Error))) +
-    geom_line() +
-    geom_point() +
-    theme_bw()
-# dev.off()
+
 
 filter(norms_by_MC_size, MC_Size == max(MC_Size))
 
@@ -369,7 +351,7 @@ for(i in seq_along(all_Ks)){
 mean_ENC_Jacob_norms = sapply(list_ENC_Jacob_norms, mean)
 SD_ENC_Jacob_norms = sapply(list_ENC_Jacob_norms, sd)
 
-data_ENC_Jacob_norms = data.frame(all_Ks, mean_ENC_Jacob_norms, SD_ENC_Jacob_norms)
+(data_ENC_Jacob_norms = data.frame(all_Ks, mean_ENC_Jacob_norms, SD_ENC_Jacob_norms))
 
-fit_Jacob_norms = lm(log(SD_ENC_Jacob_norms) ~ log(all_Ks), data = data_ENC_Jacob_norms)
-summary(fit_Jacob_norms)
+fit_Jacob_norm_SDs = lm(log(SD_ENC_Jacob_norms) ~ log(all_Ks), data = data_ENC_Jacob_norms)
+summary(fit_Jacob_norm_SDs)

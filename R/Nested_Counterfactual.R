@@ -121,9 +121,6 @@ M_vec_gamma <- function(x = NULL, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", 
 #'
 ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
-  RE_names = expand_REs(which_REs)
-
-
   mu_Y = as.numeric(b_Y[1] + x * b_Y[2] + w %*% b_Y[4:length(b_Y)])
   mu_M = as.numeric(b_M[1] + x_m * b_M[2] + w %*% b_M[3:length(b_M)])
 

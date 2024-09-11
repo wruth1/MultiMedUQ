@@ -482,8 +482,10 @@ test_that("Values of grad_ENC are correct for subsets of REs", {
       this_M_REs = all_M_sets[[j]]
       this_REs = c(this_Y_REs, this_M_REs)
 
-      this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
-      this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+      # this_theta_Y = rep(1, times = REs2theta_length(this_Y_REs))
+      # this_theta_M = rep(1, times = REs2theta_length(this_M_REs))
+      this_theta_Y = 1:REs2theta_length(this_Y_REs)
+      this_theta_M = 1:REs2theta_length(this_M_REs)
 
       this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
 
