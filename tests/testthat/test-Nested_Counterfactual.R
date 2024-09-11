@@ -73,16 +73,14 @@ test_that("ENC works with a subset of REs", {
 
 
 # Sizes of gradients
-library(rje)        # For the powerSetCond function, which returns the power set, minus the empty set
-
 
 test_that("Dimensions of gradients are correct for subsets of REs", {
 
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
@@ -132,8 +130,8 @@ test_that("Values of grad_mu_Y are correct for subsets of REs", {
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
@@ -178,8 +176,8 @@ test_that("Values of grad_mu_M are correct for subsets of REs", {
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
@@ -223,8 +221,8 @@ test_that("Values of grad_b_Y_M are correct for subsets of REs", {
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
@@ -269,8 +267,8 @@ test_that("Values of grad_gamma_Y are correct for subsets of REs", {
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
@@ -318,8 +316,8 @@ test_that("Values of grad_gamma_M are correct for subsets of REs", {
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
@@ -365,8 +363,8 @@ test_that("Values of grad_psi_Y are correct for subsets of REs", {
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
@@ -419,8 +417,8 @@ test_that("Values of grad_psi_M are correct for subsets of REs", {
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
@@ -474,8 +472,8 @@ test_that("Values of grad_ENC are correct for subsets of REs", {
   Y_REs = c("Y.Int", "Y.X", "Y.M")
   M_REs = c("M.Int", "M.X")
 
-  all_Y_sets = powerSetCond(Y_REs)
-  all_M_sets = powerSetCond(M_REs)
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
 
   for(i in seq_along(all_Y_sets)){
     for(j in seq_along(all_M_sets)){
