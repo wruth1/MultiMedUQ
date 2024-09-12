@@ -896,7 +896,7 @@ X64=X64, X65=X65, X66=X66, X67=X67, X68=X68, X69=X69, X70=X70, X71=X71, X72=X72,
 dev.off()
 
 data_all_errs %>%
-  filter(K == 800) %>% slice(-c(bad_rows)) %>%
+  filter(K == 400) %>% slice(-c(bad_rows)) %>%
     ggplot(aes(X1=X1, X2=X2, X3=X3, X4=X4, X5=X5, X6=X6, X7=X7, X8=X8, X9=X9, X10=X10, X11=X11, X12=X12, X13=X13, X14=X14, X15=X15, X16=X16, X17=X17, X18=X18, X19=X19, X20=X20, X21=X21, X22=X22, X23=X23, X24=X24, X25=X25, X26=X26, X27=X27, X28=X28, X29=X29, X30=X30, X31=X31, X32=X32, X33=X33, X34=X34, X35=X35, X36=X36, X37=X37, X38=X38, X39=X39, X40=X40, X41=X41, X42=X42, X43=X43, X44=X44, X45=X45, X46=X46, X47=X47, X48=X48, X49=X49, X50=X50, X51=X51, X52=X52, X53=X53, X54=X54, X55=X55, X56=X56, X57=X57, X58=X58, X59=X59, X60=X60, X61=X61, X62=X62, X63=X63, 
     X64=X64, X65=X65, X66=X66, X67=X67, X68=X68, X69=X69, X70=X70, X71=X71, X72=X72, X73=X73, X74=X74, X75=X75, X76=X76, X77=X77, X78=X78, X79=X79, X80=X80, X81=X81, X82=X82, X83=X83, X84=X84, X85=X85, X86=X86, X87=X87, X88=X88, X89=X89, X90=X90, X91=X91, X92=X92, X93=X93, X94=X94, X95=X95, X96=X96, X97=X97, X98=X98, X99=X99, X100=X100, X101=X101, X102=X102, X103=X103, X104=X104, X105=X105, X106=X106, X107=X107, X108=X108, X109=X109, X110=X110, X111=X111, X112=X112, X113=X113, X114=X114, X115=X115, X116=X116, X117=X117, X118=X118, X119=X119, X120=X120)) + 
     geom_path(alpha=0.1) + coord_serialaxes()
@@ -911,7 +911,7 @@ data_errs_800_full %>%
 
 
 
-# Remove row 1118 because it corresponds to the most egregious outlier on multiple variables
+# Detect and remove outliers
 data_errs_800_full = data_all_errs %>% filter(K == 800) %>% dplyr::select(-K)
 
 SD_errs_800_full = data_errs_800_full %>% summarise_all(sd)
@@ -948,3 +948,39 @@ which(SD_errs_800 > 2e-04)
 
 hist(unlist(data_errs_800_full[10]))#, breaks=100)
 
+
+
+
+# Detect and remove outliers - K=400
+data_errs_400_full = data_all_errs %>% filter(K == 400) %>% dplyr::select(-K)
+
+SD_errs_400_full = data_errs_400_full %>% summarise_all(sd)
+
+hist(unlist(SD_errs_400_full))
+
+bad_cols = which(unlist(SD_errs_400_full) > 4e-04)
+
+
+hist(data_errs_400_full[,bad_cols[1]])
+hist(data_errs_400_full[,bad_cols[1]], breaks = 100)
+bad_rows = which(data_errs_400_full[,bad_cols[1]] < -1e-2)
+
+hist(unlist(data_errs_400_full[bad_cols[2]]), breaks = 100)
+bad_rows = c(bad_rows, which(unlist(data_errs_400_full[bad_cols[2]]) < -4e-3)) 
+
+
+hist(unlist(data_errs_400_full[bad_cols[3]]), breaks=100)
+bad_rows = c(bad_rows, which(unlist(data_errs_400_full[bad_cols[3]]) < -4e-3)) 
+
+hist(unlist(data_errs_400_full[bad_cols[4]]), breaks=100, xlim = c(-3e-3, 3e-3))
+bad_rows = c(bad_rows, which(unlist(data_errs_400_full[bad_cols[3]]) < -2.5e-3 | unlist(data_errs_400_full[bad_cols[3]]) > 2.3e-3)) 
+
+
+
+bad_rows %<>% unique()
+
+
+data_errs_400 = data_all_errs %>% filter(K == 400) %>% dplyr::select(-K) %>% slice(-c(bad_rows))
+SD_errs_400 = data_errs_400 %>% summarise_all(sd)
+hist(unlist(SD_errs_400))
+which(SD_errs_400 > 2e-04)

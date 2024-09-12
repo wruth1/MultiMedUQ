@@ -92,45 +92,45 @@ w = c(0,0)
 
 
 
-# #* Covariances of ENCs
+#* Covariances of ENCs
 
-# list_ENC_hats = list()
-# list_ENC_cov_hats = list()
+list_ENC_hats = list()
+list_ENC_cov_hats = list()
 
-# num_reps = nrow(list_par_hats[[1]])
+num_reps = nrow(list_par_hats[[1]])
 
-# for(i in seq_along(all_Ks)){
+for(i in seq_along(all_Ks)){
 
-#     some_ENC_hats = data.frame()
-#     some_ENC_cov_hats = list()
+    some_ENC_hats = data.frame()
+    some_ENC_cov_hats = list()
 
-#     for(j in seq_len(num_reps)){
-#         if(j %% 50 == 0) {
-#             print(paste0("j = ", j, " of ", num_reps, ", K = ", all_Ks[i], " (number ", i, " of ", length(all_Ks), ")"))
-#         }
+    for(j in seq_len(num_reps)){
+        if(j %% 50 == 0) {
+            print(paste0("j = ", j, " of ", num_reps, ", K = ", all_Ks[i], " (number ", i, " of ", length(all_Ks), ")"))
+        }
 
-#         this_par_hat = list_par_hats[[i]][j,]
+        this_par_hat = list_par_hats[[i]][j,]
 
-#         this_b_Y = this_par_hat[1:5]
-#         this_theta_Y = this_par_hat[6:8]
-#         this_b_M = this_par_hat[9:12]
-#         this_theta_M = this_par_hat[13:15]
-
-
-#         this_ENC_hat = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-#         some_ENC_hats = rbind(some_ENC_hats, this_ENC_hat)
+        this_b_Y = this_par_hat[1:5]
+        this_theta_Y = this_par_hat[6:8]
+        this_b_M = this_par_hat[9:12]
+        this_theta_M = this_par_hat[13:15]
 
 
-#         this_Sigma = list_par_cov_hats[[i]][[j]]
-#         this_ENC_cov_hat = all_covs_ENC_pars(w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-#         some_ENC_cov_hats[[j]] = this_ENC_cov_hat
+        this_ENC_hat = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+        some_ENC_hats = rbind(some_ENC_hats, this_ENC_hat)
 
-#     }
 
-#     colnames(some_ENC_hats) = c("11", "10", "01", "00")
-#     list_ENC_hats[[i]] = some_ENC_hats
-#     list_ENC_cov_hats[[i]] = some_ENC_cov_hats
-# }
+        this_Sigma = list_par_cov_hats[[i]][[j]]
+        this_ENC_cov_hat = all_covs_ENC_pars(w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+        some_ENC_cov_hats[[j]] = this_ENC_cov_hat
+
+    }
+
+    colnames(some_ENC_hats) = c("11", "10", "01", "00")
+    list_ENC_hats[[i]] = some_ENC_hats
+    list_ENC_cov_hats[[i]] = some_ENC_cov_hats
+}
 
 # save(all_Ks, num_reps, list_ENC_hats, list_ENC_cov_hats, file = "ENC_Cov_Hats.RData")
 load("ENC_Cov_Hats.RData", verbose = TRUE)
@@ -203,7 +203,6 @@ total_num_reps = nrow(list_par_hats[[1]])
 # all_Bs = seq(100, 200, by=10)
 all_Bs = seq(100, total_num_reps, by=20)
 
-counter = 0
 
 for(i in seq_along(all_Ks)){
     for(r in seq_along(all_Bs)){
@@ -224,7 +223,6 @@ for(i in seq_along(all_Ks)){
         this_info = c(all_Ks[i], this_B, this_err, this_err_scaled, this_err_extra_scaled)
 
 
-        counter = counter + 1
         norms_by_MC_size = rbind(norms_by_MC_size, this_info)
     }
 }
@@ -239,14 +237,14 @@ norms_by_MC_size %>% arrange(K)
 library(ggplot2)
 
 
+# Absolute error as a function of MC size
 norms_by_MC_size %>% 
-    ggplot(aes(x = MC_Size, y = Scaled_Error, color = as.factor(K))) +
+    ggplot(aes(x = MC_Size, y = Abs_Error, color = as.factor(K))) +
     geom_line() +
     geom_point() +
     theme_bw()
 
 # Grid of plots
-# Absolute error scaled by K
 # pdf("Plots/Abs_Error_by_MC_Size.pdf", width = 10, height = 10)
 norms_by_MC_size %>%
     ggplot(aes(x = MC_Size, y = Abs_Error, color = as.factor(K))) +
@@ -295,7 +293,7 @@ best_err_estimates = norms_by_MC_size %>%
     filter(MC_Size == max(MC_Size)) %>%
     mutate(log_K = log(K), log_err = log(Abs_Error))
 
-fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates[-1,])
+fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates)
 summary(fit_err_rate)
 
 plot(fit_err_rate, 1)
@@ -355,3 +353,118 @@ SD_ENC_Jacob_norms = sapply(list_ENC_Jacob_norms, sd)
 
 fit_Jacob_norm_SDs = lm(log(SD_ENC_Jacob_norms) ~ log(all_Ks), data = data_ENC_Jacob_norms)
 summary(fit_Jacob_norm_SDs)
+
+
+
+
+
+#* Isolate effect of gradient on estimation of Gamma_1
+
+
+Theta_0 = c(b_Y, theta_Y, b_M, theta_M)
+
+# # Need to construct Sigma_0 more carefully. Some parameters have bounded support
+# # Sigma_0_factor = matrix(rnorm(num_pars^2), nrow = num_pars)
+# # Sigma_0 = t(Sigma_0_factor) %*% Sigma_0_factor
+# Sigma_0 = diag(num_pars)
+# Sigma_0[6,6] = 0.1
+# Sigma_0[7,7] = 0.05
+# Sigma_0[8,8] = 0.1
+# Sigma_0[13,13] = 0.1
+# Sigma_0[14,14] = 0.05
+# Sigma_0[15,15] = 0.1
+
+# Alternatively, use an estimate of Sigma_0 from another MC study
+list_Sigma_0_hats = purrr::map2(list_mean_covs, all_Ks, ~ .x * .y)
+Sigma_0 = Reduce("+", list_Sigma_0_hats) / length(list_Sigma_0_hats)
+# Sigma_0 = list_par_cov_hats[[5]][[1]] * all_Ks[5]
+
+B = 1000
+
+test_Ks = c(100, 200, 400, 800)
+
+
+list_all_errs = list()
+
+set.seed(1)
+
+tic()
+
+for(ii in seq_along(test_Ks)){
+    this_K = test_Ks[ii]
+
+    Gamma_0 = Sigma_0 / this_K
+
+
+
+
+    some_Thetas = mvrnorm(B, mu = Theta_0, Sigma = Gamma_0)
+
+    some_ENCs = data.frame()
+    for(i in seq_len(B)){
+        this_Theta = some_Thetas[i,]
+
+        this_b_Y = this_Theta[1:5]
+        this_theta_Y = this_Theta[6:8]
+        this_b_M = this_Theta[9:12]
+        this_theta_M = this_Theta[13:15]
+
+        tryCatch({
+
+        this_ENCs = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs = which_REs)
+
+        some_ENCs = rbind(some_ENCs, this_ENCs)
+        }, error = function(e) {
+            print(paste0("Error at i = ", i, ": ", e))
+        })
+    }
+    colnames(some_ENCs) = c("11", "10", "01", "00")
+
+    Gamma_1_circ = cov(some_ENCs)
+
+
+    some_Jacobians = list()
+    for(i in seq_len(B)){
+
+        if(i %% 100 == 0) {
+            print(paste0("i = ", i, " of ", B, ", K = ", this_K, " of ", max(test_Ks)))
+        }
+        this_Theta = some_Thetas[i,]
+
+        this_b_Y = this_Theta[1:5]
+        this_theta_Y = this_Theta[6:8]
+        this_b_M = this_Theta[9:12]
+        this_theta_M = this_Theta[13:15]
+
+        this_Jacobian = Jacob_ENC_pars(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs = which_REs)
+
+        some_Jacobians[[i]] = this_Jacobian
+    }
+
+    some_Gamma_1_hats = lapply(some_Jacobians, function(J) J %*% Gamma_0 %*% t(J))
+
+
+    some_errs = sapply(some_Gamma_1_hats, function(x) norm(x - Gamma_1_circ, "2"))
+
+
+    list_all_errs[[ii]] = some_errs
+}
+
+toc()
+
+#! Backup
+# list_all_errs_Sigma_0_hat = list_all_errs
+# list_all_errs = list_all_errs_Sigma_0_hat
+
+data_test_errs = t(sapply(list_all_errs, function(this_errs) c(mean(this_errs), sd(this_errs))))
+data_test_errs = data.frame(cbind(test_Ks, data_test_errs))
+colnames(data_test_errs) = c("K", "mean", "SD")
+data_test_errs
+
+# plot log of mean error vs log K
+ggplot(data_test_errs, aes(x = log(K), y = log(mean))) +
+  geom_point() +
+  geom_line()
+
+fit_test_errs = lm(log(mean) ~ log(K), data = data_test_errs)
+summary(fit_test_errs)

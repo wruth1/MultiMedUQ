@@ -477,7 +477,10 @@ grad_psi_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("
   grad_M_contrib = m * grad_b_Y_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
   grad_gamma = grad_gamma_Y(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
-  return(d1_psi(mu_Y + m*b_Y[3], gamma_Y) * (grad_mu +  grad_M_contrib) + d2_psi(mu_Y + m*b_Y[3], gamma_Y) * grad_gamma)
+  grad_1 = d1_psi(mu_Y + m*b_Y[3], gamma_Y) * (grad_mu +  grad_M_contrib)
+  grad_2 = d2_psi(mu_Y + m*b_Y[3], gamma_Y) * grad_gamma
+
+  return(grad_1 + grad_2)
 
 }
 
@@ -491,10 +494,12 @@ grad_psi_M <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("
   M_vec = M_vec_gamma(x_m, which_REs)
   gamma_M = theta2gamma(M_vec, theta_M)
 
-  grad_mu = (2*m - 1) * grad_mu_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
+  sign_m = 2*m - 1 # Multiplier for mu_M based on whether m = 0 or 1
+
+  grad_mu = sign_m * grad_mu_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
   grad_gamma = grad_gamma_M(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs)
 
-  return(d1_psi(mu_M, gamma_M) * grad_mu + d2_psi(mu_M, gamma_M) * grad_gamma)
+  return(d1_psi(sign_m*mu_M, gamma_M) * grad_mu + d2_psi(sign_m*mu_M, gamma_M) * grad_gamma)
 
 }
 
