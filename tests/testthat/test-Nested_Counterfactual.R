@@ -126,6 +126,7 @@ test_that("Dimensions of gradients are correct for subsets of REs", {
 # Values of gradients
 
 ## Non-trivial values for the b's and theta's. Former based on output from another MC study. Latter chosen arbitrarily.
+## Crucially, no parameters are equal to zero.
 b_Y = c(0.0376828219852018, 0.966486302988689, 1.99644760563721, -0.00556557712859059, 0.000826754128449799)
 b_M = c(-0.0990439890654785, 1.76353928991247, 0.0128566136999183, 0.00711746366915989)
 
@@ -135,9 +136,9 @@ make_theta = function(RE_names){
   if(num_REs == 1){
     return(1)
   } else if(num_REs == 2){
-    return(c(1, 0.5, 1))
+    return(c(2, 0.5, 3))
   } else if(num_REs == 3){
-    return(c(1, 0.5, 0.5, 1, 0.5, 1))
+    return(c(4, 0.4, 0.3, 5, 0.2, 6))
   }
 }
 

@@ -56,7 +56,7 @@ list_par_cov_hats = list()
 
 
 
-set.seed(11111111)
+set.seed(2222)
 
 
 
@@ -104,99 +104,103 @@ for(j in seq_along(all_Ks)){
 
 
 
-
-B = 50000
-
-
-list_all_theta_errs = list()
-for(i in seq_along(all_Ks)){
-    some_theta_hats = list_par_hats[[i]]
-
-    theta_bar = apply(some_theta_hats, 2, mean)
-
-    some_errs = c()
-    for(j in 1:nrow(some_theta_hats)){
-        this_err = some_theta_hats[j,] - theta_bar
-
-        some_errs = rbind(some_errs, norm(this_err, type="2"))
-    }
-
-    list_all_theta_errs[[i]] = some_errs
-}
-
-data_all_theta_errs = data.frame(K = rep(all_Ks, each = num_reps), err = Reduce("c", list_all_theta_errs))
-
-# histogram of errors, faceted by K
-ggplot(data_all_theta_errs, aes(x = err)) + geom_histogram() + facet_wrap(~K)
+#* Explore high-dimensional visualization
 
 
-library(ggmulti)
-
-i=1
-q = data.frame(list_par_hats[[i]])
-colnames(q) = c(paste0("b_Y", 1:5), paste0("theta_Y", 1:3), paste0("b_M", 1:4), paste0("theta_M", 1:3))
-q_sub = q[sample(1:nrow(q), 200),]
-
-ggplot(q_sub, aes(b_Y1 = b_Y1,
-                                b_Y2 = b_Y2,
-                                b_Y3 = b_Y3,
-                                b_Y4 = b_Y4,
-                                b_Y5 = b_Y5,
-                                theta_Y1 = theta_Y1,
-                                theta_Y2 = theta_Y2,
-                                theta_Y3 = theta_Y3,
-                                b_M1 = b_M1,
-                                b_M2 = b_M2,
-                                b_M3 = b_M3,
-                                b_M4 = b_M4,
-                                theta_M1 = theta_M1,
-                                theta_M2 = theta_M2,
-                                theta_M3 = theta_M3
-                                )) + 
-    geom_path(alpha=0.1) + coord_serialaxes() + geom_histogram()
- 
-
-# MC delta method for ENC
-
-# list_cov_ENC_tildes = list()
-# list_all_ENC_tildes = list()
-
+# list_all_theta_errs = list()
 # for(i in seq_along(all_Ks)){
+#     some_theta_hats = list_par_hats[[i]]
 
-#     this_theta_hat = apply(list_par_hats[[i]], 2, mean)
+#     theta_bar = apply(some_theta_hats, 2, mean)
 
-#     this_cov_hat = list_mean_covs[[i]]
+#     some_errs = c()
+#     for(j in 1:nrow(some_theta_hats)){
+#         this_err = some_theta_hats[j,] - theta_bar
 
-
-#     some_theta_tildes = mvrnorm(B, mu = this_theta_hat, Sigma = this_cov_hat)
-
-#     some_ENC_tildes = data.frame()
-
-#     for(j in 1:B){
-
-#         if(j%%1000 == 0) cat("i = ", i, " of ", length(all_Ks), ", j = ", j, " of ", B, "\n", sep="")
-
-
-
-#         this_theta_tilde = some_theta_tildes[j,]
-
-#         this_b_Y = this_theta_tilde[1:5]
-#         this_theta_Y = this_theta_tilde[6:8]
-#         this_b_M = this_theta_tilde[9:12]
-#         this_theta_M = this_theta_tilde[13:15]
-
-#         this_ENC_tilde = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs)
-
-#         some_ENC_tildes = rbind(some_ENC_tildes, this_ENC_tilde)
+#         some_errs = rbind(some_errs, norm(this_err, type="2"))
 #     }
 
-
-#     list_all_ENC_tildes[[i]] = some_ENC_tildes
-#     cov_ENC_tilde = cov(some_ENC_tildes)
-
-
-#     list_cov_ENC_tildes[[i]] = cov_ENC_tilde
+#     list_all_theta_errs[[i]] = some_errs
 # }
+
+# data_all_theta_errs = data.frame(K = rep(all_Ks, each = num_reps), err = Reduce("c", list_all_theta_errs))
+
+# # histogram of errors, faceted by K
+# ggplot(data_all_theta_errs, aes(x = err)) + geom_histogram() + facet_wrap(~K)
+
+
+# library(ggmulti)
+
+# i=1
+# q = data.frame(list_par_hats[[i]])
+# colnames(q) = c(paste0("b_Y", 1:5), paste0("theta_Y", 1:3), paste0("b_M", 1:4), paste0("theta_M", 1:3))
+# q_sub = q[sample(1:nrow(q), 200),]
+
+# ggplot(q_sub, aes(b_Y1 = b_Y1,
+#                                 b_Y2 = b_Y2,
+#                                 b_Y3 = b_Y3,
+#                                 b_Y4 = b_Y4,
+#                                 b_Y5 = b_Y5,
+#                                 theta_Y1 = theta_Y1,
+#                                 theta_Y2 = theta_Y2,
+#                                 theta_Y3 = theta_Y3,
+#                                 b_M1 = b_M1,
+#                                 b_M2 = b_M2,
+#                                 b_M3 = b_M3,
+#                                 b_M4 = b_M4,
+#                                 theta_M1 = theta_M1,
+#                                 theta_M2 = theta_M2,
+#                                 theta_M3 = theta_M3
+#                                 )) + 
+#     geom_path(alpha=0.1) + coord_serialaxes() + geom_histogram()
+ 
+
+
+
+
+
+#* MC delta method for ENC
+
+B = 10000
+
+list_cov_ENC_tildes = list()
+list_all_ENC_tildes = list()
+
+for(i in seq_along(all_Ks)){
+
+    this_theta_hat = apply(list_par_hats[[i]], 2, mean)
+
+    this_cov_hat = list_mean_covs[[i]]
+
+
+    some_theta_tildes = mvrnorm(B, mu = this_theta_hat, Sigma = this_cov_hat)
+
+    some_ENC_tildes = data.frame()
+
+    for(j in 1:B){
+
+        if(j%%1000 == 0) cat("i = ", i, " of ", length(all_Ks), ", j = ", j, " of ", B, "\n", sep="")
+
+
+
+        this_theta_tilde = some_theta_tildes[j,]
+
+        this_b_Y = this_theta_tilde[1:5]
+        this_theta_Y = this_theta_tilde[6:8]
+        this_b_M = this_theta_tilde[9:12]
+        this_theta_M = this_theta_tilde[13:15]
+
+        this_ENC_tilde = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs)
+
+        some_ENC_tildes = rbind(some_ENC_tildes, this_ENC_tilde)
+    }
+
+
+    list_all_ENC_tildes[[i]] = some_ENC_tildes
+
+    cov_ENC_tilde = cov(some_ENC_tildes)
+    list_cov_ENC_tildes[[i]] = cov_ENC_tilde
+}
 
 
 # save(all_Ks, B, list_all_ENC_tildes, list_cov_ENC_tildes, file="ENC_MC_Delta.RData")

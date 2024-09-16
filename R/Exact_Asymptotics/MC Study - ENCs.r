@@ -50,45 +50,45 @@ w = c(0,0)
 
 
 
-# load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
+load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
 
 
 
 
-# # Extract empirical and average estimated covariances for each value of K
+# Extract empirical and average estimated covariances for each value of K
 
-# num_pars = ncol(list_par_hats[[1]])
-
-
-# ## Remove any runs with NA parameter estimates
-# for(j in seq_along(all_Ks)){
-#     # Covariance matrices first to preserve information in parameter estimates
-#     list_par_cov_hats[[j]] = list_par_cov_hats[[j]][complete.cases(list_par_hats[[j]])]
-#     list_par_hats[[j]] = na.omit(list_par_hats[[j]])
-# }
-
-# lengths(list_par_cov_hats)
-# sapply(list_par_hats, nrow)
+num_pars = ncol(list_par_hats[[1]])
 
 
-# list_emp_covs = list()
-# list_mean_covs = list()
-# list_all_errs = list()
+## Remove any runs with NA parameter estimates
+for(j in seq_along(all_Ks)){
+    # Covariance matrices first to preserve information in parameter estimates
+    list_par_cov_hats[[j]] = list_par_cov_hats[[j]][complete.cases(list_par_hats[[j]])]
+    list_par_hats[[j]] = na.omit(list_par_hats[[j]])
+}
 
-# # Extract empirical covariance and mean estimated covariance.
-# for(j in seq_along(all_Ks)){
+lengths(list_par_cov_hats)
+sapply(list_par_hats, nrow)
 
-#     this_emp_cov = cov(list_par_hats[[j]])
-#     list_emp_covs[[j]] = this_emp_cov
 
-#     some_cov_hats = list_par_cov_hats[[j]]
-#     this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
+list_emp_covs = list()
+list_mean_covs = list()
+list_all_errs = list()
 
-#     list_mean_covs[[j]] = this_mean_cov
+# Extract empirical covariance and mean estimated covariance.
+for(j in seq_along(all_Ks)){
 
-#     list_all_errs[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
+    this_emp_cov = cov(list_par_hats[[j]])
+    list_emp_covs[[j]] = this_emp_cov
 
-# }
+    some_cov_hats = list_par_cov_hats[[j]]
+    this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
+
+    list_mean_covs[[j]] = this_mean_cov
+
+    list_all_errs[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
+
+}
 
 
 
@@ -268,7 +268,7 @@ norms_by_MC_size %>%
 #     scale_y_continuous(name = "K Times Absolute Error", sec.axis = sec_axis(trans =~./scale_factor, name = "K^3/2 Times Absolute Error"))
 
 
-# Plot scaled error vs K for maximum MC size
+# Plot absolute error vs K for maximum MC size
 norms_by_MC_size %>%
     filter(MC_Size == max(MC_Size)) %>%
     ggplot(aes(x = K, y = Abs_Error)) +
@@ -294,6 +294,7 @@ best_err_estimates = norms_by_MC_size %>%
     mutate(log_K = log(K), log_err = log(Abs_Error))
 
 fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates)
+fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates[c(-1, -5),])
 summary(fit_err_rate)
 
 plot(fit_err_rate, 1)
@@ -361,7 +362,7 @@ summary(fit_Jacob_norm_SDs)
 #* Isolate effect of gradient on estimation of Gamma_1
 
 
-Theta_0 = c(b_Y, theta_Y, b_M, theta_M)
+# Theta_0 = c(b_Y, theta_Y, b_M, theta_M)
 
 # # Need to construct Sigma_0 more carefully. Some parameters have bounded support
 # # Sigma_0_factor = matrix(rnorm(num_pars^2), nrow = num_pars)
@@ -379,9 +380,9 @@ list_Sigma_0_hats = purrr::map2(list_mean_covs, all_Ks, ~ .x * .y)
 Sigma_0 = Reduce("+", list_Sigma_0_hats) / length(list_Sigma_0_hats)
 # Sigma_0 = list_par_cov_hats[[5]][[1]] * all_Ks[5]
 
-B = 1000
+B = 2000
 
-test_Ks = c(100, 200, 400, 800)
+test_Ks = c(100, 200, 400, 800, 1600, 3200)
 
 
 list_all_errs = list()
@@ -466,5 +467,6 @@ ggplot(data_test_errs, aes(x = log(K), y = log(mean))) +
   geom_point() +
   geom_line()
 
+fit_test_errs = lm(log(mean) ~ log(K), data = data_test_errs[-5,])
 fit_test_errs = lm(log(mean) ~ log(K), data = data_test_errs)
 summary(fit_test_errs)

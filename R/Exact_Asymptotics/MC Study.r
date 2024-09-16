@@ -31,8 +31,8 @@ all_Ks = c(50, 100, 200, 400, 800)
 # K = 50
 
 # num_reps = 30
-# num_reps = 300
-num_reps = 1200
+num_reps = 500
+# num_reps = 1200
 
 
 which_REs = c("Y.Int", "Y.X", "M.All")
@@ -57,7 +57,7 @@ list_par_cov_hats = list()
 
 
 
-set.seed(22222222)
+set.seed(55555555)
 
 
 # Setup cluster
@@ -165,19 +165,27 @@ stopCluster(cl)
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K.RData")
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_2.RData")
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_3.RData")
+# save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_4.RData")
+
+# save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_5.RData")
+# save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_6.RData")
+
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_Many_Reps.RData")
+
 # save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_Pooled.RData")
+
+
 # load("Par_Hat_MC.RData", verbose = TRUE)
 # load("Par_Hat_MC-Large_K.RData", verbose = TRUE)
 # load("Par_Hat_MC-Large_K_2.RData", verbose = TRUE)
-# load("Par_Hat_MC-Large_K_3.RData", verbose = TRUE) #! Merge this into the pooled version
+# load("Par_Hat_MC-Large_K_3.RData", verbose = TRUE)
 # load("Par_Hat_MC-Large_K_Many_Reps.RData", verbose = TRUE)
 load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
 
 
 # # # Concatenate parameter estimates from multiple MC studies
 # # ## Alternatively, load the Pooled version of the saved data.
-# all_files = c("Par_Hat_MC-Large_K_3.RData", "Par_Hat_MC-Large_K_Pooled.RData")
+# all_files = c("Par_Hat_MC-Large_K_5.RData", "Par_Hat_MC-Large_K_6.RData", "Par_Hat_MC-Large_K_Pooled.RData")
 
 # load(all_files[1], verbose = TRUE)
 
@@ -199,9 +207,15 @@ load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
 # list_par_hats = large_list_par_hats
 # list_par_cov_hats = large_list_par_cov_hats
 
+# save(num_reps,all_Ks, list_par_hats, list_par_cov_hats, file = "Par_Hat_MC-Large_K_Pooled.RData")
 
 
-# Extract empirical and average estimated covariances for each value of K
+
+
+
+
+
+#* Extract empirical and average estimated covariances for each value of K
 
 num_pars = ncol(list_par_hats[[1]])
 
@@ -238,7 +252,98 @@ for(j in seq_along(all_Ks)){
 
 
 
-# Compute summary statistics of ratios of diagonal elements across pairs of K-levels
+#* Compute empirical and analytical covariance estimates separately on each half of the data and compare.
+
+# Merge multiple datasets
+all_files = c("Par_Hat_MC-Large_K_4.RData", "Par_Hat_MC-Large_K_6.RData")
+
+load(all_files[1], verbose = TRUE)
+
+
+
+large_list_par_hats = list_par_hats
+large_list_par_cov_hats = list_par_cov_hats
+
+for(file in all_files[2:length(all_files)]){
+
+    load(file, verbose = TRUE)
+
+    for(i in seq_along(all_Ks)){
+
+        large_list_par_hats[[i]] = rbind(large_list_par_hats[[i]], list_par_hats[[i]])
+
+        large_list_par_cov_hats[[i]] = c(large_list_par_cov_hats[[i]], list_par_cov_hats[[i]])
+    }
+}
+
+list_par_hats = large_list_par_hats
+list_par_cov_hats = large_list_par_cov_hats
+
+length(list_par_cov_hats[[1]])
+
+# Compute LHS and RHS empirical and analytical covariances
+
+lhs_emp_covs = list()
+rhs_emp_covs = list()
+lhs_mean_covs = list()
+rhs_mean_covs = list()
+
+for(j in seq_along(all_Ks)){
+    this_K = all_Ks[j]
+    # Empirical covariances
+    some_par_hats = list_par_hats[[j]]
+    lhs_par_hats = some_par_hats[1:(nrow(some_par_hats)/2),]
+    rhs_par_hats = some_par_hats[(nrow(some_par_hats)/2+1):nrow(some_par_hats),]
+
+    lhs_emp_cov = cov(lhs_par_hats)
+    rhs_emp_cov = cov(rhs_par_hats)
+
+    lhs_emp_covs[[j]] = lhs_emp_cov
+    rhs_emp_covs[[j]] = rhs_emp_cov
+
+
+    # Analytical covariances
+    some_cov_hats = list_par_cov_hats[[j]]
+    lhs_cov_hats = some_cov_hats[1:(length(some_cov_hats)/2)]
+    rhs_cov_hats = some_cov_hats[(length(some_cov_hats)/2+1):length(some_cov_hats)]
+
+    lhs_mean_cov = Reduce("+", lhs_cov_hats) / length(lhs_cov_hats)
+    rhs_mean_cov = Reduce("+", rhs_cov_hats) / length(rhs_cov_hats)
+
+    lhs_mean_covs[[j]] = lhs_mean_cov
+    rhs_mean_covs[[j]] = rhs_mean_cov
+}
+
+
+data_diffs = data.frame()
+
+for(j in seq_along(all_Ks)){
+    this_K = all_Ks[j]
+
+    this_emp_diff = norm(lhs_emp_covs[[j]] - rhs_emp_covs[[j]], "2")
+    this_mean_diff = norm(lhs_mean_covs[[j]] - rhs_mean_covs[[j]], "2")
+
+    this_emp_scaled_diff = this_emp_diff * this_K
+    this_mean_scaled_diff = this_mean_diff * this_K
+
+    this_emp_rel_diff = this_emp_diff / norm(lhs_emp_covs[[j]], "2")
+    this_mean_rel_diff = this_mean_diff / norm(lhs_mean_covs[[j]], "2")
+
+    this_diff = c(this_K, this_emp_diff, this_mean_diff, this_emp_scaled_diff, this_mean_scaled_diff, this_emp_rel_diff, this_mean_rel_diff)
+    data_diffs = rbind(data_diffs, this_diff)
+}    
+colnames(data_diffs) = c("K", "Emp", "Mean", "Emp-Scaled", "Mean-Scaled", "Emp-Rel", "Mean-Rel")
+
+data_diffs
+
+
+
+
+
+
+
+
+#* Compute summary statistics of ratios of diagonal elements across pairs of K-levels
 
 ## Empirical variances
 info_rats = data.frame()
@@ -407,228 +512,6 @@ data_covs
 
 
 
-# Covariances of ENCs
-
-list_ENC_hats = list()
-list_ENC_cov_hats = list()
-
-for(i in seq_along(all_Ks)){
-
-    some_ENC_hats = data.frame()
-    some_ENC_cov_hats = list()
-
-    for(j in seq_len(num_reps)){
-
-        this_par_hat = list_par_hats[[i]][j,]
-
-        this_b_Y = this_par_hat[1:5]
-        this_theta_Y = this_par_hat[6:8]
-        this_b_M = this_par_hat[9:12]
-        this_theta_M = this_par_hat[13:15]
-
-
-        this_ENC_hat = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-        some_ENC_hats = rbind(some_ENC_hats, this_ENC_hat)
-
-
-        this_Sigma = list_par_cov_hats[[i]][[j]]
-        this_ENC_cov_hat = all_covs_ENC_pars(w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-        some_ENC_cov_hats[[j]] = this_ENC_cov_hat
-
-    }
-
-    colnames(some_ENC_hats) = c("11", "10", "01", "00")
-    list_ENC_hats[[i]] = some_ENC_hats
-    list_ENC_cov_hats[[i]] = some_ENC_cov_hats
-}
-
-
-## Summarize covariance estimates
-
-### Empirical
-
-list_ENC_emp_covs = list()
-
-for(i in seq_along(all_Ks)){
-    list_ENC_emp_covs[[i]] = cov(list_ENC_hats[[i]])
-}
-
-
-### Estimated
-
-list_ENC_mean_covs = list()
-
-for(i in seq_along(all_Ks)){
-    some_ENC_cov_hats = list_ENC_cov_hats[[i]]
-    this_mean_ENC_cov_hat = Reduce("+", some_ENC_cov_hats) / num_reps
-    list_ENC_mean_covs[[i]] = this_mean_ENC_cov_hat
-}
-
-
-
-## Compare covariance estimates
-
-### Easier: Variances (i.e. diagonal elements)
-info_var_diffs = data.frame()
-for(i in seq_along(all_Ks)){
-    some_var_diffs = diag(list_ENC_emp_covs[[i]] - list_ENC_mean_covs[[i]])
-    some_rel_var_diffs = some_var_diffs / diag(list_ENC_emp_covs[[i]])
-
-    this_info = c(all_Ks[i], mean(some_var_diffs), sd(some_var_diffs), mean(some_rel_var_diffs), sd(some_rel_var_diffs))
-
-    info_var_diffs = rbind(info_var_diffs, this_info)
-}
-colnames(info_var_diffs) = c("K", "Mean_Diff", "SD_Diff", "Mean_Rel_Diff", "SD_Rel_Diff")
-
-info_var_diffs
-
-info_var_diffs %>% mutate(scale_abs_diff = Mean_Diff * K) %>% select(-"Mean_Rel_Diff", -"SD_Rel_Diff")
-
-
-### Harder: Matrix norms
-info_ENC_norms = data.frame()
-for(i in seq_along(all_Ks)){
-    diff_mat = list_ENC_emp_covs[[i]] - list_ENC_mean_covs[[i]]
-    # diff_mat_norm = norm(diff_mat, type = "2")
-    diff_mat_norm = norm(diff_mat, type = "F")
-
-    # rel_norm = diff_mat_norm / norm(list_ENC_emp_covs[[i]], type = "2")
-    rel_norm = diff_mat_norm / norm(list_ENC_emp_covs[[i]], type = "F")
-
-    this_info = c(all_Ks[i], diff_mat_norm, rel_norm)
-    info_ENC_norms = rbind(info_ENC_norms, this_info)
-}
-colnames(info_ENC_norms) = c("K", "Norm_Diff", "Rel_Norm_Diff")
-
-info_ENC_norms
-
-scaled_ENC_norms = info_ENC_norms %>% mutate(scale_abs_diff = Norm_Diff * K) %>% select(-"Rel_Norm_Diff")
-
-
-
-
-# Covariances of mediation effects
-
-
-list_ME_hats = list()
-list_ME_cov_hats = list()
-
-this_scale = c("diff", "rat", "OR")
-
-for(i in seq_along(all_Ks)){
-    print(paste0("K = ", all_Ks[i], "; number ", i, " of ", length(all_Ks)))
-
-    some_ME_hats = data.frame()
-    some_ME_cov_hats = list()
-
-    for(j in seq_len(num_reps)){
-
-        this_par_hat = list_par_hats[[i]][j,]
-
-        this_b_Y = this_par_hat[1:5]
-        this_theta_Y = this_par_hat[6:8]
-        this_b_M = this_par_hat[9:12]
-        this_theta_M = this_par_hat[13:15]
-
-
-        this_ME_hat = all_MEs_pars(this_scale, w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-        some_ME_hats = rbind(some_ME_hats, this_ME_hat)
-
-
-        this_Sigma = list_par_cov_hats[[i]][[j]]
-        this_ME_cov_hat = all_covs_MEs_pars(this_scale, w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-        some_ME_cov_hats[[j]] = this_ME_cov_hat
-
-    }
-
-    colnames(some_ME_hats) = c("11", "10", "01", "00")
-    list_ME_hats[[i]] = some_ME_hats
-    list_ME_cov_hats[[i]] = some_ME_cov_hats
-}
-
-
-## Summarize covariance estimates
-
-### Empirical
-
-list_ME_emp_covs = list()
-
-for(i in seq_along(all_Ks)){
-    list_ME_emp_covs[[i]] = cov(list_ME_hats[[i]])
-}
-
-
-### Estimated
-
-list_ME_mean_covs = list()
-
-for(i in seq_along(all_Ks)){
-    some_ME_cov_hats = list_ME_cov_hats[[i]]
-    this_mean_ME_cov_hat = Reduce("+", some_ME_cov_hats) / num_reps
-    list_ME_mean_covs[[i]] = this_mean_ME_cov_hat
-}
-
-
-
-## Compare covariance estimates
-
-### Easier: Variances (i.e. diagonal elements)
-info_var_diffs = data.frame()
-for(i in seq_along(all_Ks)){
-    some_var_diffs = diag(list_ME_emp_covs[[i]] - list_ME_mean_covs[[i]])
-    some_rel_var_diffs = some_var_diffs / diag(list_ME_emp_covs[[i]])
-
-    this_info = c(all_Ks[i], mean(some_var_diffs), sd(some_var_diffs), mean(some_rel_var_diffs), sd(some_rel_var_diffs))
-
-    info_var_diffs = rbind(info_var_diffs, this_info)
-}
-colnames(info_var_diffs) = c("K", "Mean_Diff", "SD_Diff", "Mean_Rel_Diff", "SD_Rel_Diff")
-
-info_var_diffs
-
-info_var_diffs %>% mutate(scale_abs_diff = Mean_Diff * K) %>% select(-"Mean_Rel_Diff", -"SD_Rel_Diff")
-
-
-### Harder: Matrix norms
-info_ME_norms = data.frame()
-for(i in seq_along(all_Ks)){
-    diff_mat = list_ME_emp_covs[[i]] - list_ME_mean_covs[[i]]
-    diff_mat_norm = norm(diff_mat, type = "2")
-
-    # rel_norm = diff_mat_norm / norm(list_ME_emp_covs[[i]], type = "2")
-    rel_norm = diff_mat_norm / norm(list_ME_emp_covs[[i]], type = "F")
-
-    this_info = c(all_Ks[i], diff_mat_norm, rel_norm)
-    info_ME_norms = rbind(info_ME_norms, this_info)
-}
-colnames(info_ME_norms) = c("K", "Norm_Diff", "Rel_Norm_Diff")
-
-info_ME_norms
-
-scaled_ME_norms = info_ME_norms %>% mutate(scale_abs_diff = Norm_Diff * K) %>% select(-"Rel_Norm_Diff")
-
-
-
-# Summarize errors for all covariance estimates
-
-theta_mat = scaled_rel_norms %>% select(-Norm_Rel, -scale_rel_norm)
-ENC_mat = scaled_ENC_norms
-ME_mat = scaled_ME_norms
-
-colnames(theta_mat) = c("K", "theta-abs", "theta-scaled")
-colnames(ENC_mat) = c("K", "ENC-abs", "ENC-scaled")
-colnames(ME_mat) = c("K", "ME-abs", "ME-scaled")
-
-summary_mat = cbind(theta_mat, ENC_mat[,-1], ME_mat[,-1])
-
-summary_mat %>% 
-    dplyr::mutate_if(is.numeric, funs(as.character(signif(., 3)))) %>%
-    kbl(., format = "latex", booktabs = F, 
-        caption = "Raw and scaled absolute errors in estimating empirical covariance matrices of estimators for the parameters, ENCs and mediation effects.",
-        label = "tab:err_summary",
-        col.names = c("K", "Abs $\\theta$", "Scaled $\\theta$", "Abs ENC", "Scaled ENC", "Abs ME", "Scaled ME"),
-        align = "c", escape = F
-    )
 
 
 
@@ -669,14 +552,14 @@ for(i in seq_along(all_Ks)){
     for(j in seq_along(this_emp_decomp)){
 
         abs_diff = norm(this_emp_decomp[[j]] - this_mean_decomp[[j]], type = "2")
-        rel_diff = abs_diff / norm(this_emp_decomp[[j]], type = "2")
+        scaled_diff = abs_diff * all_Ks[i]
 
 
-        this_info = c(all_Ks[i], names(this_emp_decomp)[j], abs_diff, rel_diff)
+        this_info = c(all_Ks[i], names(this_emp_decomp)[j], abs_diff, scaled_diff)
         data_decomp = rbind(data_decomp, this_info)
     }
 }
-colnames(data_decomp) = c("K", "Component", "Abs_Diff", "Rel_Diff")
+colnames(data_decomp) = c("K", "Component", "Abs_Diff", "Scaled_Diff")
 data_decomp %<>% mutate(across(c(1,3,4), as.numeric))
 
 data_decomp
@@ -689,7 +572,7 @@ data_decomp %>%
 flavour_decomp = data_decomp %>% 
     mutate(diag = ifelse(Component %in% c("cross_Y", "cross_M"), F, T)) %>% 
     group_by(K, diag) %>% 
-    summarize(mean_abs = mean(Abs_Diff), mean_rel = mean(Rel_Diff), .groups = "drop")
+    summarize(mean_abs = mean(Abs_Diff), mean_scaled = mean(Scaled_Diff), .groups = "drop")
 
 flavour_decomp %>%
     arrange(diag)
@@ -699,7 +582,7 @@ flavour_decomp %>%
 
 
 
-# Trajectory of errors across increasing MC sizes
+#* Trajectory of errors across increasing MC sizes
 
 # list_emp_covs
 # list_all_errs
@@ -719,17 +602,26 @@ for(j in seq_along(all_Ks)){
 
 }
 
+list_mean_covs[[5]]
 
 
 norms_by_MC_size = data.frame()
 
 total_num_reps = nrow(list_par_hats[[1]])
 # all_Bs = seq(100, 200, by=10)
-all_Bs = seq(100, total_num_reps, by=20)
+all_Bs = seq(100, total_num_reps, by=50)
+# all_Bs = seq(100, total_num_reps)
+
+list_emp_covs_by_MC_size = lapply(list_emp_covs, cov)
 
 
 for(i in seq_along(all_Ks)){
+
+    some_emp_covs = list()
     for(r in seq_along(all_Bs)){
+
+        print(paste0("K = ", all_Ks[i], " of ", max(all_Ks), ", B = ", all_Bs[r], " of ", total_num_reps))
+
         this_B = all_Bs[r]
 
         # this_emp_cov = cov(list_par_hats2[[i]][1:this_B,])
@@ -738,6 +630,8 @@ for(i in seq_along(all_Ks)){
         # # Pool both simulations' results
         this_emp_cov = cov(large_list_par_hats[[i]][1:this_B,])
         this_mean_cov = Reduce("+", large_list_par_cov_hats[[i]][1:this_B]) / this_B
+
+        some_emp_covs[[r]] = this_emp_cov
 
         this_err = norm(this_emp_cov - this_mean_cov, type = "2")
 
@@ -749,13 +643,48 @@ for(i in seq_along(all_Ks)){
 
         norms_by_MC_size = rbind(norms_by_MC_size, this_info)
     }
+
+    list_emp_covs_by_MC_size[[i]] = some_emp_covs
 }
 colnames(norms_by_MC_size) = c("K", "MC_Size", "Abs_Error", "Scaled_Error", "Extra_Scaled_Error")
 
-norms_by_MC_size
 
-# Sort norms_by_MC size by K
-norms_by_MC_size %>% arrange(K)
+
+
+emp_covs_summary = lapply(list_emp_covs_by_MC_size, function(x) sapply(x, function(y) c(norm(y, type = "2"), det(y))))
+data_emp_covs_summary = data.frame()
+for(i in seq_along(all_Ks)){
+    this_K = all_Ks[i]
+
+    this_summary = t(emp_covs_summary[[i]])
+
+    some_summary_data = data.frame()
+
+    for(j in 2:length(all_Bs)){
+        this_B = all_Bs[j]
+
+        this_var_norm = var(this_summary[1:j, 1])
+        this_var_det = var(this_summary[1:j, 2])
+
+        this_info = c(this_K, this_B, this_var_norm, this_var_det)
+        some_summary_data = rbind(some_summary_data, this_info)
+    }
+    colnames(some_summary_data) = c("K", "MC_Size", "Norm_Var", "Det_Var")
+
+    data_emp_covs_summary = rbind(data_emp_covs_summary, some_summary_data)
+}
+
+data_emp_covs_summary %>%
+    filter(K == 800) %>%
+    lm(log(Norm_Var) ~ log(MC_Size), data = .) %>%
+    summary()
+
+data_emp_covs_summary %>%
+    filter(K == 800) %>%
+    lm(log(Det_Var) ~ log(MC_Size), data = .) %>%
+    summary()
+
+# norms_by_MC_size
 
 
 
@@ -772,7 +701,16 @@ pdf("Plots/Abs_Error_by_MC_Size.pdf", width = 10, height = 10)
 norms_by_MC_size %>%
     ggplot(aes(x = MC_Size, y = Abs_Error, color = as.factor(K))) +
     geom_line() +
-    geom_point() +
+    # geom_point() +
+    facet_wrap(~K, scales="free") +
+    theme_bw()
+dev.off()
+
+pdf("Plots/Scaled_Error_by_MC_Size.pdf", width = 10, height = 10)
+norms_by_MC_size %>%
+    ggplot(aes(x = MC_Size, y = Scaled_Error, color = as.factor(K))) +
+    geom_line() +
+    # geom_point() +
     facet_wrap(~K, scales="free") +
     theme_bw()
 dev.off()
@@ -794,7 +732,7 @@ dev.off()
 # Plot scaled error vs K for maximum MC size
 norms_by_MC_size %>%
     filter(MC_Size == max(MC_Size)) %>%
-    ggplot(aes(x = K, y = Abs_Error)) +
+    ggplot(aes(x = K, y = Scaled_Error)) +
     geom_line() +
     geom_point() +
     theme_bw()
@@ -816,7 +754,8 @@ best_err_estimates = norms_by_MC_size %>%
     filter(MC_Size == max(MC_Size)) %>%
     mutate(log_K = log(K), log_err = log(Abs_Error))
 
-fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates[-1,])
+fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates)
+# fit_err_rate = lm(log_err ~ log_K, data = best_err_estimates[-4,])
 summary(fit_err_rate)
 
 plot(fit_err_rate, 1)
@@ -863,7 +802,34 @@ filter(norms_by_MC_size, MC_Size == max(MC_Size))
 # sum(predict(fit_times, newdata = data_pred)) / 360
 
 
+
+
+
+
 #* Explore distribution of errors
+
+load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
+
+list_emp_covs = list()
+list_mean_covs = list()
+list_all_errs = list()
+
+# Extract empirical covariance and mean estimated covariance.
+for(j in seq_along(all_Ks)){
+
+    this_emp_cov = cov(list_par_hats[[j]])
+    list_emp_covs[[j]] = this_emp_cov
+
+    some_cov_hats = list_par_cov_hats[[j]]
+    this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
+
+    list_mean_covs[[j]] = this_mean_cov
+
+    list_all_errs[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
+
+}
+
+
 
 data_all_errs = data.frame()
 
@@ -889,11 +855,11 @@ for(i in seq_along(all_Ks)){
 
 library(ggmulti)
 
-pdf("Plots/Visualize_All_Errors_Theta_Hat.pdf", width = 10, height = 10)
+# pdf("Plots/Visualize_All_Errors_Theta_Hat.pdf", width = 10, height = 10)
 ggplot(data_all_errs, aes(X1=X1, X2=X2, X3=X3, X4=X4, X5=X5, X6=X6, X7=X7, X8=X8, X9=X9, X10=X10, X11=X11, X12=X12, X13=X13, X14=X14, X15=X15, X16=X16, X17=X17, X18=X18, X19=X19, X20=X20, X21=X21, X22=X22, X23=X23, X24=X24, X25=X25, X26=X26, X27=X27, X28=X28, X29=X29, X30=X30, X31=X31, X32=X32, X33=X33, X34=X34, X35=X35, X36=X36, X37=X37, X38=X38, X39=X39, X40=X40, X41=X41, X42=X42, X43=X43, X44=X44, X45=X45, X46=X46, X47=X47, X48=X48, X49=X49, X50=X50, X51=X51, X52=X52, X53=X53, X54=X54, X55=X55, X56=X56, X57=X57, X58=X58, X59=X59, X60=X60, X61=X61, X62=X62, X63=X63, 
 X64=X64, X65=X65, X66=X66, X67=X67, X68=X68, X69=X69, X70=X70, X71=X71, X72=X72, X73=X73, X74=X74, X75=X75, X76=X76, X77=X77, X78=X78, X79=X79, X80=X80, X81=X81, X82=X82, X83=X83, X84=X84, X85=X85, X86=X86, X87=X87, X88=X88, X89=X89, X90=X90, X91=X91, X92=X92, X93=X93, X94=X94, X95=X95, X96=X96, X97=X97, X98=X98, X99=X99, X100=X100, X101=X101, X102=X102, X103=X103, X104=X104, X105=X105, X106=X106, X107=X107, X108=X108, X109=X109, X110=X110, X111=X111, X112=X112, X113=X113, X114=X114, X115=X115, X116=X116, X117=X117, X118=X118, X119=X119, X120=X120)) + 
     geom_path(alpha=0.1) + coord_serialaxes() + facet_wrap(~K, scales = "free_y") #+ geom_histogram()
-dev.off()
+# dev.off()
 
 data_all_errs %>%
   filter(K == 400) %>% slice(-c(bad_rows)) %>%
