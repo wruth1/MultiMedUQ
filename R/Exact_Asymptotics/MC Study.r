@@ -11,6 +11,7 @@ library(magrittr)
 library(dplyr)
 library(kableExtra)
 library(ggplot2)
+library(ggmulti)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 devtools::load_all()
 
@@ -515,71 +516,6 @@ data_covs
 
 
 
-# Decompose cov mat into components
-
-cov_decomp = function(Sigma){
-    b_Y_comp = Sigma[1:5, 1:5]
-    theta_Y_comp = Sigma[6:8, 6:8]
-    cross_Y_comp = Sigma[1:5, 6:8]
-
-    b_M_comp = Sigma[9:12, 9:12]
-    theta_M_comp = Sigma[13:15, 13:15]
-    cross_M_comp = Sigma[9:12, 13:15]
-
-    output = list(
-        b_Y = b_Y_comp,
-        theta_Y = theta_Y_comp,
-        cross_Y = cross_Y_comp,
-        b_M = b_M_comp,
-        theta_M = theta_M_comp,
-        cross_M = cross_M_comp
-    )
-
-    return(output)
-}
-
-
-list_emp_decomps = lapply(list_emp_covs, cov_decomp)
-list_mean_decomps = lapply(list_mean_covs, cov_decomp)
-
-data_decomp = data.frame()
-
-for(i in seq_along(all_Ks)){
-
-    this_emp_decomp = list_emp_decomps[[i]]
-    this_mean_decomp = list_mean_decomps[[i]]
-
-    for(j in seq_along(this_emp_decomp)){
-
-        abs_diff = norm(this_emp_decomp[[j]] - this_mean_decomp[[j]], type = "2")
-        scaled_diff = abs_diff * all_Ks[i]
-
-
-        this_info = c(all_Ks[i], names(this_emp_decomp)[j], abs_diff, scaled_diff)
-        data_decomp = rbind(data_decomp, this_info)
-    }
-}
-colnames(data_decomp) = c("K", "Component", "Abs_Diff", "Scaled_Diff")
-data_decomp %<>% mutate(across(c(1,3,4), as.numeric))
-
-data_decomp
-
-data_decomp %>% 
-    arrange(Component)
-
-
-
-flavour_decomp = data_decomp %>% 
-    mutate(diag = ifelse(Component %in% c("cross_Y", "cross_M"), F, T)) %>% 
-    group_by(K, diag) %>% 
-    summarize(mean_abs = mean(Abs_Diff), mean_scaled = mean(Scaled_Diff), .groups = "drop")
-
-flavour_decomp %>%
-    arrange(diag)
-
-
-
-
 
 
 #* Trajectory of errors across increasing MC sizes
@@ -628,8 +564,8 @@ for(i in seq_along(all_Ks)){
         # this_mean_cov = Reduce("+", list_par_cov_hats2[[i]][1:this_B]) / this_B
 
         # # Pool both simulations' results
-        this_emp_cov = cov(large_list_par_hats[[i]][1:this_B,])
-        this_mean_cov = Reduce("+", large_list_par_cov_hats[[i]][1:this_B]) / this_B
+        this_emp_cov = cov(list_par_hats[[i]][1:this_B,])
+        this_mean_cov = Reduce("+", list_par_cov_hats[[i]][1:this_B]) / this_B
 
         some_emp_covs[[r]] = this_emp_cov
 
@@ -853,7 +789,6 @@ for(i in seq_along(all_Ks)){
 }
 
 
-library(ggmulti)
 
 # pdf("Plots/Visualize_All_Errors_Theta_Hat.pdf", width = 10, height = 10)
 ggplot(data_all_errs, aes(X1=X1, X2=X2, X3=X3, X4=X4, X5=X5, X6=X6, X7=X7, X8=X8, X9=X9, X10=X10, X11=X11, X12=X12, X13=X13, X14=X14, X15=X15, X16=X16, X17=X17, X18=X18, X19=X19, X20=X20, X21=X21, X22=X22, X23=X23, X24=X24, X25=X25, X26=X26, X27=X27, X28=X28, X29=X29, X30=X30, X31=X31, X32=X32, X33=X33, X34=X34, X35=X35, X36=X36, X37=X37, X38=X38, X39=X39, X40=X40, X41=X41, X42=X42, X43=X43, X44=X44, X45=X45, X46=X46, X47=X47, X48=X48, X49=X49, X50=X50, X51=X51, X52=X52, X53=X53, X54=X54, X55=X55, X56=X56, X57=X57, X58=X58, X59=X59, X60=X60, X61=X61, X62=X62, X63=X63, 
@@ -950,3 +885,319 @@ data_errs_400 = data_all_errs %>% filter(K == 400) %>% dplyr::select(-K) %>% sli
 SD_errs_400 = data_errs_400 %>% summarise_all(sd)
 hist(unlist(SD_errs_400))
 which(SD_errs_400 > 2e-04)
+
+
+
+
+#* Explore outlier detection for Theta hat
+
+some_par_hats = list_par_hats[[5]]
+
+all_grubbs_p_vals = data.frame()
+for(i in seq_along(list_par_hats)){
+    some_par_hats = list_par_hats[[i]]
+    
+    some_p_vals = sapply(seq_len(ncol(some_par_hats)), function(i) grubbs.test(some_par_hats[,i])$p.value)
+
+    this_info = c(all_Ks[i], some_p_vals)
+
+    all_grubbs_p_vals = rbind(all_grubbs_p_vals, this_info)
+}
+colnames(all_grubbs_p_vals) = c("K", "b_Y_Int", "b_Y_X", "b_Y_M", "b_Y_W1", "b_Y_W2", "theta_Y_Int", "rho_Y", "theta_Y_X", "b_M_Int", "b_M_X", "b_M_W1", "b_M_W2", "theta_M_Int", "rho_M", "theta_M_X")
+all_grubbs_p_vals
+
+conclusions_grubbs = all_grubbs_p_vals < 0.05
+
+small_p_vals = all_grubbs_p_vals[conclusions_grubbs]
+
+which(conclusions_grubbs, arr.ind=T)
+
+all_grubbs_p_vals[1,10]
+
+
+
+## Plot theta hats for each K
+data_theta_hats = data.frame()
+for(i in seq_along(list_par_hats)){
+    some_theta_hats = list_par_hats[[i]]
+
+    this_data = data.frame(K = rep(all_Ks[i], nrow(some_theta_hats)), some_theta_hats)
+    data_theta_hats = rbind(data_theta_hats, this_data)
+}
+colnames(data_theta_hats) = c("K", "b_Y_Int", "b_Y_X", "b_Y_M", "b_Y_W1", "b_Y_W2", "theta_Y_Int", "rho_Y", "theta_Y_X", "b_M_Int", "b_M_X", "b_M_W1", "b_M_W2", "theta_M_Int", "rho_M", "theta_M_X")
+
+ggplot(data_theta_hats, aes(b_Y_Int=b_Y_Int, b_Y_X=b_Y_X, b_Y_M=b_Y_M, b_Y_W1=b_Y_W1, b_Y_W2=b_Y_W2, theta_Y_Int=theta_Y_Int, rho_Y=rho_Y, theta_Y_X=theta_Y_X, b_M_Int=b_M_Int, b_M_X=b_M_X, b_M_W1=b_M_W1, b_M_W2=b_M_W2, theta_M_Int=theta_M_Int, rho_M=rho_M, theta_M_X=theta_M_X)) + geom_path(alpha=0.1) + coord_serialaxes() + facet_wrap(~K, scales = "free_y")
+
+
+
+## Plot Sigma_0 hat for each K
+data_Sigma_hat_raw = data.frame()
+
+for(i in seq_along(all_Ks)){
+    some_cov_hats = list_par_cov_hats[[i]]
+
+    this_data_cov = data.frame()
+    for(j in seq_along(some_cov_hats)){
+
+        if(j %% 100 == 0) print(paste("On K = ", all_Ks[i], ", iteration ", j, " out of ", length(some_cov_hats),  sep=""))
+
+        this_cov_hat = some_cov_hats[[j]]
+
+        # Extract upper triangle of this_err with diagonal
+        this_triangle = this_cov_hat[upper.tri(this_cov_hat, diag = T)]
+
+        this_data_cov = rbind(this_data_cov, data.frame(K = all_Ks[i], t(this_triangle)))
+    }
+
+    this_data_cov$empirical = F
+
+    this_emp_cov = cov(list_par_hats[[i]])
+    this_triangle = this_emp_cov[upper.tri(this_emp_cov, diag = T)]
+
+    this_data_cov = rbind(this_data_cov, data.frame(K = all_Ks[i], t(this_triangle), empirical = T))
+
+    data_Sigma_hat_raw = rbind(data_Sigma_hat_raw, this_data_cov)
+}
+
+### Remove identically zero columns
+find_non_zero_cols = function(mat) sapply(seq_len(ncol(mat)), function(i) !all(mat[,i] == 0))
+
+to_keep = data_Sigma_hat_raw %>%
+    filter(empirical == F) %>%
+    foo()
+to_keep[length(to_keep)] = T
+
+data_Sigma_hat = data_Sigma_hat_raw[,to_keep]
+# data_Sigma_hat = data_Sigma_hat_raw
+
+# Get list of all relevant variable names (some elements of Sigma_0 are identically zero)
+paste(paste(colnames(data_Sigma_hat[,-1]), colnames(data_Sigma_hat[,-1]), sep="="), collapse = ", ")
+
+data_Sigma_hat %<>% mutate(opacity = ifelse(empirical == T, 1, 0.1))
+
+data_baseline = data.frame()
+for(i in seq_along(all_Ks)){
+    for(j in -1:1){
+        this_baseline = rep(j/all_Ks[i], times = ncol(data_Sigma_hat)-3)
+        this_baseline = c(all_Ks[i], this_baseline, T, 1)
+
+        data_baseline = rbind(data_baseline, this_baseline)
+    }
+}
+colnames(data_baseline) = colnames(data_Sigma_hat)
+data_Sigma_hat = rbind(data_baseline, data_Sigma_hat)
+
+ggplot(data_Sigma_hat, aes(X1=X1, X2=X2, X3=X3, X4=X4, X5=X5, X6=X6, X7=X7, X8=X8, X9=X9, X10=X10, X11=X11, X12=X12, X13=X13, X14=X14, X15=X15, X16=X16, X17=X17, X18=X18, X19=X19, X20=X20, X21=X21, X22=X22, X23=X23, X24=X24, X25=X25, X26=X26, X27=X27, X28=X28, X29=X29, X30=X30, X31=X31, X32=X32, X33=X33, X34=X34, X35=X35, X36=X36, X45=X45, X54=X54, X55=X55, X64=X64, X65=X65, X66=X66, X75=X75, X76=X76, X77=X77, X78=X78, X87=X87, X88=X88, X89=X89, X90=X90, X91=X91, X100=X100, X101=X101, X102=X102, X103=X103, X104=X104, X105=X105, X114=X114, X115=X115, X116=X116, X117=X117, X118=X118, X119=X119, X120=X120, color = empirical)) + geom_path(aes(alpha=opacity)) + coord_serialaxes() + facet_wrap(~K, scales = "free_y")
+
+
+## Detect outliers in estimated covariance matrices
+all_grubbs_p_vals = data.frame()
+for(i in seq_along(list_par_hats)){
+
+    some_cov_hats = filter(data_Sigma_hat, K == all_Ks[i]) %>% select(-K, -empirical, -opacity)
+    
+    some_p_vals = sapply(seq_len(ncol(some_cov_hats)), function(i) grubbs.test(some_cov_hats[,i])$p.value)
+
+    this_info = c(all_Ks[i], some_p_vals)
+
+    all_grubbs_p_vals = rbind(all_grubbs_p_vals, this_info)
+}
+
+all_grubbs_p_vals * ncol(all_grubbs_p_vals)
+
+all_grubbs_p_vals %>% select(-1) %>% apply(.,1, mean)
+
+
+## Remove rows with any value less than -1/K
+
+rows_keep = data_Sigma_hat %>% select(-empirical, -opacity) %>% apply(., 1, function(x) !any(x < -1/x[1]) & !any(x[-1] > 10/x[1]))
+
+data_Sigma_hat_clean = data_Sigma_hat[rows_keep,]
+
+ggplot(data_Sigma_hat_clean, aes(X1=X1, X2=X2, X3=X3, X4=X4, X5=X5, X6=X6, X7=X7, X8=X8, X9=X9, X10=X10, X11=X11, X12=X12, X13=X13, X14=X14, X15=X15, X16=X16, X17=X17, X18=X18, X19=X19, X20=X20, X21=X21, X22=X22, X23=X23, X24=X24, X25=X25, X26=X26, X27=X27, X28=X28, X29=X29, X30=X30, X31=X31, X32=X32, X33=X33, X34=X34, X35=X35, X36=X36, X45=X45, X54=X54, X55=X55, X64=X64, X65=X65, X66=X66, X75=X75, X76=X76, X77=X77, X78=X78, X87=X87, X88=X88, X89=X89, X90=X90, X91=X91, X100=X100, X101=X101, X102=X102, X103=X103, X104=X104, X105=X105, X114=X114, X115=X115, X116=X116, X117=X117, X118=X118, X119=X119, X120=X120, color = empirical)) + geom_path(aes(alpha=opacity)) + coord_serialaxes() + facet_wrap(~K, scales = "free_y")
+
+
+
+# ## Remove outliers from original datasets
+# inds_remove = which(!rows_keep)
+# K_inds_remove = (inds_remove %/% total_num_reps) + 1
+# row_inds_remove = inds_remove %% total_num_reps
+
+# list_par_hats_clean = list_par_hats
+# list_par_cov_hats_clean = list_par_cov_hats
+
+# for(ind in seq_along(inds_remove)){
+#     i = K_inds_remove[ind]
+#     j = row_inds_remove[ind]
+#     list_par_hats_clean[[i]] = list_par_hats_clean[[i]][-j,]
+#     list_par_cov_hats_clean[[i]] = list_par_cov_hats_clean[[i]][-j]
+# }
+
+
+# save(list_par_hats_clean, list_par_cov_hats_clean, num_reps, all_Ks, file = "Par_Hat_MC_Clean.RData")
+load(file = "Par_Hat_MC_Clean.RData", verbose = TRUE)
+
+
+list_emp_covs_clean = list()
+list_mean_covs_clean = list()
+list_all_errs_clean = list()
+
+# Extract empirical covariance and mean estimated covariance.
+for(j in seq_along(all_Ks)){
+
+    this_emp_cov = cov(list_par_hats_clean[[j]])
+    list_emp_covs_clean[[j]] = this_emp_cov
+
+    some_cov_hats = list_par_cov_hats_clean[[j]]
+    this_mean_cov = Reduce("+", some_cov_hats) / length(some_cov_hats)
+
+    list_mean_covs_clean[[j]] = this_mean_cov
+
+    list_all_errs_clean[[j]] = lapply(some_cov_hats, function(x) x - this_emp_cov)
+
+}
+
+
+all_mean_errs = sapply(list_all_errs_clean, function(some_errs) mean(sapply(some_errs, norm, type="2")))
+# all_mean_errs = sapply(list_all_errs, function(some_errs) mean(sapply(some_errs, norm, type="2")))
+
+plot(log(all_Ks), log(all_mean_errs))
+
+data_mean_errs = data.frame(K = all_Ks, err = all_mean_errs)
+
+data_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
+
+
+
+
+#* Explore UQ for ENCs with clean data
+
+
+
+
+#* Covariances of ENCs
+
+# list_ENC_hats_clean = list()
+# list_ENC_cov_hats_clean = list()
+
+# for(i in seq_along(all_Ks)){
+
+#     some_ENC_hats = data.frame()
+#     some_ENC_cov_hats = list()
+
+#     this_num_reps = nrow(list_par_hats_clean[[i]])
+
+#     for(j in seq_len(this_num_reps)){
+#         if(j %% 50 == 0) {
+#             print(paste0("j = ", j, " of ", this_num_reps, ", K = ", all_Ks[i], " (number ", i, " of ", length(all_Ks), ")"))
+#         }
+
+#         this_par_hat = list_par_hats_clean[[i]][j,]
+
+#         this_b_Y = this_par_hat[1:5]
+#         this_theta_Y = this_par_hat[6:8]
+#         this_b_M = this_par_hat[9:12]
+#         this_theta_M = this_par_hat[13:15]
+
+
+#         this_ENC_hat = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+#         some_ENC_hats = rbind(some_ENC_hats, this_ENC_hat)
+
+
+#         this_Sigma = list_par_cov_hats_clean[[i]][[j]]
+#         this_ENC_cov_hat = all_covs_ENC_pars(w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+#         some_ENC_cov_hats[[j]] = this_ENC_cov_hat
+
+#     }
+
+#     colnames(some_ENC_hats) = c("11", "10", "01", "00")
+#     list_ENC_hats_clean[[i]] = some_ENC_hats
+#     list_ENC_cov_hats_clean[[i]] = some_ENC_cov_hats
+# }
+
+# save(list_ENC_hats_clean, list_ENC_cov_hats_clean, num_reps, all_Ks, file = "ENC_Hat_MC_Clean.RData")
+load(file = "ENC_Hat_MC_Clean.RData", verbose = TRUE)
+
+
+list_ENC_emp_covs = lapply(list_ENC_hats_clean, cov)
+list_ENC_mean_covs = lapply(list_ENC_cov_hats_clean, function(x) Reduce("+", x) / length(x))
+list_ENC_errs = lapply(list_ENC_cov_hats_clean, function(x) lapply(x, function(y) y - list_ENC_emp_covs[[i]]))
+
+ENC_mean_errs = sapply(list_ENC_errs, function(some_errs) mean(sapply(some_errs, norm, type="2")))
+
+plot(log(all_Ks), log(ENC_mean_errs))
+
+data_ENC_mean_errs = data.frame(K = all_Ks, err = ENC_mean_errs)    
+
+# data_ENC_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
+data_ENC_mean_errs %>% slice(-5) %>% lm(log(err) ~ log(K), data=.) %>% summary()
+
+
+
+#* Mediation Effects
+
+
+
+list_ME_hats_clean = list()
+list_ME_cov_hats_clean = list()
+
+this_scale = c("diff", "rat", "OR")
+ME_names = expand.grid(flavour = c("total", "direct", "indirect"), scale = this_scale) %>% 
+        arrange(flavour) %>% apply(1, paste, collapse = "_")
+
+for(i in seq_along(all_Ks)){
+
+    some_ME_hats = data.frame()
+    some_ME_cov_hats = list()
+
+    some_par_hats = list_par_hats_clean[[i]]
+    this_num_reps = nrow(some_par_hats)
+
+    for(j in seq_len(this_num_reps)){
+        if(j %% 100 == 0) {
+            print(paste0("j = ", j, " of ", this_num_reps, ", K = ", all_Ks[i], " (number ", i, " of ", length(all_Ks), ")"))
+        }
+
+        this_par_hat = some_par_hats[j,]
+
+        this_b_Y = this_par_hat[1:5]
+        this_theta_Y = this_par_hat[6:8]
+        this_b_M = this_par_hat[9:12]
+        this_theta_M = this_par_hat[13:15]
+
+
+        this_ME_hat = all_MEs_pars(this_scale, w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+        some_ME_hats = rbind(some_ME_hats, this_ME_hat)
+
+
+        this_Sigma = list_par_cov_hats_clean[[i]][[j]]
+        this_ME_cov_hat = all_covs_MEs_pars(this_scale, w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+        some_ME_cov_hats[[j]] = this_ME_cov_hat
+
+    }
+
+    
+    colnames(some_ME_hats) = ME_names
+    list_ME_hats_clean[[i]] = some_ME_hats
+    list_ME_cov_hats_clean[[i]] = some_ME_cov_hats
+}
+
+
+
+# save(list_ME_hats_clean, list_ME_cov_hats_clean, num_reps, all_Ks, file = "ME_Hat_MC_Clean.RData")
+load(file = "ME_Hat_MC_Clean.RData", verbose = TRUE)
+
+
+list_ME_emp_covs = lapply(list_ME_hats_clean, cov)
+list_ME_mean_covs = lapply(list_ME_cov_hats_clean, function(x) Reduce("+", x) / length(x))
+list_ME_errs = lapply(list_ME_cov_hats_clean, function(x) lapply(x, function(y) y - list_ME_emp_covs[[i]]))
+
+ME_mean_errs = sapply(list_ME_errs, function(some_errs) mean(sapply(some_errs, norm, type="2")))
+
+plot(log(all_Ks), log(ME_mean_errs))
+
+data_ME_mean_errs = data.frame(K = all_Ks, err = ME_mean_errs)    
+
+data_ME_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
+# data_ME_mean_errs %>% slice(-5) %>% lm(log(err) ~ log(K), data=.) %>% summary()
+
