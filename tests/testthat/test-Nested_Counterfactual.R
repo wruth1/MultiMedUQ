@@ -72,7 +72,7 @@ test_that("ENC works with a subset of REs", {
 })
 
 
-# Sizes of gradients
+#* Dimensions of gradients
 
 test_that("Dimensions of gradients are correct for subsets of REs", {
 
