@@ -14,7 +14,8 @@ all_MEs_pars(
   b_M,
   theta_M,
   x_ref = 1,
-  x_m_ref = 0
+  x_m_ref = 0,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 
 all_MEs_models(
@@ -23,7 +24,8 @@ all_MEs_models(
   fit_Y,
   fit_M,
   x_ref = 1,
-  x_m_ref = 0
+  x_m_ref = 0,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 }
 \arguments{
@@ -37,6 +39,8 @@ all_MEs_models(
 
 \item{x_ref, x_m_ref}{Reference values of \eqn{X}, respectively for \eqn{X} and for determining the value of \eqn{M}.}
 
+\item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
+
 \item{fit_Y, fit_M}{Models for \eqn{Y} and \eqn{M}, respectively.}
 }
 \value{
@@ -44,4 +48,20 @@ All mediation effects (total, direct and indirect), on the specified scale(s). O
 }
 \description{
 Total, direct and indirect mediation effects on the specified scale(s)
+}
+\details{
+The following shorthands for random effects are available:
+\itemize{
+\item "All": All REs
+\item "Y.All": All REs for Y
+\item "M.All": All REs for M
+}
+Additionally, individual REs can be specified:
+\itemize{
+\item "Y.Int": Intercept for Y
+\item "Y.X": Slope for X in Y
+\item "Y.M": Slope for M in Y
+\item "M.Int": Intercept for M
+\item "M.X": Slope for M
+}
 }

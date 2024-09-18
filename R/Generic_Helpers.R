@@ -32,7 +32,7 @@ expit <- function(x){
 #'
 #' @param Sigma A covariance matrix
 #'
-#' @return theta, a vector of SDs and correlations. Order matches that of merDeriv.
+#' @return theta, a vector of SDs and correlations. Order matches that of merDeriv (i.e. SD, cor, SD for a 2x2).
 #' @export
 Sigma2theta <- function(Sigma){
   # Extract lower triangle of Sigma
@@ -89,6 +89,10 @@ theta2Sigma <- function(theta){
 #' @param fit An lme4 model
 #' @param format The format of the output. Can be "list" or "vector".
 #'
+#' @details
+#' Note: It is unnecessary to specify which random effects are required, since we extract exactly what is contained in the fitted \code{lme4} object.
+#'
+#'
 #' @return A list with elements b (fixed effects) and theta (RE SDs and correlations), or a vector with b followed by theta.
 #' @export
 #'
@@ -114,3 +118,79 @@ get_model_pars <- function(fit, format="list"){
 
 
 
+#' Expand shorthand notation for random effects in models for Y and M
+#'
+#' @param RE_input A character vector of REs to include. May contain shorthands. See details.
+#'
+#'
+#' @return A character vector containing names of the REs to include in the models.
+#' @export
+#'
+#' @details
+#' The following shorthands for random effects are available:
+#' \itemize{
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
+#' }
+#' Additionally, individual REs can be specified:
+#' \itemize{
+#' \item "Y.Int": Intercept for Y
+#' \item "Y.X": Slope for X in Y
+#' \item "Y.M": Slope for M in Y
+#' \item "M.Int": Intercept for M
+#' \item "M.X": Slope for M
+#' }
+#'
+#'
+expand_REs <- function(RE_input){
+  all_REs = c()
+
+
+
+  if(identical(RE_input, "All")){ # All REs
+    all_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+  } else{
+    if("Y.All" %in% RE_input){ # All Y REs
+      all_REs = c(all_REs, "Y.Int", "Y.X", "Y.M")
+    } else{ # Some Y REs
+      if("Y.Int" %in% RE_input){
+        all_REs = c(all_REs, "Y.Int")
+      }
+      if("Y.X" %in% RE_input){
+        all_REs = c(all_REs, "Y.X")
+      }
+      if("Y.M" %in% RE_input){
+      all_REs = c(all_REs, "Y.M")
+      }
+    }
+
+    if("M.All" %in% RE_input){ # All M REs
+      all_REs = c(all_REs, "M.Int", "M.X")
+    } else{ # Some M REs
+      if("M.Int" %in% RE_input){
+        all_REs = c(all_REs, "M.Int")
+      }
+      if("M.X" %in% RE_input){
+        all_REs = c(all_REs, "M.X")
+      }
+    }
+  }
+
+  return(unique(all_REs))
+}
+
+
+
+# Number of parameters required to encode the joint distribution of the specified list of REs
+## Note: This is just the sum of the first r positive integers, where r is the number of REs.
+REs2theta_length = function(REs){
+  num_REs = length(REs)
+
+  num_pars = num_REs * (num_REs + 1) / 2
+}
+
+# Similar to the previous function, but this one takes the number of random effects.
+num_REs2theta_length = function(num_REs){
+  num_pars = num_REs * (num_REs + 1) / 2
+}

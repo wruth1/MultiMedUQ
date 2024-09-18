@@ -117,6 +117,7 @@ list_2_data_make_labels <- function(X_list, group_labels = NULL){
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
 #' @param output_list Should output be formatted as a list with one component per group (of size n-by-5) or a single data.frame of size (Kn)-by-6 with a column labelled `group`?
 #' @param return_REs Should random effects also be returned? If TRUE, output is a list containing two components: `data` and `REs`.
+#' @param which_REs Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.
 #'
 #' @return A simulated dataset, optionally inside a list which also contains random effects.
 #' @export
@@ -134,14 +135,15 @@ list_2_data_make_labels <- function(X_list, group_labels = NULL){
 make_validation_data <-
   function(n, K, b_Y, theta_Y, b_M, theta_M,
            output_list = FALSE,
-           return_REs = FALSE) {
-    all_reg_pars = make_all_reg_pars()
-    # all_reg_pars = list(beta_M = b_M, Gamma_M = theta2Sigma(theta_M),
-    #                     beta_Y = b_Y, Gamma_Y = theta2Sigma(theta_Y))
+           return_REs = FALSE,
+           which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+    # all_reg_pars = make_all_reg_pars()
+    all_reg_pars = list(beta_M = b_M, Gamma_M = theta2Sigma(theta_M),
+                        beta_Y = b_Y, Gamma_Y = theta2Sigma(theta_Y))
 
 
     # Generate data as a list
-    data_list_output = make_validation_data_list(n, K, all_reg_pars, return_REs)
+    data_list_output = make_validation_data_list(n, K, all_reg_pars, return_REs, which_REs)
     if (!return_REs) {
       data_list = data_list_output
     } else{
@@ -167,9 +169,9 @@ make_validation_data <-
 
 
 make_validation_data_list <-
-  function(n, K, all_reg_pars, return_REs = FALSE) {
+  function(n, K, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
     output_list = purrr::map(1:K,
-                             ~ make_one_group_validation(n, all_reg_pars, return_REs))
+                             ~ make_one_group_validation(n, all_reg_pars, return_REs, which_REs))
 
     if (!return_REs) {
       return(output_list)
@@ -182,11 +184,11 @@ make_validation_data_list <-
 
 
 make_one_group_validation <-
-  function(n, all_reg_pars, return_REs = FALSE) {
+  function(n, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
     X = make_X_validation(n)
     all_Cs = make_C_validation(n)
 
-    M_info = make_M_validation(X, all_Cs, all_reg_pars, return_REs)
+    M_info = make_M_validation(X, all_Cs, all_reg_pars, return_REs, which_REs)
 
     if (!return_REs) {
       M = M_info
@@ -197,7 +199,7 @@ make_one_group_validation <-
 
 
 
-    Y_info = make_Y_validation(M, X, all_Cs, all_reg_pars, return_REs)
+    Y_info = make_Y_validation(M, X, all_Cs, all_reg_pars, return_REs, which_REs)
 
     if (!return_REs) {
       Y = Y_info
@@ -206,7 +208,7 @@ make_one_group_validation <-
       REs_Y = Y_info[["REs"]]
     }
 
-    output_data = data.frame(Y = Y, M = M, X = X, all_Cs)
+    output_data = data.frame(Y = Y, X = X, M = M, all_Cs)
 
     if (!return_REs) {
       return(output_data)
@@ -232,7 +234,7 @@ make_C_validation <- function(n) {
 
 
 make_M_validation <-
-  function(X, all_Cs, all_reg_pars, return_REs = FALSE) {
+  function(X, all_Cs, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
     beta_M = all_reg_pars$beta_M    # Coefficient vector for fixed effects
     Gamma_M = all_reg_pars$Gamma_M  # Covariance matrix of random effects
 
@@ -241,16 +243,29 @@ make_M_validation <-
       stop("In make_M_validation: X and all_Cs must have same number of rows.")
 
     # Organize X and all_Cs into datasets
+    ## Fixed effects data
     data_fix = data.frame(X = X, all_Cs)
-    data_ran = data.frame(X = X)
+
+    ## Random effects data
+    RE_names = expand_REs(which_REs)
+    data_ran_raw = c()
+    if("M.Int" %in% RE_names){
+      data_ran_raw = cbind(data_ran_raw, rep(1, times=n))
+    }
+    if("M.X" %in% RE_names){
+      data_ran_raw = cbind(data_ran_raw, X)
+    }
+    data_ran = data.frame(data_ran_raw)
 
 
+    # Compute linear predictors
     lin_pred_info = get_lin_preds(
       data_fix,
       data_ran,
       beta_M,
       Gamma_M,
-      add_intercept = TRUE,
+      add_intercept_fix = TRUE,
+      add_intercept_ran = FALSE,
       return_REs = return_REs
     )
     if (!return_REs) {
@@ -272,7 +287,7 @@ make_M_validation <-
   }
 
 make_Y_validation <-
-  function(M, X, all_Cs, all_reg_pars, return_REs = FALSE) {
+  function(M, X, all_Cs, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
     beta_Y = all_reg_pars$beta_Y    # Coefficient vector for fixed effects
     Gamma_Y = all_reg_pars$Gamma_Y  # Covariance matrix of random effects
 
@@ -282,15 +297,32 @@ make_Y_validation <-
       stop("In make_Y_validation: M, X and all_Cs must have same number of rows.")
 
     # Organize M, X and all_Cs into datasets
-    data_fix = data.frame(M = M, X = X, all_Cs)
-    data_ran = data.frame(M = M, X = X)
+    ## Fixed effects
+    data_fix = data.frame(X = X, M = M, all_Cs)
 
+    ## Random effects
+    RE_names = expand_REs(which_REs)
+    data_ran_raw = c()
+    if("Y.Int" %in% RE_names){
+      data_ran_raw = cbind(data_ran_raw, rep(1, times=n))
+    }
+    if("Y.X" %in% RE_names){
+      data_ran_raw = cbind(data_ran_raw, X)
+    }
+    if("Y.M" %in% RE_names){
+      data_ran_raw = cbind(data_ran_raw, M)
+    }
+    data_ran = data.frame(data_ran_raw)
+
+
+    ## Compute linear predictors
     lin_pred_info = get_lin_preds(
       data_fix,
       data_ran,
       beta_Y,
       Gamma_Y,
-      add_intercept = TRUE,
+      add_intercept_fix = TRUE,
+      add_intercept_ran = FALSE,
       return_REs = return_REs
     )
     if (!return_REs) {
@@ -313,125 +345,8 @@ make_Y_validation <-
 
 
 
-# Generic simulators for GLMM response ----
 
-# I must have thought these were a good idea at some point, but they're not currently being used.
-
-# make_response_RE_cov <-
-#   function(data_fix, data_ran, beta_fix, Gamma) {
-#     lin_preds = get_lin_preds_RE_cov(data_fix, data_ran, beta_fix, Gamma)
-#     all_probs = boot::inv.logit(lin_preds)
-#     response = stats::rbinom(nrow(data_fix), 1, all_probs)
-#     return(response)
-#   }
-#
-#
-# make_response_RE_vec <-
-#   function(data_fix, data_ran, beta_fix, beta_ran) {
-#     lin_preds = get_lin_preds_RE_vec(data_fix, data_ran, beta_fix, beta_ran)
-#     all_probs = boot::inv.logit(lin_preds)
-#     response = stats::rbinom(nrow(data_fix), 1, all_probs)
-#     return(response)
-#   }
-
-
-
-
-
-# one_par_boot_dataset <- function(mod_Y, mod_M) {
-#   # Start with M ----
-#
-#   ## Compute contribution to the linear predictor of the fixed and random effects separately ----
-#
-#   data_fix_M = stats::model.matrix(mod_M, type = "fixed")
-#   data_ran_M = stats::model.matrix(mod_M, type = "random") %>% as.matrix() %>% as.data.frame()
-#
-#
-#   ## Fixed ----
-#   fixed_contrib_M = data_fix_M %*% lme4::fixef(mod_M)
-#
-#
-#   ## Random ----
-#   ran_coef_mat_M = lme4::ranef(mod_M)[[1]]
-#
-#   all_ran_coefs_M = c()
-#   for (i in 1:nrow(ran_coef_mat)) {
-#     all_ran_coefs_M = c(all_ran_coefs_M, as.numeric(ran_coef_mat_M[i, ]))
-#   }
-#
-#   ran_contrib_M = as.matrix(data_ran_M) %*% all_ran_coefs_M
-#
-#
-#   ## Simulate new M ----
-#   lin_preds_M = fixed_contrib_M + ran_contrib_M
-#   probs_M = boot::inv.logit(lin_preds_M)
-#   new_M = stats::rbinom(nrow(data_fix_M), 1, probs_M)
-#
-#
-#   # Now onto Y ----
-#   data_fix_Y = stats::model.matrix(mod_Y, type = "fixed")
-#   data_ran_Y = stats::model.matrix(mod_Y, type = "random") %>% as.matrix() %>% as.data.frame(check.names = T)
-#
-#
-#   ## Inject simulated M into the data for Y ----
-#
-#   ### Fixed-effects data ----
-#   data_fix_Y[, "M1"] = new_M
-#
-#
-#   ### Random effects data ----
-#   new_M_by_group = split(new_M, real_data$group)
-#   q = ncol(data_ran_Y) / length(all_groups)
-#   n = nrow(data_ran_Y) / length(all_groups)
-#
-#   for (i in 1:length(all_groups)) {
-#     col_ind = q * (i-1) + 2
-#     row_start = n * (i-1) + 1
-#     row_end = n * i
-#
-#     this_group = all_groups[i]
-#     this_M = new_M_by_group[[this_group]]
-#
-#     data_ran_Y[row_start:row_end, col_ind] = this_M
-#   }
-#
-#
-#   ## Compute contributions to the linear predictor ----
-#
-#   fixed_contrib_Y = data_fix_Y %*% lme4::fixef(mod_Y)
-#
-#
-#   ran_coef_mat_Y = lme4::ranef(mod_Y)[[1]]
-#
-#   all_ran_coefs_Y = c()
-#   for (i in 1:nrow(ran_coef_mat)) {
-#     all_ran_coefs_Y = c(all_ran_coefs_Y, as.numeric(ran_coef_mat_Y[i, ]))
-#   }
-#
-#   ran_contrib_Y = as.matrix(data_ran_Y) %*% all_ran_coefs_Y
-#
-#
-#
-#   ## Simulate new Y ----
-#   lin_preds_Y = fixed_contrib_Y + ran_contrib_Y
-#   probs_Y = boot::inv.logit(lin_preds_Y)
-#   new_Y = stats::rbinom(nrow(data_fix_Y), 1, probs_Y)
-#
-#
-#
-#   # Construct and return new dataset ----
-#   data_new = real_data
-#   data_new$Y = new_Y
-#   data_new$M = new_M
-#   return(data_new)
-# }
-
-
-
-
-#### Extract linear predictors ####
-
-
+#### Compute linear predictors ####
 
 
 #' Compute the contribution to the linear predictor due to the provided dataset and coefficient vector
@@ -549,33 +464,9 @@ get_lin_preds <- function(data_fix, data_ran, beta, Gamma, add_intercept = NULL,
   # Return linear predictors, optionally in a list alongside the random effects
   if(return_REs){
     output = list(lin_preds = lin_preds, REs = ran_effs)
+    return(output)
   } else{
     return(lin_preds)
   }
 }
-
-
-
-# Some extra utilities ----
-
-# These only get used by other simulators which never get called. I must have thought this was a good idea at some point, but they're not currently being used anywhere.
-
-# get_lin_preds_RE_cov <- function(data_fix, data_ran, beta_fix, Gamma){
-#   contrib_fix = lin_pred_contrib(data_fix, beta_fix)
-#   ran_effs = make_REs(Gamma)
-#   contrib_ran = lin_pred_contrib(data_ran, ran_effs, add_intercept_ran)
-#
-#   lin_preds = contrib_fix + contrib_ran
-#   return(lin_preds)
-# }
-#
-# get_lin_preds_RE_vec <- function(data_fix, data_ran, beta_fix, beta_ran){
-#   contrib_fix = lin_pred_contrib(data_fix, beta_fix)
-#   contrib_ran = lin_pred_contrib(data_ran, beta_ran, add_intercept_ran)
-#
-#   lin_preds = contrib_fix + contrib_ran
-#   return(lin_preds)
-# }
-
-
 

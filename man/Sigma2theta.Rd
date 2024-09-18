@@ -10,7 +10,7 @@ Sigma2theta(Sigma)
 \item{Sigma}{A covariance matrix}
 }
 \value{
-theta, a vector of SDs and correlations. Order matches that of merDeriv.
+theta, a vector of SDs and correlations. Order matches that of merDeriv (i.e. SD, cor, SD for a 2x2).
 }
 \description{
 Convert a covariance matrix to a vector of SDs and correlations
