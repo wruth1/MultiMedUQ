@@ -26,7 +26,7 @@ ME_OR = function(ENC1, ENC2){
 #' Compute a mediation effect on the given scale(s)
 #'
 #' @param ENC1,ENC2 Two expected nested counterfactuals
-#' @param scale The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".
+#' @param scale The scale(s) of the mediation effect. Can be "diff", "rat" or "OR" (or any combination thereof).
 #'
 #' @return The mediation effect on the given scale.
 #' @export
@@ -212,7 +212,7 @@ grad_TE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   d1 = (1 / (1 - ENC_11)^2) / (ENC_00 / (1 - ENC_00))
   d2 = 0
   d3 = 0
-  d4 = (ENC_11 / (1 - ENC_11)) / (ENC_00^2)
+  d4 = -(ENC_11 / (1 - ENC_11)) / (ENC_00^2)
 
   return(c(d1, d2, d3, d4))
 }
@@ -236,7 +236,7 @@ grad_DE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   d1 = 0
   d2 = (1 / (1 - ENC_10)^2) / (ENC_00 / (1 - ENC_00))
   d3 = 0
-  d4 = (ENC_10 / (1 - ENC_10)) / (ENC_00^2)
+  d4 = -(ENC_10 / (1 - ENC_10)) / (ENC_00^2)
 
   return(c(d1, d2, d3, d4))
 }
@@ -250,7 +250,7 @@ grad_IE_diff <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 #' @rdname grad_med_effs
 #' @export
 grad_IE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
-  return(c(1/ENC_00, 0, -ENC_11/ENC_01^2, 0))
+  return(c(1/ENC_01, 0, -ENC_11/ENC_01^2, 0))
 }
 
 #' @rdname grad_med_effs
@@ -258,7 +258,7 @@ grad_IE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 grad_IE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
   d1 = (1 / (1 - ENC_11)^2) / (ENC_01 / (1 - ENC_01))
   d2 = 0
-  d3 = (ENC_11 / (1 - ENC_11)) / (ENC_01^2)
+  d3 = -(ENC_11 / (1 - ENC_11)) / (ENC_01^2)
   d4 = 0
 
   return(c(d1, d2, d3, d4))
@@ -346,6 +346,8 @@ all_grad_MEs_models <- function(scale, w, fit_Y, fit_M, which_REs = c("Y.Int", "
 #' @param w Level of covariates, \eqn{W}.
 #' @param fit_Y,fit_M Fitted models for Y and M.
 #' @param which_REs Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.
+#' 
+#' @name ME_covariances
 #'
 #' @details
 #' Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
@@ -375,4 +377,24 @@ all_cov_MEs <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, which_R
   cov_MEs = grad_MEs %*% cov_ENCs %*% t(grad_MEs)
 
   return(cov_MEs)
+}
+
+#' @rdname ME_covariances
+#' @export
+all_covs_MEs_models <- function(scale = c("diff", "rat", "OR"), w, Sigma, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+  Jacob_ENCs = Jacob_ENC_models(w, fit_Y, fit_M, which_REs)             # Parameters to ENCs
+  Jacob_MEs = all_grad_MEs_models(scale, w, fit_Y, fit_M, which_REs)    # ENCs to MEs
+  Jacob = Jacob_MEs %*% Jacob_ENCs                                      # Parameters to MEs
+
+  return(Jacob %*% Sigma %*% t(Jacob))
+}
+
+#' @rdname ME_covariances
+#' @export
+all_covs_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+  Jacob_ENCs = Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M, which_REs)           # Parameters to ENCs
+  Jacob_MEs = all_grad_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs)  # ENCs to MEs
+  Jacob = Jacob_MEs %*% Jacob_ENCs                                                # Parameters to MEs
+
+  return(Jacob %*% Sigma %*% t(Jacob))
 }

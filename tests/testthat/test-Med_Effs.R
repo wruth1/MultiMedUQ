@@ -65,8 +65,7 @@ test_that("get_ME works with multiple scales",{
 
 
 
-
-# Total, direct and indirect effects
+#* Compare all_MEs vs individual effects
 
 w = c(2,3)
 
@@ -85,135 +84,289 @@ test_that("all_MEs matches individual effects", {
 
 
 
-# Covariance matrix of all mediation effects on various scales.
+
+
+
+
+
+#* Subset of REs
+
+
+## Non-trivial values for the b's and theta's. Former based on output from another MC study. Latter chosen arbitrarily.
+## Crucially, no parameters are equal to zero.
+b_Y = c(0.0376828219852018, 0.966486302988689, 1.99644760563721, -0.00556557712859059, 0.000826754128449799)
+b_M = c(-0.0990439890654785, 1.76353928991247, 0.0128566136999183, 0.00711746366915989)
+
+theta_Y = c(sqrt(0.5), 0.5, 0, 1, 0.5, sqrt(0.5))
+theta_M = c(1, 0.5, 2)
+
 
 scale = c("diff", "rat", "OR")
 
-## Note: This test depends on objects computed in test-Reg_Par_Covs.R
-test_that("Joint covariance of all mediation effects is positive definite", {
-  skip_on_cran()
-  load("w_fit_Y_fit_M.RData")
+test_that("ME works with a subset of REs", {
+  # Easy case: No effects
+  expect_equal(all_MEs_pars(scale, c(0,0), rep(0, times=5), rep(0, times=6), rep(0, times=4), rep(0, times=3)), all_MEs_pars(scale, c(0,0), rep(0, times=5), rep(0, times=1), rep(0, times=4), rep(0, times=1), which_REs = c("Y.Int", "M.Int")))
 
-  ### Some extremely small negative e-vals. Check that norm of negatives is very small
-  e_vals = eigen(all_cov_MEs(scale, w, fit_Y, fit_M), symmetric=T, only.values = T)$values
-  norm_pos = norm(e_vals[e_vals > 0], "2")
-  norm_neg = norm(e_vals[e_vals < 0], "2")
+  # Harder case: Non-zero effects
+  ## Loop over all pairs of single REs
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+  RE_pairs = expand.grid(Y_REs, M_REs)
 
-  expect_true(norm_pos / norm_neg > 1e10)
-  # expect_true(all(eigen(all_cov_MEs(scale, w, fit_Y, fit_M), symmetric=T, only.values = T)$values > 0))
+  Y_RE_inds = c(1, 4, 6)
+  M_RE_inds = c(1,3)
+  RE_ind_pairs = expand.grid(Y_RE_inds, M_RE_inds)
+
+  for (i in seq_len(nrow(RE_pairs))){
+    this_REs = as.character(unlist(RE_pairs[i,]))
+    Y_RE = this_REs[1]
+    M_RE = this_REs[2]
+
+    Y_ind = RE_ind_pairs[i,1]
+    M_ind = RE_ind_pairs[i,2]
+
+    this_theta_Y = rep(0, times = 6)
+    this_theta_Y[Y_ind] = theta_Y[Y_ind]
+    # if(Y_RE == "Y.Int"){
+    #   this_theta_Y[Y_ind] = sqrt(0.5)
+    # } else if(Y_RE == "Y.X"){
+    #   this_theta_Y[Y_ind] = 1
+    # } else if(Y_RE == "Y.M"){
+    #   this_theta_Y[Y_ind] = sqrt(0.5)
+    # }
+
+    this_theta_M = rep(0, times = 3)
+    this_theta_M[M_ind] = theta_M[M_ind]
+    # if(M_RE == "M.Int"){
+    #   this_theta_M[M_ind] = 1
+    # } else if(M_RE == "M.X"){
+    #   this_theta_M[M_ind] = 2
+    # }
+
+    ME_zeros = all_MEs_pars(scale, w, b_Y, this_theta_Y, b_M, this_theta_M)
+    ME_effs = all_MEs_pars(scale, w, b_Y, theta_Y[Y_ind], b_M, theta_M[M_ind], which_REs = this_REs)
+
+    expect_equal(ME_zeros, ME_effs,
+                 label = paste0(Y_RE, " with ", M_RE))
+  }
 })
 
 
 
 
+#* Dimensions of gradients
+all_scales = c("diff", "rat", "OR")
+
+test_that("Dimensions of gradients are correct for subsets of REs", {
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
+  all_scale_sets = rje::powerSetCond(all_scales)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+      for(l in seq_along(all_scale_sets)){
+        
+        this_scale = all_scale_sets[[l]]
+
+        this_Y_REs = all_Y_sets[[i]]
+        this_M_REs = all_M_sets[[j]]
+        this_REs = c(this_Y_REs, this_M_REs)
+
+        this_theta_Y = make_theta(this_Y_REs)
+        this_theta_M = make_theta(this_M_REs)
 
 
-#* To run the following:
-library(lme4)
-library(merDeriv)
-source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
-
-
-# Set parameters and fit models
-set.seed(1)
-
-
-x = 0
-x_m = 1
-
-b_Y = c(0,0,1,0,0)
-# theta_Y = c(sqrt(0.5), 0.5, 0, 1, 0.5, sqrt(0.5))
-theta_Y = c(sqrt(0.5), 0, 1)
-
-b_M = c(0,0,0,0)
-theta_M = c(1, 0.5, 2)
-
-
-data = make_validation_data(20, 100, b_Y, theta_Y, b_M, theta_M, output_list = F)
-
-w = c(0,0)
-
-## Note: glmer wasn't converging with default values. I chose one of the default optimizers, and increased the number of function evaluations. Both bobyqa and the other default use this limiter instead of the number of iterations.
-(fit_Y = lme4::glmer(Y ~ X + M + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))))
-(fit_M = lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))))
+        this_grad_MEs = all_grad_MEs_pars(this_scale, w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+        expect_equal(dim(this_grad_MEs), c(3 * length(this_scale), 4))
+      
+      }
+    }
+  }
+})
 
 
 
-# Compare current implementation with the one from the Exact_Asymptotics project
-## The latter is reasonably well-validated against a Monte Carlo empirical SE
-Y_model = fit_Y
-Y_model_info = attributes(VarCorr(Y_model)$group)
 
-M_model = fit_M
-M_model_info = attributes(VarCorr(M_model)$group)
+#* Values of gradients
+b_Y = c(0.0376828219852018, 0.966486302988689, 1.99644760563721, -0.00556557712859059, 0.000826754128449799)
+b_M = c(-0.0990439890654785, 1.76353928991247, 0.0128566136999183, 0.00711746366915989)
 
-## Extract fitted parameters
+make_theta = function(RE_names){
+  num_REs = length(RE_names)
 
-### M model
-a_hat = fixef(M_model)
-a_RE_sds = M_model_info$stddev
-a_RE_cor = M_model_info$correlation[2,1]
-theta_hat = c(a_RE_sds, a_RE_cor)
-if(any(is.nan(theta_hat))) stop("NaNs in theta_hat")  # Skip rest of current analysis if correlation is 0/0
-M_cov = vcov(M_model, full=TRUE, ranpar="sd")
+  if(num_REs == 1){
+    return(1)
+  } else if(num_REs == 2){
+    return(c(2, 0.5, 3))
+  } else if(num_REs == 3){
+    return(c(4, 0.4, 0.3, 5, 0.2, 6))
+  }
+}
 
-
-### Y model
-b_hat = fixef(Y_model)
-b_RE_sds = Y_model_info$stddev
-b_RE_cor = Y_model_info$correlation[2,1]
-gamma_hat = c(b_RE_sds, b_RE_cor)
-if(any(is.nan(gamma_hat))) stop("NaNs in gamma_hat")  # Skip rest of current analysis if correlation is 0/0
-Y_cov = vcov(Y_model, full=TRUE, ranpar="sd")
+all_scales = c("diff", "rat", "OR")
 
 
-# ### Translate to terminology of MultiMedUQ
-# b_Y = b_hat
-# theta_Y = gamma_hat
-# b_M = a_hat
-# theta_M = theta_hat
+
+test_that("Values of grads are correct for subsets of REs on difference scale", {
+
+  scale = "diff"
+
+  this_Y_REs = c("Y.Int", "Y.X", "Y.M")
+  this_M_REs = c("M.Int", "M.X")
+  this_REs = c(this_Y_REs, this_M_REs)
+
+  this_theta_Y = make_theta(this_Y_REs)
+  this_theta_M = make_theta(this_M_REs)
+
+  this_ENCs = all_ENCs(w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+
+  this_num_pars = length(b_Y) + length(b_M) + length(this_theta_Y) + length(this_theta_M)
 
 
-### Estimate mediation effect
-#### Fixed-effects
-a_0_hat = a_hat[1]
-a_x_hat = a_hat[2]
-A_2_hat = a_hat[3:4]
+  # Total Effect
+  test_TE_diff = function(ENCs, scale){
+    get_ME(ENCs[1], ENCs[4], scale)[1]
+  }
 
-b_0_hat = b_hat[1]
-b_m_hat = b_hat[3]
-b_x_hat = b_hat[2]
-B_3_hat = b_hat[4:5]
+  expect_equal(grad_TE_diff(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_TE_diff, this_ENCs, scale = scale))
 
 
-## Linear predictors
-eta_hat = as.numeric(a_0_hat + a_x_hat * 0 + w %*% A_2_hat)
-zeta_hat = as.numeric(b_0_hat + b_x_hat * 0 + w %*% B_3_hat)
+  # Direct Effect
+  test_DE_diff = function(ENCs, scale){
+    get_ME(ENCs[2], ENCs[4], scale)[1]
+  }
+
+  expect_equal(grad_DE_diff(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_DE_diff, this_ENCs, scale = scale))
 
 
-## Random effects covariances
-s_M_0 = a_RE_sds[1]
-s_M_x = a_RE_sds[2]
-rho_M = a_RE_cor
 
-s_Y_0 = b_RE_sds[1]
-s_Y_x = b_RE_sds[2]
-rho_Y = b_RE_cor
+  # Indirect Effect
+  test_IE_diff = function(ENCs, scale){
+    get_ME(ENCs[1], ENCs[3], scale)[1]
+  }
 
+  expect_equal(grad_IE_diff(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_IE_diff, this_ENCs, scale = scale))
 
-## Sigma functions
-sigma_M1 = sigma_fun(0, s_M_0, s_M_x, rho_M)
-sigma_M2 = sigma_fun(1, s_M_0, s_M_x, rho_M)
+})
 
 
-sigma_Y1 = sigma_fun(0, s_Y_0, s_Y_x, rho_Y)
-sigma_Y2 = sigma_fun(1, s_Y_0, s_Y_x, rho_Y)
 
-## Mediation effect
-### See Helpers.R for the function Phi, which computes the mediation effect on odds-ratio scale
-med_hat = Phi(eta_hat, zeta_hat, a_x_hat, b_m_hat, b_x_hat, sigma_Y2, sigma_M2, sigma_Y1, sigma_M1)
+#?  Order of output is {ENC(1,1), ENC(1,0), ENC(0,1), ENC(0,0)}.
 
 
-new_med_hats = all_MEs_models(scale = "OR", w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "M.All")) 
 
-abs(med_hat - new_med_hats[1]) / abs(med_hat)
+test_that("Values of grads are correct for subsets of REs on ratio scale", {
+
+  scale = "rat"
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = make_theta(this_Y_REs)
+      this_theta_M = make_theta(this_M_REs)
+
+      this_ENCs = all_ENCs(w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+
+
+
+      # Total Effect
+      test_TE_rat = function(ENCs, scale){
+        get_ME(ENCs[1], ENCs[4], scale)[1]
+      }
+
+      expect_equal(grad_TE_rat(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_TE_rat, this_ENCs, scale = scale))
+
+
+      # Direct Effect
+      test_DE_rat = function(ENCs, scale){
+        get_ME(ENCs[2], ENCs[4], scale)[1]
+      }
+
+      expect_equal(grad_DE_rat(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_DE_rat, this_ENCs, scale = scale))
+
+
+      # Indirect Effect
+      test_IE_rat = function(ENCs, scale){
+        get_ME(ENCs[1], ENCs[3], scale)[1]
+      }
+
+      expect_equal(grad_IE_rat(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_IE_rat, this_ENCs, scale = scale))
+    }
+  }
+})
+
+
+test_that("Values of grads are correct for subsets of REs on odds-ratio scale", {
+
+  scale = "OR"
+
+  Y_REs = c("Y.Int", "Y.X", "Y.M")
+  M_REs = c("M.Int", "M.X")
+
+  all_Y_sets = rje::powerSetCond(Y_REs)
+  all_M_sets = rje::powerSetCond(M_REs)
+
+  for(i in seq_along(all_Y_sets)){
+    for(j in seq_along(all_M_sets)){
+
+      this_Y_REs = all_Y_sets[[i]]
+      this_M_REs = all_M_sets[[j]]
+      this_REs = c(this_Y_REs, this_M_REs)
+
+      this_theta_Y = make_theta(this_Y_REs)
+      this_theta_M = make_theta(this_M_REs)
+
+      this_ENCs = all_ENCs(w, b_Y, this_theta_Y, b_M, this_theta_M, which_REs = this_REs)
+
+
+
+      # Total Effect
+      test_TE_or = function(ENCs, scale){
+        get_ME(ENCs[1], ENCs[4], scale)[1]
+      }
+
+      expect_equal(grad_TE_or(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_TE_or, this_ENCs, scale = scale))
+
+
+      # Direct Effect
+      test_DE_or = function(ENCs, scale){
+        get_ME(ENCs[2], ENCs[4], scale)[1]
+      }
+
+      expect_equal(grad_DE_or(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_DE_or, this_ENCs, scale = scale))
+
+
+      # Indirect Effect
+      test_IE_or = function(ENCs, scale){
+        get_ME(ENCs[1], ENCs[3], scale)[1]
+      }
+
+      expect_equal(grad_IE_or(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_IE_or, this_ENCs, scale = scale))
+    }
+  }
+})
+
+
+
+
+#* Estimated covariance matrix should be positive definite
+## Note: This test depends on objects computed in test-Reg_Par_Covs.R
+test_that("Joint covariance of ENC at all input levels is positive definite",{
+  skip_on_cran()
+  load("w_fit_Y_fit_M.RData")
+  expect_true(all(eigen(all_cov_MEs(w, fit_Y, fit_M), symmetric=T, only.values = T)$values > 0))
+})
