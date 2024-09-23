@@ -1073,10 +1073,6 @@ data_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
 #* Explore UQ for ENCs with clean data
 
 
-
-
-#* Covariances of ENCs
-
 # list_ENC_hats_clean = list()
 # list_ENC_cov_hats_clean = list()
 
@@ -1121,7 +1117,7 @@ load(file = "ENC_Hat_MC_Clean.RData", verbose = TRUE)
 
 list_ENC_emp_covs = lapply(list_ENC_hats_clean, cov)
 list_ENC_mean_covs = lapply(list_ENC_cov_hats_clean, function(x) Reduce("+", x) / length(x))
-list_ENC_errs = lapply(list_ENC_cov_hats_clean, function(x) lapply(x, function(y) y - list_ENC_emp_covs[[i]]))
+list_ENC_errs = lapply(seq_along(list_ENC_cov_hats_clean), function(i) lapply(list_ENC_cov_hats_clean[[i]], function(y) y - list_ENC_emp_covs[[i]]))
 
 ENC_mean_errs = sapply(list_ENC_errs, function(some_errs) mean(sapply(some_errs, norm, type="2")))
 
@@ -1190,7 +1186,7 @@ load(file = "ME_Hat_MC_Clean.RData", verbose = TRUE)
 
 list_ME_emp_covs = lapply(list_ME_hats_clean, cov)
 list_ME_mean_covs = lapply(list_ME_cov_hats_clean, function(x) Reduce("+", x) / length(x))
-list_ME_errs = lapply(list_ME_cov_hats_clean, function(x) lapply(x, function(y) y - list_ME_emp_covs[[i]]))
+list_ME_errs = lapply(seq_along(list_ME_cov_hats_clean), function(i) lapply(list_ME_cov_hats_clean[[i]], function(y) y - list_ME_emp_covs[[i]]))
 
 ME_mean_errs = sapply(list_ME_errs, function(some_errs) mean(sapply(some_errs, norm, type="2")))
 
