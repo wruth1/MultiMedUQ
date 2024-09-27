@@ -249,7 +249,7 @@ test_that("Values of grads are correct for subsets of REs on difference scale", 
 
   # Indirect Effect
   test_IE_diff = function(ENCs, scale){
-    get_ME(ENCs[1], ENCs[3], scale)[1]
+    get_ME(ENCs[1], ENCs[2], scale)[1]
   }
 
   expect_equal(grad_IE_diff(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_IE_diff, this_ENCs, scale = scale))
@@ -304,7 +304,7 @@ test_that("Values of grads are correct for subsets of REs on ratio scale", {
 
       # Indirect Effect
       test_IE_rat = function(ENCs, scale){
-        get_ME(ENCs[1], ENCs[3], scale)[1]
+        get_ME(ENCs[1], ENCs[2], scale)[1]
       }
 
       expect_equal(grad_IE_rat(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_IE_rat, this_ENCs, scale = scale))
@@ -355,7 +355,7 @@ test_that("Values of grads are correct for subsets of REs on odds-ratio scale", 
 
       # Indirect Effect
       test_IE_or = function(ENCs, scale){
-        get_ME(ENCs[1], ENCs[3], scale)[1]
+        get_ME(ENCs[1], ENCs[2], scale)[1]
       }
 
       expect_equal(grad_IE_or(this_ENCs[1], this_ENCs[2], this_ENCs[3], this_ENCs[4]), numDeriv::grad(test_IE_or, this_ENCs, scale = scale))

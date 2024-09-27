@@ -192,7 +192,7 @@ all_MEs_models <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, x_re
 all_MEs_ENCs <- function(scale = c("diff", "rat", "OR"), ENCs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   MEs = c(get_ME(ENCs[1], ENCs[4], scale),
             get_ME(ENCs[2], ENCs[4], scale),
-            get_ME(ENCs[1], ENCs[3], scale))
+            get_ME(ENCs[1], ENCs[2], scale))
 
   ME_names = as.vector(t(outer(c("total", "direct", "indirect"), scale, paste, sep = "_")))
   names(MEs) = ME_names
@@ -261,21 +261,21 @@ grad_DE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
 #' @rdname grad_med_effs
 #' @export
 grad_IE_diff <- function(ENC_11, ENC_10, ENC_01, ENC_00){
-  return(c(1, 0, -1, 0))
+  return(c(1, -1, 0, 0))
 }
 
 #' @rdname grad_med_effs
 #' @export
 grad_IE_rat <- function(ENC_11, ENC_10, ENC_01, ENC_00){
-  return(c(1/ENC_01, 0, -ENC_11/ENC_01^2, 0))
+  return(c(1/ENC_10, -ENC_11/ENC_10^2, 0, 0))
 }
 
 #' @rdname grad_med_effs
 #' @export
 grad_IE_or <- function(ENC_11, ENC_10, ENC_01, ENC_00){
-  d1 = (1 / (1 - ENC_11)^2) / (ENC_01 / (1 - ENC_01))
-  d2 = 0
-  d3 = -(ENC_11 / (1 - ENC_11)) / (ENC_01^2)
+  d1 = (1 / (1 - ENC_11)^2) / (ENC_10 / (1 - ENC_10))
+  d2 = -(ENC_11 / (1 - ENC_11)) / (ENC_10^2)
+  d3 = 0
   d4 = 0
 
   return(c(d1, d2, d3, d4))

@@ -1198,5 +1198,5 @@ plot(log(all_Ks), log(ME_mean_errs))
 data_ME_mean_errs = data.frame(K = all_Ks, err = ME_mean_errs)    
 
 data_ME_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
-# data_ME_mean_errs %>% slice(-5) %>% lm(log(err) ~ log(K), data=.) %>% summary()
+data_ME_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% abline()
 
