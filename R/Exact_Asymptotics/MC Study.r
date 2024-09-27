@@ -1066,6 +1066,7 @@ plot(log(all_Ks), log(all_mean_errs))
 data_mean_errs = data.frame(K = all_Ks, err = all_mean_errs)
 
 data_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
+data_mean_errs %>% slice(-4) %>% lm(log(err) ~ log(K), data=.) %>% summary()
 
 
 
@@ -1125,8 +1126,8 @@ plot(log(all_Ks), log(ENC_mean_errs))
 
 data_ENC_mean_errs = data.frame(K = all_Ks, err = ENC_mean_errs)    
 
-# data_ENC_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
-data_ENC_mean_errs %>% slice(-5) %>% lm(log(err) ~ log(K), data=.) %>% summary()
+data_ENC_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
+# data_ENC_mean_errs %>% slice(-5) %>% lm(log(err) ~ log(K), data=.) %>% summary()
 
 
 
@@ -1164,6 +1165,8 @@ for(i in seq_along(all_Ks)){
 
         this_ME_hat = all_MEs_pars(this_scale, w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
         some_ME_hats = rbind(some_ME_hats, this_ME_hat)
+
+        q = unlist(all_MEs_ENCs(this_scale, list_ENC_hats_clean[[i]][j,], which_REs=which_REs))
 
 
         this_Sigma = list_par_cov_hats_clean[[i]][[j]]

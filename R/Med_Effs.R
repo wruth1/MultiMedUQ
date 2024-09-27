@@ -184,6 +184,23 @@ all_MEs_models <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, x_re
 }
 
 
+#' @param ENCs A vector of expected nested counterfactuals
+#'
+#' @rdname all_MEs
+#' @export
+#'
+all_MEs_ENCs <- function(scale = c("diff", "rat", "OR"), ENCs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  MEs = c(get_ME(ENCs[1], ENCs[4], scale),
+            get_ME(ENCs[2], ENCs[4], scale),
+            get_ME(ENCs[1], ENCs[3], scale))
+
+  ME_names = as.vector(t(outer(c("total", "direct", "indirect"), scale, paste, sep = "_")))
+  names(MEs) = ME_names
+
+  return(MEs)
+}
+
+
 
 # Gradient of mediation effects as functions of ENCs (expected nested counterfactuals)
 ## Recall that the order of \eqn{(X, X_M)} levels in ENC is (1,1), (1,0), (0,1), (0,0).
@@ -336,6 +353,34 @@ all_grad_MEs_models <- function(scale, w, fit_Y, fit_M, which_REs = c("Y.Int", "
   theta_M = info_M[["theta"]]
 
   return(all_grad_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs))
+}
+
+#' @param ENCs A vector of all expected nested counterfactuals.
+#'
+#' @rdname all_grad_MEs
+#' @export
+all_grad_MEs_ENCs <- function(scale, ENCs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  all_TE_grads = c()
+  all_DE_grads = c()
+  all_IE_grads = c()
+
+  if("diff" %in% scale){
+    all_TE_grads = rbind(all_TE_grads, grad_TE_diff(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_DE_grads = rbind(all_DE_grads, grad_DE_diff(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_IE_grads = rbind(all_IE_grads, grad_IE_diff(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+  }
+  if("rat" %in% scale){
+    all_TE_grads = rbind(all_TE_grads, grad_TE_rat(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_DE_grads = rbind(all_DE_grads, grad_DE_rat(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_IE_grads = rbind(all_IE_grads, grad_IE_rat(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+  }
+  if("OR" %in% scale){
+    all_TE_grads = rbind(all_TE_grads, grad_TE_or(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_DE_grads = rbind(all_DE_grads, grad_DE_or(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+    all_IE_grads = rbind(all_IE_grads, grad_IE_or(ENCs[1], ENCs[2], ENCs[3], ENCs[4]))
+  }
+
+  return(rbind(all_TE_grads, all_DE_grads, all_IE_grads))
 }
 
 

@@ -152,6 +152,8 @@ ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
 #' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
 #'
+#' @name all_ENCs
+#' 
 #' @details
 #' The following shorthands for random effects are available:
 #' \itemize{
@@ -181,6 +183,24 @@ all_ENCs <- function(w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X"
   return(c(ENC_11, ENC_10, ENC_01, ENC_00))
 }
 
+#' @param Theta A vector of all parameters from both models.
+#' @rdname all_ENCs
+#' 
+#' @export
+all_ENCs_theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  RE_names = expand_REs(which_REs)
+  num_Y_REs = sum(grepl("^Y\\.", RE_names))
+  num_M_REs = sum(grepl("^M\\.", RE_names))
+
+  len_theta_Y = num_REs2theta_length(num_Y_REs)
+
+  this_b_Y = Theta[1:5]
+  this_theta_Y = Theta[6:(5 + len_theta_Y)]
+  this_b_M = Theta[(6 + len_theta_Y):(9 + len_theta_Y)]
+  this_theta_M = Theta[(10 + len_theta_Y):length(Theta)]
+
+  return(all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs = which_REs))
+}
 
 
 # Gradient of ENC ####
@@ -634,6 +654,24 @@ Jacob_ENC_models <- function(w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M
   theta_M = info_M[["theta"]]
 
   return(Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M, which_REs))
+}
+
+#' @rdname Jacob_ENC
+#' @param Theta Vector of parameters from both models. Order is b_Y, theta_Y, b_M, theta_M
+#'
+#' @export
+Jacob_ENC_Theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  RE_names = expand_REs(which_REs)
+  num_Y_REs = sum(grepl("^Y\\.", RE_names))
+
+  len_theta_Y = num_REs2theta_length(num_Y_REs)
+
+  this_b_Y = Theta[1:5]
+  this_theta_Y = Theta[6:(5 + len_theta_Y)]
+  this_b_M = Theta[(6 + len_theta_Y):(9 + len_theta_Y)]
+  this_theta_M = Theta[(10 + len_theta_Y):length(Theta)]
+
+  return(Jacob_ENC_pars(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs = which_REs))
 }
 
 
