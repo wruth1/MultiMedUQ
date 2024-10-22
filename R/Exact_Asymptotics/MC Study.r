@@ -1135,51 +1135,51 @@ data_ENC_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
 
 
 
-list_ME_hats_clean = list()
-list_ME_cov_hats_clean = list()
+# list_ME_hats_clean = list()
+# list_ME_cov_hats_clean = list()
 
-this_scale = c("diff", "rat", "OR")
-ME_names = expand.grid(flavour = c("total", "direct", "indirect"), scale = this_scale) %>% 
-        arrange(flavour) %>% apply(1, paste, collapse = "_")
+# this_scale = c("diff", "rat", "OR")
+# ME_names = expand.grid(flavour = c("total", "direct", "indirect"), scale = this_scale) %>% 
+#         arrange(flavour) %>% apply(1, paste, collapse = "_")
 
-for(i in seq_along(all_Ks)){
+# for(i in seq_along(all_Ks)){
 
-    some_ME_hats = data.frame()
-    some_ME_cov_hats = list()
+#     some_ME_hats = data.frame()
+#     some_ME_cov_hats = list()
 
-    some_par_hats = list_par_hats_clean[[i]]
-    this_num_reps = nrow(some_par_hats)
+#     some_par_hats = list_par_hats_clean[[i]]
+#     this_num_reps = nrow(some_par_hats)
 
-    for(j in seq_len(this_num_reps)){
-        if(j %% 100 == 0) {
-            print(paste0("j = ", j, " of ", this_num_reps, ", K = ", all_Ks[i], " (number ", i, " of ", length(all_Ks), ")"))
-        }
+#     for(j in seq_len(this_num_reps)){
+#         if(j %% 100 == 0) {
+#             print(paste0("j = ", j, " of ", this_num_reps, ", K = ", all_Ks[i], " (number ", i, " of ", length(all_Ks), ")"))
+#         }
 
-        this_par_hat = some_par_hats[j,]
+#         this_par_hat = some_par_hats[j,]
 
-        this_b_Y = this_par_hat[1:5]
-        this_theta_Y = this_par_hat[6:8]
-        this_b_M = this_par_hat[9:12]
-        this_theta_M = this_par_hat[13:15]
-
-
-        this_ME_hat = all_MEs_pars(this_scale, w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-        some_ME_hats = rbind(some_ME_hats, this_ME_hat)
-
-        q = unlist(all_MEs_ENCs(this_scale, list_ENC_hats_clean[[i]][j,], which_REs=which_REs))
+#         this_b_Y = this_par_hat[1:5]
+#         this_theta_Y = this_par_hat[6:8]
+#         this_b_M = this_par_hat[9:12]
+#         this_theta_M = this_par_hat[13:15]
 
 
-        this_Sigma = list_par_cov_hats_clean[[i]][[j]]
-        this_ME_cov_hat = all_covs_MEs_pars(this_scale, w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
-        some_ME_cov_hats[[j]] = this_ME_cov_hat
+#         this_ME_hat = all_MEs_pars(this_scale, w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+#         some_ME_hats = rbind(some_ME_hats, this_ME_hat)
 
-    }
+#         q = unlist(all_MEs_ENCs(this_scale, list_ENC_hats_clean[[i]][j,], which_REs=which_REs))
+
+
+#         this_Sigma = list_par_cov_hats_clean[[i]][[j]]
+#         this_ME_cov_hat = all_covs_MEs_pars(this_scale, w, this_Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
+#         some_ME_cov_hats[[j]] = this_ME_cov_hat
+
+#     }
 
     
-    colnames(some_ME_hats) = ME_names
-    list_ME_hats_clean[[i]] = some_ME_hats
-    list_ME_cov_hats_clean[[i]] = some_ME_cov_hats
-}
+#     colnames(some_ME_hats) = ME_names
+#     list_ME_hats_clean[[i]] = some_ME_hats
+#     list_ME_cov_hats_clean[[i]] = some_ME_cov_hats
+# }
 
 
 
@@ -1199,4 +1199,5 @@ data_ME_mean_errs = data.frame(K = all_Ks, err = ME_mean_errs)
 
 data_ME_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% summary()
 data_ME_mean_errs %>% lm(log(err) ~ log(K), data=.) %>% abline()
+
 
