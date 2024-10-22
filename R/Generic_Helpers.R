@@ -83,6 +83,14 @@ theta2Sigma <- function(theta){
 }
 
 
+# Get the number of REs used to construct theta
+theta2num_REs <- function(theta){
+  l = length(theta)
+  n = (sqrt(1 + 8*l) - 1)/2
+  return(n)
+}
+
+
 
 #' Extract fitted parameters of interest from an lme4 model.
 #'
@@ -193,4 +201,29 @@ REs2theta_length = function(REs){
 # Similar to the previous function, but this one takes the number of random effects.
 num_REs2theta_length = function(num_REs){
   num_pars = num_REs * (num_REs + 1) / 2
+}
+
+
+
+# Return the number of REs for Y
+num_Y_REs = function(which_REs){
+  RE_names = expand_REs(which_REs)
+
+  # Extract REs starting with "Y"
+  # Note: The following will fail if there are no Y REs
+  Y_REs = RE_names[grepl("^Y", RE_names)]
+  
+  return(length(Y_REs))
+}
+
+
+# Return the number of REs for M
+num_M_REs = function(which_REs){
+  RE_names = expand_REs(which_REs)
+
+  # Extract REs starting with "M"
+  # Note: The following will fail if there are no M REs
+  M_REs = RE_names[grepl("^M", RE_names)]
+  
+  return(length(M_REs))
 }

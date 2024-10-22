@@ -138,6 +138,16 @@ make_validation_data <-
            return_REs = FALSE,
            which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
     # all_reg_pars = make_all_reg_pars()
+
+    # Check that the number of variance parameters supplied matches which_REs
+    if(num_Y_REs(which_REs) != theta2num_REs(theta_Y)){
+      stop("In make_validation_data: The number of variance parameters supplied for Y does not match which_REs.")
+    }
+    if(num_M_REs(which_REs) != theta2num_REs(theta_M)){
+      stop("In make_validation_data: The number of variance parameters supplied for M does not match which_REs.")
+    }
+
+
     all_reg_pars = list(beta_M = b_M, Gamma_M = theta2Sigma(theta_M),
                         beta_Y = b_Y, Gamma_Y = theta2Sigma(theta_Y))
 
