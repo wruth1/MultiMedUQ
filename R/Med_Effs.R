@@ -1,4 +1,10 @@
 
+get_ME_names = function(scale){
+    as.vector(t(outer(c("total", "direct", "indirect"), scale, paste, sep = "_")))
+}
+
+
+
 #' Compute mediation effects on different scales
 #'
 #' @param ENC1,ENC2 Two expected nested counterfactuals

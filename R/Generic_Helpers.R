@@ -195,12 +195,12 @@ expand_REs <- function(RE_input){
 REs2theta_length = function(REs){
   num_REs = length(REs)
 
-  num_pars = num_REs * (num_REs + 1) / 2
+  num_REs * (num_REs + 1) / 2
 }
 
 # Similar to the previous function, but this one takes the number of random effects.
 num_REs2theta_length = function(num_REs){
-  num_pars = num_REs * (num_REs + 1) / 2
+  num_REs * (num_REs + 1) / 2
 }
 
 
