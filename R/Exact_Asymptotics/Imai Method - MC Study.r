@@ -195,7 +195,44 @@ for(i in seq_along(list_par_hats)){
 
 toc()
 
-test = list()
-test[[1]] = 1
-test[[2]] = NA
-test[[3]] = 3
+# save(list_cov_tildes, file = "R/Exact_Asymptotics/MC_delta.RData")
+load("R/Exact_Asymptotics/MC_delta.RData", verbose = TRUE)
+
+
+
+all_tests = c()
+for(j in seq_along(list_cov_tildes)){
+
+    q = list_cov_tildes[[j]]
+
+    check = list()
+    for(i in seq_along(q)){
+        check[[i]] = q[[i]][1,1]
+    }
+
+    check2 = sapply(check, is.numeric)
+    all_tests = c(all_tests, sum(!check2))
+}
+
+problems = which(check2 == FALSE)
+list_cov_tildes[[5]][[problems[1]]]
+
+sapply(list_cov_tildes, length)
+
+
+list_cov_tildes_clean = lapply(list_cov_tildes, function(x) x[sapply(x, is.null) == FALSE])
+
+
+mean_cov_tildes = lapply(list_cov_tildes_clean, function(x) Reduce(`+`, x) / length(x))
+
+list_ME_mean_covs
+
+ME_err_norms = c()
+for(i in seq_along(mean_cov_tildes)){
+    this_err = norm(mean_cov_tildes[[i]] - list_ME_mean_covs[[i]], type="2") / norm(mean_cov_tildes[[i]], type="2")
+    ME_err_norms = c(ME_err_norms, this_err)
+}
+ME_err_norms
+all_Ks
+
+ME_err_norms * sqrt(all_Ks)
