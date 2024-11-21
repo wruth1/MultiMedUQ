@@ -56,18 +56,19 @@ theta_M = c(1, 0.5, 2)
 
 
 
-set.seed(1)
+# set.seed(1)
 
 
-all_datasets = list()
+# all_datasets = list()
 
 
-for (i in 1:num_reps) {
-    print(paste0("i = ", i, " of ", num_reps))
-    all_datasets[[i]] = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
-}
+# for (i in 1:num_reps) {
+#     print(paste0("i = ", i, " of ", num_reps))
+#     all_datasets[[i]] = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
+# }
 
-save(all_datasets, file = "R/Paper MC Study/all_datasets.RData")
+# save(all_datasets, file = "R/Paper MC Study/all_datasets.RData")
+load("R/Paper MC Study/all_datasets.RData", verbose = TRUE)
 
 
 
