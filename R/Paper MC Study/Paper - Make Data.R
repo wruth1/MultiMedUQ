@@ -75,3 +75,5 @@ load("R/Paper MC Study/all_datasets.RData", verbose = TRUE)
 # Compute true values of mediation effects
 scale = c("diff", "rat", "OR")
 true_MEs = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs = which_REs)
+
+save(true_MEs, file = "R/Paper MC Study/true_MEs.RData")
