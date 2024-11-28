@@ -21,16 +21,16 @@ devtools::load_all()
 # N = 20
 # N = 40
 # N = 60
-N = 200
+N = 100
 
 # all_Ks = c(50, 100, 200, 400, 800)
 # all_Ks = c(50, 100, 200)
 # all_Ks = 50 * (2:6)
-K = 50
+K = 200
 
 # num_reps = 30
-num_reps = 500
-# num_reps = 1200
+# num_reps = 500
+num_reps = 1000
 
 
 # which_REs = c("Y.Int", "Y.X", "M.All")
@@ -56,19 +56,26 @@ theta_M = c(1, 0.5, 2)
 
 
 
-# set.seed(1)
+set.seed(1)
 
 
-# all_datasets = list()
+all_datasets = list()
 
 
-# for (i in 1:num_reps) {
-#     print(paste0("i = ", i, " of ", num_reps))
-#     all_datasets[[i]] = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
-# }
+for (i in 1:num_reps) {
+    print(paste0("i = ", i, " of ", num_reps))
+    all_datasets[[i]] = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
+}
 
 # save(all_datasets, file = "R/Paper MC Study/all_datasets.RData")
 load("R/Paper MC Study/all_datasets.RData", verbose = TRUE)
+
+for(i in seq_along(all_datasets)){
+    data = all_datasets[[i]]
+    save(data, file = paste0("R/Paper MC Study/Datasets/", i, ".RData"))
+}
+
+
 
 
 
