@@ -2,6 +2,7 @@
 % Please edit documentation in R/Nested_Counterfactual.R
 \name{all_ENCs}
 \alias{all_ENCs}
+\alias{all_ENCs_theta}
 \title{Expected nested counterfactuals for all configurations of \eqn{X} and \eqn{X_M}.}
 \usage{
 all_ENCs(
@@ -12,6 +13,8 @@ all_ENCs(
   theta_M,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
+
+all_ENCs_theta(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
 }
 \arguments{
 \item{w}{Level of covariates, \eqn{W}.}
@@ -21,6 +24,8 @@ all_ENCs(
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
 
 \item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
+
+\item{Theta}{A vector of all parameters from both models.}
 }
 \value{
 A vector of expected nested counterfactuals for all configurations of \eqn{X} and \eqn{X_M}. Order of output is \code{ENC(1,1), ENC(1,0), ENC(0,1), ENC(0,0)}.

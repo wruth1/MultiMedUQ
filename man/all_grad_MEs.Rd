@@ -4,6 +4,7 @@
 \alias{all_grad_MEs}
 \alias{all_grad_MEs_pars}
 \alias{all_grad_MEs_models}
+\alias{all_grad_MEs_ENCs}
 \title{Jacobian of all mediation effects wrt all ENCs}
 \usage{
 all_grad_MEs_pars(
@@ -23,6 +24,12 @@ all_grad_MEs_models(
   fit_M,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
+
+all_grad_MEs_ENCs(
+  scale,
+  ENCs,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 }
 \arguments{
 \item{scale}{The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".}
@@ -36,6 +43,8 @@ all_grad_MEs_models(
 \item{which_REs}{Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.}
 
 \item{fit_Y, fit_M}{Models for \eqn{Y} and \eqn{M}, respectively.}
+
+\item{ENCs}{A vector of all expected nested counterfactuals.}
 }
 \value{
 A matrix of partial derivatives. Dimension is (3 * length(scale))-by-4.

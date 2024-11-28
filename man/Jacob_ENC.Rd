@@ -4,6 +4,7 @@
 \alias{Jacob_ENC}
 \alias{Jacob_ENC_pars}
 \alias{Jacob_ENC_models}
+\alias{Jacob_ENC_Theta}
 \title{"Jacobian" of expected nested counterfactuals. I.e. Gradients for every combination of \eqn{X, X_M}.}
 \usage{
 Jacob_ENC_pars(
@@ -21,6 +22,8 @@ Jacob_ENC_models(
   fit_M,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
+
+Jacob_ENC_Theta(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
 }
 \arguments{
 \item{w}{Level of covariates, \eqn{W}.}
@@ -32,9 +35,11 @@ Jacob_ENC_models(
 \item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
 
 \item{fit_Y, fit_M}{Fitted models for Y and M.}
+
+\item{Theta}{Vector of parameters from both models. Order is b_Y, theta_Y, b_M, theta_M}
 }
 \value{
-Gradients for every combination of \eqn{X} and \eqn{X_M}, organized as a 4-by-many matrix. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0).
+Gradients for every combination of \eqn{X} and \eqn{X_M}, organized as a 4-by-many matrix. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0). Length of each gradient (i.e. number of columns) is adjusted to match which_REs.
 }
 \description{
 "Jacobian" of expected nested counterfactuals. I.e. Gradients for every combination of \eqn{X, X_M}.

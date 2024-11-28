@@ -54,7 +54,7 @@ d2_psi(mu, sigma)
 \item{sigma}{SD of the latent Gaussian.}
 }
 \value{
-Gradient of the function \code{psi(mu, sigma)} with respect to \code{b_Y}, \code{theta_Y}, \code{b_M}, and \code{theta_M}.
+Gradient of the function \code{psi(mu, sigma)} with respect to \code{b_Y}, \code{theta_Y}, \code{b_M}, and \code{theta_M}. Length of return vector is influenced by which random effects are included in which_REs.
 
 The gradient of the function \code{psi(mu, sigma)} with respect to \code{mu} and \code{sigma}.
 }

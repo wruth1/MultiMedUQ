@@ -29,7 +29,7 @@ grad_ENC(
 \item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
 }
 \value{
-Gradient of the expected nested counterfactual of \eqn{Y} with \eqn{X = x} and \eqn{M = M_{x\_m}}.
+Gradient of the expected nested counterfactual of \eqn{Y} with \eqn{X = x} and \eqn{M = M_{x\_m}}. Length of return vector is influenced by which random effects are included in which_REs.
 }
 \description{
 Gradient of expected nested counterfactual. Binary Y, binary M.

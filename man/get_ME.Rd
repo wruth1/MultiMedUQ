@@ -9,7 +9,7 @@ get_ME(ENC1, ENC2, scale = c("diff", "rat", "OR"))
 \arguments{
 \item{ENC1, ENC2}{Two expected nested counterfactuals}
 
-\item{scale}{The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".}
+\item{scale}{The scale(s) of the mediation effect. Can be "diff", "rat" or "OR" (or any combination thereof).}
 }
 \value{
 The mediation effect on the given scale.

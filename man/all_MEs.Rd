@@ -4,6 +4,7 @@
 \alias{all_MEs}
 \alias{all_MEs_pars}
 \alias{all_MEs_models}
+\alias{all_MEs_ENCs}
 \title{Total, direct and indirect mediation effects on the specified scale(s)}
 \usage{
 all_MEs_pars(
@@ -27,6 +28,12 @@ all_MEs_models(
   x_m_ref = 0,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
+
+all_MEs_ENCs(
+  scale = c("diff", "rat", "OR"),
+  ENCs,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 }
 \arguments{
 \item{scale}{The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".}
@@ -42,6 +49,8 @@ all_MEs_models(
 \item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
 
 \item{fit_Y, fit_M}{Models for \eqn{Y} and \eqn{M}, respectively.}
+
+\item{ENCs}{A vector of expected nested counterfactuals}
 }
 \value{
 All mediation effects (total, direct and indirect), on the specified scale(s). Order is total, direct, indirect. Within each effect, order is as specified in \code{scale}. Default is difference, ratio, odds-ratio.
