@@ -7,3 +7,4 @@ inst/doc
 *.code-workspace
 R/Paper MC Study/Datasets/*
 R/Paper MC Study/Results - Delta, MC Delta/*
+R/Paper MC Study/*/*
