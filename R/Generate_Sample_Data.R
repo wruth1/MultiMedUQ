@@ -296,6 +296,16 @@ make_M_validation <-
     }
   }
 
+
+# hist(lin_preds)
+# plot(lin_preds)
+
+# hist(all_probs)
+# plot(all_probs)
+# plot(X, all_probs)
+# plot(all_Cs$C1, all_probs)
+# plot(all_Cs$C2, all_probs)
+
 make_Y_validation <-
   function(M, X, all_Cs, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
     beta_Y = all_reg_pars$beta_Y    # Coefficient vector for fixed effects

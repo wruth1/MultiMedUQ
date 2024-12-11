@@ -72,8 +72,8 @@ clusterSetRNGStream(cl = cl, 123)
 
 
 tic()
-for(i in 7:num_reps){
-    
+for(i in 146:num_reps){
+
     load(paste0("R/Paper MC Study/Datasets/", i, ".RData"))
 
     # Extract X and C
@@ -95,7 +95,7 @@ for(i in 7:num_reps){
 
 
 
-    
+
 
     tryCatch({
 
@@ -125,7 +125,7 @@ for(i in 7:num_reps){
         set.seed(1)
 
         time = Sys.time()
-        
+
         #* Perform parameteric bootstrap
         some_boot_MEs = pbsapply(seq_len(B), function(boot_rep) {
             boot_data = make_bootstrap_data(n = n, K = K, b_Y = this_b_Y, theta_Y = this_theta_Y, b_M = this_b_M, theta_M = this_theta_M, X_list = X_list, all_Cs_list = C_list, which_REs = which_REs)

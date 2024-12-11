@@ -37,7 +37,7 @@ which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 
 
 # save(all_ME_hats, all_cov_hats_delta, all_cov_hats_MC_delta, runtime_total_delta, runtime_total_MC_delta, file = "R/Paper MC Study/Paper - Delta and MC Delta Results.RData")
-load("R/Paper MC Study/Paper - Delta and MC Delta Results.RData", verbose = TRUE)
+load("R/Paper MC Study/Paper - Delta and MC Delta Results (new).RData", verbose = TRUE)
 
 
 # #! Delta method has one pathological entry. Let's remove it and proceed
@@ -57,7 +57,7 @@ get_CIs = function(ME_hats, SEs){
 
 # Empirical covariance matrix of parameter estimates
 
-load("R/Paper MC Study/true_MEs.RData", verbose = TRUE)
+load("R/Paper MC Study/true_MEs (new).RData", verbose = TRUE)
 
 
 ## Convert all_ME_hats from a list to a data frame

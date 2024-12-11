@@ -66,16 +66,16 @@ clusterSetRNGStream(cl = cl, 123)
 
 
 tic()
-MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
+MC_results_delta_MC_delta = pblapply((num_reps+1):(2*num_reps), function(i) {
     load(paste0("R/Paper MC Study/Datasets/", i, ".RData"))
 
-    # # Remove half the groups
+    # #! Remove half the groups
     # groups_keep = paste0("G", 1:(K / 2))
     # data %<>% dplyr::filter(group %in% groups_keep)
 
-    # Remove half the samples in each group
-    data %<>% dplyr::group_by(group) %>%
-        dplyr::slice_sample(n = n / 2) %>% dplyr::ungroup()
+    # #! Remove half the samples in each group
+    # data %<>% dplyr::group_by(group) %>%
+    #     dplyr::slice_sample(n = n / 2) %>% dplyr::ungroup()
 
 
     tryCatch({
@@ -125,12 +125,12 @@ MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
     tryCatch({
     output = list(this_MEs = this_MEs, this_delta_cov = this_delta_cov, this_MC_delta_cov = this_MC_delta_cov, this_delta_runtime = this_delta_runtime, this_MC_delta_runtime = this_MC_delta_runtime)
 
-    save(output, file = paste0("R/Paper MC Study/Results (half n) - Delta, MC Delta/", i, ".RData"))
+    save(output, file = paste0("R/Paper MC Study/Results (new) - Delta, MC Delta/", i, ".RData"))
     return(output)
     }, error = function(e){
       output = list(this_MEs = NULL, this_delta_cov = NULL, this_MC_delta_cov = NULL, this_delta_runtime = NULL, this_MC_delta_runtime = NULL)
 
-      save(output, file = paste0("R/Paper MC Study/Results (half n) - Delta, MC Delta/", i, ".RData"))
+      save(output, file = paste0("R/Paper MC Study/Results (new) - Delta, MC Delta/", i, ".RData"))
       return(output)
     })
 
@@ -147,9 +147,9 @@ stopCluster(cl)
 
 
 #* Build list of all output
-data_names = list.files("R/Paper MC Study/Results - Delta, MC Delta/")
+data_names = list.files("R/Paper MC Study/Results (new) - Delta, MC Delta/")
 MC_results_delta_MC_delta = pblapply(seq_along(data_names), function(x) {
-    load(paste0("R/Paper MC Study/Results - Delta, MC Delta/", x, ".RData"))
+    load(paste0("R/Paper MC Study/Results (new) - Delta, MC Delta/", x, ".RData"))
     return(output)
 })
 
@@ -164,8 +164,8 @@ runtime_total_delta = sapply(MC_results_delta_MC_delta, function(x) x$this_delta
 runtime_total_MC_delta = sapply(MC_results_delta_MC_delta, function(x) x$this_MC_delta_runtime) %>% sum()
 
 
-# save(all_ME_hats, all_cov_hats_delta, all_cov_hats_MC_delta, runtime_total_delta, runtime_total_MC_delta, file = "R/Paper MC Study/Paper - Delta and MC Delta Results.RData")
-load("R/Paper MC Study/Paper - Delta and MC Delta Results.RData", verbose = TRUE)
+save(all_ME_hats, all_cov_hats_delta, all_cov_hats_MC_delta, runtime_total_delta, runtime_total_MC_delta, file = "R/Paper MC Study/Paper - Delta and MC Delta Results (new).RData")
+# load("R/Paper MC Study/Paper - Delta and MC Delta Results.RData", verbose = TRUE)
 
 
 # #! Delta method has one pathological entry. Let's remove it and proceed
@@ -185,7 +185,7 @@ get_CIs = function(ME_hats, SEs){
 
 # Empirical covariance matrix of parameter estimates
 
-load("R/Paper MC Study/true_MEs.RData", verbose = TRUE)
+load("R/Paper MC Study/true_MEs (new).RData", verbose = TRUE)
 
 
 ## Convert all_ME_hats from a list to a data frame
