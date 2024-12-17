@@ -20,13 +20,14 @@ devtools::load_all()
 # N = 20
 # N = 40
 # N = 60
-N = 100
+N = 1000
 n = N
 
 # all_Ks = c(50, 100, 200, 400, 800)
 # all_Ks = c(50, 100, 200)
 # all_Ks = 50 * (2:6)
-K = 200
+# K = 200
+K = 1000
 
 # num_reps = 30
 # num_reps = 500
@@ -79,7 +80,102 @@ all_reg_pars = c(b_Y, theta_Y, b_M, theta_M)
 
 
 
-data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
+data_and_REs = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs, return_REs = T)
+
+data = data_and_REs[["data"]]
+all_REs = data_and_REs[["all_REs"]]
+
+
+
+
+lin_preds_from_vecs = function(data, b_fix, inds_fix, b_ran, inds_ran){
+    p = ncol(data)
+    b = rep(0, times = p)
+
+    for(i in inds_fix){
+        b[i] = b[i] + b_fix[i]
+    }
+
+    for(i in inds_ran){
+        b[i] = b[i] + b_ran[i]
+    }
+
+    lin_preds = lin_pred_contrib(data, b, add_intercept = F)
+
+    return(lin_preds)
+    
+}
+
+
+
+
+#! WARNING: The order of groups in data is not the same as the order of groups in all_REs
+
+all_E_Ms = c()
+all_M_bars = c()
+
+for(i in seq_along(all_REs)){
+    if (i %% 50 == 0) print(paste0("i = ", i, " of ", length(all_REs)))
+
+    # i=1
+    this_group = all_REs[[i]][["data"]]
+    # this_group = filter(data, group == paste0("G", i))
+    this_REs = all_REs[[i]][["M"]]
+
+
+
+    this_data_M = this_group %>%
+                    select(-Y, -M) %>% 
+                    cbind(1, .)
+
+    lin_preds_M = lin_preds_from_vecs(this_data_M, b_M, seq_len(ncol(this_data_M)), this_REs, c(1, 2))
+
+
+
+
+    #* Compute conditional expectation of M given U
+
+    data_all_combs = cbind(1, expand.grid(c(0,1), c(0,1), c(0,1)))
+    lin_pred_all_combs = lin_preds_from_vecs(data_all_combs, b_M, seq_len(ncol(data_all_combs)), this_REs, c(1,2))
+    probs_all_combs = expit(lin_pred_all_combs)
+
+    this_E_M = mean(probs_all_combs)
+    all_E_Ms[i] = this_E_M
+
+
+    #* Estimate conditional expectation of M given U using MC sample
+    this_M_bar = mean(this_group$M)
+    all_M_bars[i] = this_M_bar
+    # this_M_SD = sd(this_group$M)
+}
+
+
+
+all_E_Ms
+all_M_bars
+
+rel_errs = abs(all_M_bars - all_E_Ms)/ all_E_Ms
+mean(rel_errs)
+sd(rel_errs)
+max(rel_errs)
+
+cor(all_E_Ms, all_M_bars)
+
+
+#* Verify that conditional variances are correct
+#* I.e. V(M|U) = E(M|U) * (1 - E(M|U))
+
+
+all_emp_vars = sapply(all_REs, function(x) {
+    this_data = x[["data"]]
+    return(var(this_data$M))
+})
+
+all_cond_vars = all_E_Ms * (1 - all_E_Ms)
+
+
+mean(abs(all_emp_vars - all_cond_vars) / all_cond_vars)
+cor(all_emp_vars, all_cond_vars)
 
 
 

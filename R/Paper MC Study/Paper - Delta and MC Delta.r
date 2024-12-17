@@ -23,7 +23,8 @@ num_reps = length(all_datasets)
 n = all_datasets[[1]] %>% filter(group == "G1") %>% nrow()
 K = all_datasets[[1]] %>% select(group) %>% unique() %>% nrow()
 
-w = c(2,3)
+# w = c(2,3)
+w = c(1,1)
 B = 500
 scale = c("diff", "rat", "OR")
 which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
@@ -66,7 +67,8 @@ clusterSetRNGStream(cl = cl, 123)
 
 
 tic()
-MC_results_delta_MC_delta = pblapply((num_reps+1):(2*num_reps), function(i) {
+# MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
+MC_results_delta_MC_delta = pblapply(1:500, function(i) {
     load(paste0("R/Paper MC Study/Datasets/", i, ".RData"))
 
     # #! Remove half the groups
