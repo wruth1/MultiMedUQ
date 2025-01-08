@@ -159,7 +159,7 @@ get_model_pars <- function(fit, format="list"){
   # Estimated raneff covariance matrix
   # warning("Confirm that order of theta is correct.")
   info_cov = as.data.frame(lme4::VarCorr(fit))
-  info_cov_sort = info_cov[order(info_cov$var1),]
+  info_cov_sort = info_cov[SD_corr2theta_indices(num_pars = nrow(info_cov)),]
   theta = info_cov_sort$sdcor
 
 
