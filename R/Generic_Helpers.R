@@ -28,11 +28,11 @@ expit <- function(x){
 
 
 
-#' Convert a covariance matrix to a vector of SDs and correlations
+#' Convert an SD-corr matrix to a vector of SDs and correlations
 #'
-#' @param Sigma A covariance matrix
+#' @param Sigma An SD-corr matrix
 #'
-#' @return theta, a vector of SDs and correlations. Order matches that of merDeriv (i.e. SD, cor, SD for a 2x2).
+#' @return theta, a vector of SDs and correlations. Order matches that of merDeriv (e.g. SD, cor, SD for a 2x2).
 #' @export
 Sigma2theta <- function(Sigma){
   # Extract lower triangle of Sigma
@@ -123,6 +123,54 @@ get_model_pars <- function(fit, format="list"){
 }
 
 
+sds_corrs2theta <- function(sd_corr_vec){
+  num_vars = (sqrt(1 + 8*length(sd_corr_vec)) - 1 ) / 2
+
+  sds = sd_corr_vec[1:num_vars]
+  corrs = sd_corr_vec[(num_vars+1):length(sd_corr_vec)]
+  len_corrs = length(corrs)
+
+
+  # Build SD-Correlation matrix
+  sd_corr_mat = matrix(0, nrow = num_vars, ncol = num_vars)
+
+  for(i in 1:num_vars){
+    for(j in 1:num_vars){
+      if(i == j) {
+        sd_corr_mat[i,j] = sds[i]
+      } else {
+         sd_corr_mat[i,j] = corrs[(i - 1) + (j - 1)]
+      }
+    }
+  }
+
+  # Convert to theta
+  theta = Sigma2theta(sd_corr_mat)
+  return(theta)
+}
+
+
+#' Extract the parameters (in our order) from a glmmTMB object
+#'
+#' @param fit A GLMM fit using glmmTMB
+#' @param format The format of the output. Can be "list" or "vector".
+#'
+#' @return A vector, theta, of model parameters. Order is fixed effects, then covariance parameters. The latter is organized as, e.g., SD, corr, corr, SD, corr, SD for a 3x3 covariance matrix.
+#' @export
+#'
+get_model_pars_TMB <- function(fit, format="list"){
+  b = glmmTMB::fixef(fit)[[1]]
+
+
+  theta = broom.mixed::tidy(fit) %>% dplyr::filter(effect == "ran_pars") %>% dplyr::pull(estimate) %>% sds_corrs2theta
+  if(format == "list"){
+      return(list(b=b, theta=theta))
+    } else if(format == "vector"){
+      return(c(b, theta))
+    } else{
+      stop("Invalid format")
+  }
+}
 
 
 
@@ -212,7 +260,7 @@ num_Y_REs = function(which_REs){
   # Extract REs starting with "Y"
   # Note: The following will fail if there are no Y REs
   Y_REs = RE_names[grepl("^Y", RE_names)]
-  
+
   return(length(Y_REs))
 }
 
@@ -224,6 +272,6 @@ num_M_REs = function(which_REs){
   # Extract REs starting with "M"
   # Note: The following will fail if there are no M REs
   M_REs = RE_names[grepl("^M", RE_names)]
-  
+
   return(length(M_REs))
 }

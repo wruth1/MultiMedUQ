@@ -78,6 +78,9 @@ theta_M = c(sqrt(0.5), 0.5, 1) / 2
 
 all_reg_pars = c(b_Y, theta_Y, b_M, theta_M)
 
+save(all_reg_pars, file = "R/Paper MC Study/True GLMM Pars.RData")
+
+
 
 
 

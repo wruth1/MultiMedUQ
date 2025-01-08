@@ -431,6 +431,10 @@ all_cov_MEs <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, which_R
 }
 
 #' @rdname ME_covariances
+#' 
+#' @param Sigma The \eqn{K}-adjusted covariance matrix for the GLMM parameters.
+#' 
+#' 
 #' @export
 all_covs_MEs_models <- function(scale = c("diff", "rat", "OR"), w, Sigma, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
   Jacob_ENCs = Jacob_ENC_models(w, fit_Y, fit_M, which_REs)             # Parameters to ENCs

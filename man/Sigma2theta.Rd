@@ -2,16 +2,16 @@
 % Please edit documentation in R/Generic_Helpers.R
 \name{Sigma2theta}
 \alias{Sigma2theta}
-\title{Convert a covariance matrix to a vector of SDs and correlations}
+\title{Convert an SD-corr matrix to a vector of SDs and correlations}
 \usage{
 Sigma2theta(Sigma)
 }
 \arguments{
-\item{Sigma}{A covariance matrix}
+\item{Sigma}{An SD-corr matrix}
 }
 \value{
-theta, a vector of SDs and correlations. Order matches that of merDeriv (i.e. SD, cor, SD for a 2x2).
+theta, a vector of SDs and correlations. Order matches that of merDeriv (e.g. SD, cor, SD for a 2x2).
 }
 \description{
-Convert a covariance matrix to a vector of SDs and correlations
+Convert an SD-corr matrix to a vector of SDs and correlations
 }

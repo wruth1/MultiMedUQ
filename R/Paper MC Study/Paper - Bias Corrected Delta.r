@@ -65,6 +65,12 @@ all_ME_hats_data = do.call(rbind, all_ME_hats)
 ME_hat_means = colMeans(all_ME_hats_data)
 ME_hat_biases = ME_hat_means - true_MEs
 
+# ### Relative size of biases
+rel_bias = abs(ME_hat_biases) / true_MEs
+mean(rel_bias)
+min(rel_bias)
+data_bias_ME = data.frame(hat = ME_hat_means, true = true_MEs, rel_bias = rel_bias)
+
 all_ME_hats = lapply(all_ME_hats, function(x) x - ME_hat_biases)
 
 # all_ME_hats_data =t( t(all_ME_hats_data) -  ME_hat_biases)
