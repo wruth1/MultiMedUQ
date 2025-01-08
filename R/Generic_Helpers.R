@@ -91,6 +91,55 @@ theta2num_REs <- function(theta){
 }
 
 
+# Re-arrange a vector of SDs followed by correlations to my theta order
+## I.e. SD, corr, corr, ..., SD, corr, corr, ..., SD
+## Output: a vector of indices, inds, s.t. sd_corr[inds] == theta
+SD_corr2theta_indices <- function(num_pars = NULL, num_vars = NULL){
+  if(!is.null(num_pars) & is.null(num_vars)){
+    num_vars = (sqrt(1 + 8*num_pars) - 1 ) / 2
+    if(num_vars %% 1 != 0){
+      stop("Incorrect number of parameters")
+    }
+  } else if(is.null(num_pars) & !is.null(num_vars)){
+    num_pars = num_vars * (num_vars + 1) / 2
+  } else{
+    stop("Must specify exactly one of num_pars or num_vars")
+  }
+
+  # Container to store indices
+  output = rep(0, times = num_pars)
+
+
+  # Destination indices of SDs (formula derived by hand)
+  ## Also useful as anchors for correlation destination indices
+  inds_SD_dest = ((1:num_vars) - 1) * (1 + num_vars - (1:num_vars)/2) + 1
+
+  # Fill-in indices
+  for(i in seq_len(num_vars)){
+    ### SDs
+    this_ind_SD_dest = inds_SD_dest[i]
+    output[this_ind_SD_dest] = i
+
+    ### Correlations
+    this_num_corrs = num_vars - i    # Number of correlations for this variable
+    num_corrs_so_far = (i-1)*(num_vars - i/2)    # Number of correlations already accounted for (this helps us index d_corr)
+    for(j in seq_len(this_num_corrs)){
+        this_ind_corr_dest = this_ind_SD_dest + j   # Index in my theta of current correlation
+
+        this_ind_corr_origin = num_corrs_so_far + j    # Index in d_corr of current correlation
+
+        output[this_ind_corr_dest] = num_vars + this_ind_corr_origin
+    }
+  }
+
+  return(output)
+}
+
+
+
+
+
+
 
 #' Extract fitted parameters of interest from an lme4 model.
 #'
@@ -112,6 +161,7 @@ get_model_pars <- function(fit, format="list"){
   info_cov = as.data.frame(lme4::VarCorr(fit))
   info_cov_sort = info_cov[order(info_cov$var1),]
   theta = info_cov_sort$sdcor
+
 
   if(format == "list"){
     return(list(b=b, theta=theta))

@@ -41,7 +41,7 @@ which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 # N = 20
 # N = 40
 # N = 60
-N=200 
+N=1000
 
 #* Main value
 # N = 100
@@ -50,10 +50,10 @@ n = N
 # all_Ks = c(50, 100, 200, 400, 800)
 # all_Ks = c(50, 100, 200)
 # all_Ks = 50 * (2:6)
-K=1000
+# K=1000
 
 #* Main value
-# K = 200
+K = 200
 
 # num_reps = 30
 # num_reps = 500
@@ -181,7 +181,7 @@ MC_results_delta_MC_delta = pblapply(1:100, function(i) {
     tryCatch({
 
         ## Note: glmer wasn't converging with default values. I chose one of the default optimizers, and increased the number of function evaluations. Both bobyqa and the other default use this limiter instead of the number of iterations.
-        # (fit_Y = suppressMessages(lme4::glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
+        (fit_Y = suppressMessages(lme4::glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
         # (fit_M = suppressMessages(lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
         fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial)
         fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)
@@ -271,3 +271,131 @@ data_bias_MEs = data.frame(par = names(mean_MEs), hat = mean_MEs, true = true_ME
 
 
 MC_results_lme4 = MC_results_delta_MC_delta
+
+
+
+
+# I did double-check that this is the correct point at which to evaluate the Jacobian of the gradient
+## Specifically, I evaluated fit$obj$fn at the point estimates. This matched the final objective function value reported in fit$fit.
+estimates = fit$fit$par
+grad_fun = fit$obj$gr
+SE_mat = solve(numDeriv::jacobian(grad_fun, estimates))
+
+
+
+
+
+
+TMB_pars = fit$fit$par
+TMB_FE_pars = TMB_pars[names(TMB_pars)=="beta"]
+TMB_RE_pars = TMB_pars[names(TMB_pars)=="theta"]
+
+# Map from TMB internal parameterization to my parameterization of RE parameters
+## Theirs is log-SDs, followed by scaled Cholesky factors of the correlation matrix. See https://github.com/glmmTMB/glmmTMB/blob/master/misc/glmmTMB_corcalcs.ipynb for details on how their correlation factors are defined and how to do the mapping.
+
+num_RE_pars = length(TMB_RE_pars)
+num_vars = (sqrt(1 + 8*num_RE_pars) - 1 ) / 2
+
+TMB_SD_pars = TMB_RE_pars[1:num_vars]
+TMB_corr_pars = TMB_RE_pars[(num_vars+1):length(TMB_RE_pars)]
+
+TMB_SDs = exp(TMB_SD_pars)
+
+## Compute correlation matrix
+TMB_corrs = get_cor(TMB_corr_pars, return_val = "vec")
+
+
+
+
+
+# Gradient of map from TMB internal parameterization to my parameterization of RE parameters
+TMB_pars = fit$fit$par
+TMB_FE_pars = TMB_pars[names(TMB_pars)=="beta"]
+TMB_RE_pars = TMB_pars[names(TMB_pars)=="theta"]
+
+num_pars = length(TMB_pars)
+num_FE_pars = length(TMB_FE_pars)
+
+num_RE_pars = length(TMB_RE_pars)
+num_vars = (sqrt(1 + 8*num_RE_pars) - 1 ) / 2
+num_SD_pars = num_vars
+num_corr_pars = num_RE_pars - num_vars
+
+TMB_SD_pars = TMB_RE_pars[1:num_vars]
+TMB_corr_pars = TMB_RE_pars[(num_vars+1):length(TMB_RE_pars)]
+
+
+
+## Jacobian of fixed effects (FE) parameters 
+d_FE_FE = diag(num_FE_pars)
+d_FE_RE = matrix(0, nrow = num_FE_pars, ncol = num_RE_pars)
+d_FE = cbind(d_FE_FE, d_FE_RE)
+
+## Jacobian of re-parameterization of SD parameters
+d_SD_FE = matrix(0, nrow = num_SD_pars, ncol = num_FE_pars)
+d_SD_SD = diag(exp(TMB_SD_pars))
+d_SD_corr = matrix(0, nrow = num_SD_pars, ncol = num_corr_pars)
+d_SD = cbind(d_SD_FE, d_SD_SD, d_SD_corr)
+
+## Jacobian of re-parameterization of correlation parameters
+d_corr_FE = matrix(0, nrow = num_corr_pars, ncol = num_FE_pars)
+d_corr_SD = matrix(0, nrow = num_corr_pars, ncol = num_SD_pars)
+d_corr_corr = t(numDeriv::jacobian(get_cor, TMB_corr_pars, return_val = "vec")) # jacobian output demension is range-by-domain
+d_corr = cbind(d_corr_FE, d_corr_SD, d_corr_corr)
+
+## Combined Jacobian
+d_TMB = rbind(d_FE, d_SD, d_corr)
+
+
+## Re-arrange d_SD and d_corr to get d_theta, the gradient of my parameterization of the RE parameters
+### Specifically, my theta is sd_1, corr_12, corr_13,..., sd_2, corr_23, ..., sd_n
+d_theta = matrix(0, nrow = num_pars, ncol = num_pars)
+
+## Fill-in gradient for fixed effects
+for(i in 1:num_FE_pars){
+    d_theta[i,] = d_TMB[i,]
+}
+
+# Leave space between SDs for correlations. This quantity was derived by hand.
+inds_SD = num_FE_pars + ((1:num_SD_pars) - 1) * (1+num_SD_pars - (1:num_SD_pars)/2) + 1
+
+## Fill-in gradients for SD and corr pars
+for(i in seq_len(num_SD_pars)){
+    ### SDs
+    theta_ind_SD = inds_SD[i]
+    d_theta[theta_ind_SD,] = d_SD[i,]
+
+    ### Correlations
+    this_num_corrs = num_SD_pars - i    # Number of correlations for this variable
+    num_corrs_so_far = (i-1)*(num_SD_pars - i/2)    # Number of correlations already accounted for (this helps us index d_corr)
+    for(j in seq_len(this_num_corrs)){
+        theta_ind_corr = theta_ind_SD + j   # Index in my theta of current correlation
+
+        this_corr_ind = num_corrs_so_far + j    # Index in d_corr of current correlation
+
+        d_theta[theta_ind_corr,] = d_corr[this_corr_ind,]
+    }
+}
+
+
+SE_mat_TMB = d_theta %*% SE_mat %*% t(d_theta)
+
+
+
+
+ SE_mat_lme4 = merDeriv::vcov.glmerMod(fit_Y, full=TRUE, ranpar = "sd")
+
+
+norm(SE_mat_lme4 - SE_mat_TMB, type = "2") / norm(SE_mat_lme4)
+
+fixef(fit_Y)
+fixef(fit)$cond
+
+theta_lme4 = get_model_pars(fit_Y)$theta
+theta_TMB = c(TMB_SDs[1],
+              TMB_corrs[1:2],
+              TMB_SDs[2],
+              TMB_corrs[3],
+              TMB_SDs[3])
+
+cbind(theta_lme4, theta_TMB)

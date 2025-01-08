@@ -8,3 +8,4 @@ inst/doc
 R/Paper MC Study/Datasets/*
 R/Paper MC Study/Results - Delta, MC Delta/*
 R/Paper MC Study/*/*.RData
+R/Paper MC Study/* Package Source/*
