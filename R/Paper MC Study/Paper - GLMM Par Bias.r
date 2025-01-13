@@ -15,6 +15,7 @@ library(broom.mixed)
 library(glmmTMB)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 source("R/Exact_Asymptotics/Imai Method.r")
+source("R/Paper MC Study/glmmTMB Helpers.r")
 devtools::load_all("D:/William/Research/MultiMedUQ")
 
 
@@ -41,10 +42,10 @@ which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 # N = 20
 # N = 40
 # N = 60
-N=1000
+# N=1000
 
 #* Main value
-# N = 100
+N = 100
 n = N
 
 # all_Ks = c(50, 100, 200, 400, 800)
@@ -64,6 +65,7 @@ num_reps = 1000
 which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 
 
+
 x = 0
 x_m = 1
 
@@ -72,38 +74,76 @@ x_m = 1
 w = c(2,3)
 
 
+# ## Non-trivial values for the b's and theta's. Former based on output from another MC study. Latter chosen arbitrarily.
+# ## Crucially, no parameters are equal to zero.
+# ##? We choose the intercepts to that the mean of the linear predictor is zero. Doing this for M makes it easier to do so for Y.
+# # b_Y_int_old = 0.0376828219852018
+# b_Y_X = 0.966486302988689
+# b_Y_M = 1.99644760563721
+# b_Y_C1 = -0.00556557712859059
+# b_Y_C2 = 0.000826754128449799
+# b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) / 2       # ~ -1.48
+# b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_C1, b_Y_C2)
+# # b_Y = c(0.0376828219852018, 0.966486302988689, 1.99644760563721, -0.00556557712859059, 0.000826754128449799)
+
+# # b_M_int_old = -0.0990439890654785
+# b_M_X = 1.76353928991247
+# b_M_C1 = 0.0128566136999183
+# b_M_C2 = 0.00711746366915989
+# b_M_int = -sum(b_M_X, b_M_C1, b_M_C2) / 2       # ~ -0.89
+# b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2)
+# # b_M = c(-0.0990439890654785, 1.76353928991247, 0.0128566136999183, 0.00711746366915989)
+
+
+
+# #! Replace extremely small coefficients on C1 and C2
+# ## Non-trivial values for the b's and theta's. Former based on output from another MC study. Latter chosen arbitrarily.
+# ## Crucially, no parameters are equal to zero.
+# ##? We choose the intercepts to that the mean of the linear predictor is zero. Doing this for M makes it easier to do so for Y.
+# # b_Y_int_old = 0.0376828219852018
+# b_Y_X = 0.966486302988689
+# b_Y_M = 1.99644760563721
+# b_Y_C1 = -1
+# b_Y_C2 = 1
+# b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) / 2       # ~ -1.48
+# b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_C1, b_Y_C2)
+# # b_Y = c(0.0376828219852018, 0.966486302988689, 1.99644760563721, -0.00556557712859059, 0.000826754128449799)
+
+# # b_M_int_old = -0.0990439890654785
+# b_M_X = 1.76353928991247
+# b_M_C1 = 1
+# b_M_C2 = -1
+# b_M_int = -sum(b_M_X, b_M_C1, b_M_C2) / 2       # ~ -0.89
+# b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2)
+# # b_M = c(-0.0990439890654785, 1.76353928991247, 0.0128566136999183, 0.00711746366915989)
+
+
+
+
+# # Choose theta_Y and theta_M based on the values of b_Y and b_M
+# theta_Y = c(sqrt(0.5), 0.3, 0.4, 1, 0.5, sqrt(0.8)) / 3
+# # theta_Y = c(sqrt(0.5), 0.5, 1)
+# # theta_M = c(1, 0.5, 2)
+# theta_M = c(sqrt(0.5), -0.5, 1) / 3
+
+
+# all_reg_pars = c(b_Y, theta_Y, b_M, theta_M)
+
+
+
+
 ## Non-trivial values for the b's and theta's. Former based on output from another MC study. Latter chosen arbitrarily.
 ## Crucially, no parameters are equal to zero.
 ##? We choose the intercepts to that the mean of the linear predictor is zero. Doing this for M makes it easier to do so for Y.
-# b_Y_int_old = 0.0376828219852018
-b_Y_X = 0.966486302988689
-b_Y_M = 1.99644760563721
-b_Y_C1 = -0.00556557712859059
-b_Y_C2 = 0.000826754128449799
-b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) / 2       # ~ -1.48
-b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_C1, b_Y_C2)
-# b_Y = c(0.0376828219852018, 0.966486302988689, 1.99644760563721, -0.00556557712859059, 0.000826754128449799)
-
-# b_M_int_old = -0.0990439890654785
-b_M_X = 1.76353928991247
-b_M_C1 = 0.0128566136999183
-b_M_C2 = 0.00711746366915989
-b_M_int = -sum(b_M_X, b_M_C1, b_M_C2) / 2       # ~ -0.89
-b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2)
-# b_M = c(-0.0990439890654785, 1.76353928991247, 0.0128566136999183, 0.00711746366915989)
-
-
-
-## Non-trivial values for the b's and theta's. Former based on output from another MC study. Latter chosen arbitrarily.
-## Crucially, no parameters are equal to zero.
-##? We choose the intercepts to that the mean of the linear predictor is zero. Doing this for M makes it easier to do so for Y.
+#! Scale factor for coefficients and SDs
+scale_factor = 1
 # b_Y_int_old = 0.0376828219852018
 b_Y_X = 0.966486302988689
 b_Y_M = 1.99644760563721
 b_Y_C1 = -1
 b_Y_C2 = 1
 b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) / 2       # ~ -1.48
-b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_C1, b_Y_C2)
+b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) * scale_factor
 # b_Y = c(0.0376828219852018, 0.966486302988689, 1.99644760563721, -0.00556557712859059, 0.000826754128449799)
 
 # b_M_int_old = -0.0990439890654785
@@ -111,20 +151,21 @@ b_M_X = 1.76353928991247
 b_M_C1 = 1
 b_M_C2 = -1
 b_M_int = -sum(b_M_X, b_M_C1, b_M_C2) / 2       # ~ -0.89
-b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2)
+b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2) * scale_factor
 # b_M = c(-0.0990439890654785, 1.76353928991247, 0.0128566136999183, 0.00711746366915989)
 
 
 
 
 # Choose theta_Y and theta_M based on the values of b_Y and b_M
-theta_Y = c(sqrt(0.5), 0.5, 0.5, 1, 0.5, sqrt(0.5)) / 3
+theta_Y = c(scale_factor*sqrt(0.5), 0.3, 0.4, scale_factor, 0.5, scale_factor*sqrt(0.8)) / 3
 # theta_Y = c(sqrt(0.5), 0.5, 1)
 # theta_M = c(1, 0.5, 2)
-theta_M = c(sqrt(0.5), 0.5, 1) / 3
+theta_M = c(scale_factor*sqrt(0.5), -0.5, scale_factor) / 3
 
 
 all_reg_pars = c(b_Y, theta_Y, b_M, theta_M)
+
 
 
 
@@ -174,34 +215,42 @@ clusterSetRNGStream(cl = cl, 123)
 
 
 # MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
-MC_results_delta_MC_delta = pblapply(1:100, function(i) {
+all_sim_results = pblapply(1:50, function(i) {
     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
     # load(paste0("R/Paper MC Study/Datasets/", i, ".RData"))
 
     tryCatch({
 
+        # ----------------------------------- lme4 ----------------------------------- #
+
         ## Note: glmer wasn't converging with default values. I chose one of the default optimizers, and increased the number of function evaluations. Both bobyqa and the other default use this limiter instead of the number of iterations.
-        (fit_Y = suppressMessages(lme4::glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
+        # (fit_Y = suppressMessages(lme4::glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
         # (fit_M = suppressMessages(lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
+
+        # info_Y = get_model_pars(fit_Y)
+        # info_M = get_model_pars(fit_M)
+        # this_Theta_hat = c(unlist(info_Y), unlist(info_M))
+
+
+
+        # ---------------------------------- glmmTMB --------------------------------- #
         fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial)
         fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)
-
-        # library(broom.mixed)
-        # tidy(fit_Y)
-
-        # fit_Y$sdr
-
 
 
         ## Extract model parameter estimates
         info_Y = get_model_pars_TMB(fit_Y)
         info_M = get_model_pars_TMB(fit_M)
         this_Theta_hat = c(unlist(info_Y), unlist(info_M))
-        # info_Y = get_model_pars(fit_Y)
-        # info_M = get_model_pars(fit_M)
-        # this_Theta_hat = c(unlist(info_Y), unlist(info_M))
+
+        ## Estimate standard errors
+        cov_hat_Y = TMB_2_GLMM_SE(fit_Y)
+        cov_hat_M = TMB_2_GLMM_SE(fit_M)
 
 
+        
+
+        # ----------------------------- Mediation Effects ---------------------------- #
         ## Compute MEs
         b_Y_hat = info_Y$b
         theta_Y_hat = info_Y$theta
@@ -234,6 +283,10 @@ MC_results_delta_MC_delta = pblapply(1:100, function(i) {
 }, cl = cl)
 
 stopCluster(cl)
+
+all_theta_hats = lapply(all_sim_results, function(x) x[["this_Theta_hat"]])
+all_MEs = lapply(all_sim_results, function(x) x[["this_MEs"]])
+all_theta_cov_hats = lapply(all_sim_results, function(x) x[["this_Theta_cov"]])
 
 # MC_results_delta_MC_delta = MC_results_delta_MC_delta_old
 
@@ -347,6 +400,7 @@ d_corr = cbind(d_corr_FE, d_corr_SD, d_corr_corr)
 d_TMB = rbind(d_FE, d_SD, d_corr)
 
 
+
 ## Re-arrange d_SD and d_corr to get d_theta, the gradient of my parameterization of the RE parameters
 ### Specifically, my theta is sd_1, corr_12, corr_13,..., sd_2, corr_23, ..., sd_n
 d_theta = matrix(0, nrow = num_pars, ncol = num_pars)
@@ -377,9 +431,11 @@ for(i in seq_len(num_SD_pars)){
     }
 }
 
+d_theta - TMB_2_GLMM_grad(fit)
+
 
 SE_mat_TMB = d_theta %*% SE_mat %*% t(d_theta)
-
+TMB_2_GLMM_SE(fit) - SE_mat_TMB
 
 
 
@@ -399,3 +455,152 @@ theta_TMB = c(TMB_SDs[1],
               TMB_SDs[3])
 
 cbind(theta_lme4, theta_TMB)
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                            MC Study of Single GLMM                           #
+# ---------------------------------------------------------------------------- #
+
+N = 100
+K = 200
+
+
+# Setup cluster
+# cl = makeCluster(detectCores() - 2)
+# cl = makeCluster(15)
+cl = makeCluster(10)
+# clusterExport(cl, c("N", "b_Y", "theta_Y", "b_M", "theta_M", "which_REs"))
+clusterExport(cl, c("w", "B", "scale", "which_REs", "N", "n", "K", "b_Y", "theta_Y", "b_M", "theta_M"))
+clusterEvalQ(cl, {
+    library(lme4)
+    library(merDeriv)
+    library(tictoc)
+    library(pbapply)
+    library(parallel)
+    library(magrittr)
+    library(dplyr)
+    library(kableExtra)
+    library(ggplot2)
+    library(ggmulti)
+    library(broom.mixed)
+    library(glmmTMB)
+    source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
+    source("R/Exact_Asymptotics/Imai Method.r")
+    source("R/Paper MC Study/glmmTMB Helpers.r")
+    devtools::load_all()
+})
+clusterSetRNGStream(cl = cl, 123)
+# clusterSetRNGStream(cl = cl, 11111111)
+
+
+
+# all_ME_hats = list()
+# all_cov_hats_delta = list()
+# all_cov_hats_MC_delta = list()
+
+# total_runtime_delta = 0
+# total_runtime_MC_delta = 0
+
+# #? Note: Extracting the SE matrix for the reg pars is slow (using merDeriv::vcov.glmerMod()). I don't want to duplicate this step (or fitting the models), so I separated out model fitting/SE extraction from my method and the MC delta.
+
+
+# library(optimx)
+# library(dfoptim)
+# Y_info_lme4 = allFit(fit_Y_lme4)
+# summary(Y_info_lme4)
+
+
+# MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
+all_sim_results = pblapply(1:100, function(i) {
+    data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
+    # load(paste0("R/Paper MC Study/Datasets/", i, ".RData"))
+
+
+    # ------------------------------- TMB Analysis ------------------------------- #
+    fit_Y_TMB = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial)
+    fit_M_TMB = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)
+
+    theta_hat_Y_TMB = get_model_pars_TMB(fit_Y_TMB)
+    theta_hat_M_TMB = get_model_pars_TMB(fit_M_TMB)
+    Theta_hat_TMB = c(unlist(theta_hat_Y_TMB), unlist(theta_hat_M_TMB))
+    cov_hat_TMB = all_pars_cov_mat_TMB(fit_Y_TMB, fit_M_TMB)
+
+    b_Y_TMB = theta_hat_Y_TMB[["b"]]
+    theta_Y_TMB = theta_hat_Y_TMB[["theta"]]
+    b_M_TMB = theta_hat_M_TMB[["b"]]
+    theta_M_TMB = theta_hat_M_TMB[["theta"]]
+    MEs_TMB = all_MEs_pars(scale, w, b_Y_TMB, theta_Y_TMB, b_M_TMB, theta_M_TMB, which_REs =  which_REs)
+    cov_MEs_TMB = all_covs_MEs_pars(scale, w, cov_hat_TMB, b_Y_TMB, theta_Y_TMB, b_M_TMB, theta_M_TMB, which_REs =  which_REs)
+
+
+    # ------------------------------- lme4 Analysis ------------------------------ #
+    fit_Y_lme4 = suppressMessages(lme4::glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "nlminbwrap", optCtrl = list(maxfun = 1e5))))
+    fit_M_lme4 = suppressMessages(lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "nloptwrap", optCtrl = list(maxfun = 1e5, algorithm = "NLOPT_LN_NELDERMEAD"))))
+
+    theta_hat_Y_lme4 = get_model_pars(fit_Y_lme4)
+    theta_hat_M_lme4 = get_model_pars(fit_M_lme4)
+    Theta_hat_lme4 = c(unlist(theta_hat_Y_lme4), unlist(theta_hat_M_lme4))
+    cov_hat_lme4 = all_pars_cov_mat(fit_Y_lme4, fit_M_lme4)
+
+    MEs_lme4 = all_MEs_models(scale, w, fit_Y_lme4, fit_M_lme4, which_REs =  which_REs)
+    cov_MEs_lme4 = all_covs_MEs_models(scale, w, cov_hat_lme4, fit_Y_lme4, fit_M_lme4, which_REs =  which_REs)
+    
+
+    output = list(Theta_hat_TMB = Theta_hat_TMB, cov_hat_TMB = cov_hat_TMB, MEs_TMB = MEs_TMB, cov_MEs_TMB = cov_MEs_TMB,
+                    Theta_hat_lme4 = Theta_hat_lme4, cov_hat_lme4 = cov_hat_lme4, MEs_lme4 = MEs_lme4, cov_MEs_lme4 = cov_MEs_lme4)
+    save(output, file = paste0("R/Paper MC Study/Results - GLMM Par Bias/", i, ".RData"))
+
+    return(output)
+}, cl = cl)
+# })
+
+stopCluster(cl)
+
+
+#* Load results and store in a single object
+all_sim_results = lapply(1:10, function(i) {
+    load(paste0("R/Paper MC Study/Results - GLMM Par Bias/", i, ".RData"))
+    return(output)
+})
+
+
+#* Extract each type of estimate
+## Specifically: Theta hat and ME hat, as well as their SEs, for both TMB and lme4
+all_Theta_hats_TMB = t(sapply(all_sim_results, function(x) x$Theta_hat_TMB))
+all_Theta_cov_hats_TMB = lapply(all_sim_results, function(x) x$cov_hat_TMB)
+all_ME_hats_TMB = t(sapply(all_sim_results, function(x) x$MEs_TMB))
+all_ME_cov_hats_TMB = lapply(all_sim_results, function(x) x$cov_MEs_TMB)
+
+all_Theta_hats_lme4 = t(sapply(all_sim_results, function(x) x$Theta_hat_lme4))
+all_Theta_cov_hats_lme4 = lapply(all_sim_results, function(x) x$cov_hat_lme4)
+all_ME_hats_lme4 = t(sapply(all_sim_results, function(x) x$MEs_lme4))
+all_ME_cov_hats_lme4 = lapply(all_sim_results, function(x) x$cov_MEs_lme4)
+
+
+#* Compare findings from TMB and lme4
+
+## Empirical covariance of Theta hat
+
+emp_cov_Theta_TMB = cov(all_Theta_hats_TMB)
+emp_cov_Theta_lme4 = cov(all_Theta_hats_lme4)
+norm(emp_cov_Theta_TMB - emp_cov_Theta_lme4) / norm(emp_cov_Theta_TMB)
+
+all_theta_hats_TMB = t(sapply(all_sim_results, function(x) x$theta_hat_Y_TMB))
+all_cov_hats_TMB = lapply(all_sim_results, function(x) x$cov_hat_Y_TMB)
+all_theta_hats_lme4 = t(sapply(all_sim_results, function(x) x$theta_hat_Y_lme4))
+
+# Compare empirical and mean estimated covariance matrices
+emp_cov_TMB = cov(all_theta_hats_TMB)
+mean_cov_hat_TMB = Reduce("+", all_cov_hats_TMB) / length(all_cov_hats_TMB)
+norm(emp_cov_TMB - mean_cov_hat_TMB) / norm(emp_cov_TMB)
+
+# Compare empirical and mean estimated variances (i.e. diagonal entries of above matrices)
+emp_vars = as.matrix(as.numeric(diag(emp_cov)))
+mean_vars = as.matrix(diag(mean_cov_hat))
+norm(emp_vars - mean_vars, type="2") / norm(emp_vars, type = "2")
+
+
+emp_cov_lme4 = all_theta_hats_lme4 %>% na.omit() %>%  cov()
+norm(emp_cov_lme4 - emp_cov_TMB, type = "2") / norm(emp_cov_lme4, type = "2")
