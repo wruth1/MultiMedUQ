@@ -600,6 +600,24 @@ all_ME_cov_hats_lme4 = lapply(all_sim_results, function(x) x$cov_MEs_lme4)
 
 #* Compare findings from TMB and lme4
 
+## Relative error in Theta hat
+rel_errs_Theta = sapply(seq_len(nrow(all_Theta_hats_TMB)), function(i){
+    this_TMB = all_Theta_hats_TMB[i,] %>% as.matrix()
+    this_lme4 = all_Theta_hats_lme4[i,] %>% as.matrix()
+
+    rel_err = norm(this_TMB - this_lme4) / min(norm(this_TMB), norm(this_lme4))
+    return(rel_err)
+})
+
+## Relative error in ME hat
+rel_errs_ME = sapply(seq_len(nrow(all_ME_hats_TMB)), function(i){
+    this_TMB = all_ME_hats_TMB[i,] %>% as.matrix()
+    this_lme4 = all_ME_hats_lme4[i,] %>% as.matrix()
+
+    rel_err = norm(this_TMB - this_lme4) / min(norm(this_TMB), norm(this_lme4))
+    return(rel_err)
+})
+
 ## Empirical covariance of Theta hat
 emp_cov_Theta_TMB = cov(all_Theta_hats_TMB)
 emp_cov_Theta_lme4 = cov(all_Theta_hats_lme4)
@@ -690,24 +708,206 @@ purrr::map2( all_reg_pars, function(Theta_hats, Theta) abs((Theta_hats - Theta)/
 
 purrr::map_dbl(all_Theta_hats_TMB, mean)
 
+
+
+
 # ---------------------------------------------------------------------------- #
-#                                      Old                                     #
+#                             Confidence Intervals                             #
 # ---------------------------------------------------------------------------- #
 
-all_theta_hats_TMB = t(sapply(all_sim_results, function(x) x$theta_hat_Y_TMB))
-all_cov_hats_TMB = lapply(all_sim_results, function(x) x$cov_hat_Y_TMB)
-all_theta_hats_lme4 = t(sapply(all_sim_results, function(x) x$theta_hat_Y_lme4))
 
-# Compare empirical and mean estimated covariance matrices
-emp_cov_TMB = cov(all_theta_hats_TMB)
-mean_cov_hat_TMB = Reduce("+", all_cov_hats_TMB) / length(all_cov_hats_TMB)
-norm(emp_cov_TMB - mean_cov_hat_TMB) / norm(emp_cov_TMB)
+# --------------------------- Supporting Functions --------------------------- #
 
-# Compare empirical and mean estimated variances (i.e. diagonal entries of above matrices)
-emp_vars = as.matrix(as.numeric(diag(emp_cov)))
-mean_vars = as.matrix(diag(mean_cov_hat))
-norm(emp_vars - mean_vars, type="2") / norm(emp_vars, type = "2")
+cov_mat_2_SEs <- function(cov_mat){
+    sqrt(diag(cov_mat))
+}
 
 
-emp_cov_lme4 = all_theta_hats_lme4 %>% na.omit() %>%  cov()
-norm(emp_cov_lme4 - emp_cov_TMB, type = "2") / norm(emp_cov_lme4, type = "2")
+# One parameter at a time
+build_CIs_one_par <- function(Theta_hats, SE){
+    lcls = Theta_hats - qnorm(0.975) * SE
+    ucls = Theta_hats + qnorm(0.975) * SE
+
+    return(list(lcl = lcls, ucl = ucls))
+}
+
+build_many_CIs <- function(Theta_hats_data, SEs){
+    lapply(seq_along(SEs), function(i){
+        this_Theta_hats = Theta_hats_data[,i]
+        this_SE = SEs[i]
+
+        return(build_CIs_one_par(this_Theta_hats, this_SE))
+    })
+}
+
+# One dataset at a time
+build_one_CI_many_pars <- function(Theta_hats, SEs){
+    lapply(seq_along(Theta_hats), function(i){
+        this_Theta_hat = Theta_hats[i]
+        this_SE = SEs[i]
+
+        return(build_CIs_one_par(this_Theta_hat, this_SE))
+    })
+}
+
+## SEs can either be a vector of SEs or a list of such vectors with length == nrow(Theta_hats_data)
+build_many_CIs_by_dataset <- function(Theta_hats_data, SEs){
+    ## Check inputs
+    if(is.list(SEs)){
+        if(length(SEs) != nrow(Theta_hats_data)){
+            stop("Number of estimates does not match number of SE vectors.")
+        } else{
+            if(length(SEs[[1]]) != ncol(Theta_hats_data)){
+                stop("Number of parameters does not match number of SEs.")
+            }
+        }
+        SE_list = TRUE
+    } else if(is.numeric(SEs)){
+        if(length(SEs) != ncol(Theta_hats_data)){
+            stop("Number of parameters does not match number of SEs.")
+        }
+        SE_list = FALSE
+    } else{
+        stop("SEs must be either a vector or a list of vectors.")
+    }
+
+    ## Build CIs
+    lapply(seq_len(nrow(Theta_hats_data)), function(i){
+        this_Theta_hats = Theta_hats_data[i,]
+        if(SE_list){
+            this_SEs = SEs[[i]]
+        } else{
+            this_SEs = SEs
+        }
+
+        return(build_one_CI_many_pars(this_Theta_hats, this_SEs))
+    })
+}
+
+
+# Check coverage
+coverage_checks_one_par <- function(Theta, CIs){
+    some_lcls = CIs$lcl
+    some_ucls = CIs$ucl
+
+    some_checks = some_lcls < Theta & Theta < some_ucls
+
+    return(some_checks)
+}
+
+many_coverage_checks <- function(Theta, CIs){
+    lapply(seq_along(CIs), function(i){
+        this_CIs = CIs[[i]]
+        this_Theta = Theta[i]
+
+        return(coverage_checks_one_par(this_Theta, this_CIs))
+    })
+}
+
+coverage_checks_2_rates <- function(coverage_checks_list){
+    sapply(coverage_checks_list, function(x) mean(x))
+}
+
+
+get_coverage_rates <- function(Theta_hats_data, cov_mat, true_Thetas){
+    SEs = cov_mat_2_SEs(cov_mat)
+    CIs = build_many_CIs(Theta_hats_data, SEs)
+    coverage_checks = many_coverage_checks(true_Thetas, CIs)
+
+    return(coverage_checks_2_rates(coverage_checks))
+}
+
+get_coverage_rates_many_cov_mats <- function(Theta_hats_data, cov_mat_list, true_Thetas){
+    SEs_list = lapply(cov_mat_list, cov_mat_2_SEs)
+
+    # Nesting structure is [dataset][parameter][lcl/ucl]
+    # Needs to be [parameter][lcl/ucl][dataset]
+    CIs_raw = build_many_CIs_by_dataset(Theta_hats_data, SEs_list)
+
+    CIs = lapply(seq_len(ncol(Theta_hats_data)), function(i){
+        this_lcls = sapply(seq_len(nrow(Theta_hats_data)), function(j) CIs_raw[[j]][[i]]$lcl) %>% unname()
+        this_ucls = sapply(seq_len(nrow(Theta_hats_data)), function(j) CIs_raw[[j]][[i]]$ucl) %>% unname()
+
+        return(list(lcl = this_lcls, ucl = this_ucls))
+    })
+
+    coverage_checks = many_coverage_checks(true_Thetas, CIs)
+    coverage_rates = coverage_checks_2_rates(coverage_checks)
+
+    return(coverage_rates)
+        
+}
+
+# ------------------------------ GLMM Parameters ----------------------------- #
+
+cov_emp_TMB = get_coverage_rates(all_Theta_hats_TMB, emp_cov_Theta_TMB, all_reg_pars)
+cov_hat_TMB = get_coverage_rates(all_Theta_hats_TMB, mean_cov_hat_Theta_TMB, all_reg_pars)
+
+cov_emp_lme4 = get_coverage_rates(all_Theta_hats_lme4, emp_cov_Theta_lme4, all_reg_pars)
+cov_hat_lme4 = get_coverage_rates(all_Theta_hats_lme4, mean_cov_hat_Theta_lme4, all_reg_pars)
+
+## CI for each dataset based on estimated SEs, not mean estimated SEs
+cov_hat_TMB_honest = get_coverage_rates_many_cov_mats(all_Theta_hats_TMB, all_Theta_cov_hats_TMB, all_reg_pars)
+cov_hat_lme4_honest = get_coverage_rates_many_cov_mats(all_Theta_hats_lme4, all_Theta_cov_hats_lme4, all_reg_pars)
+
+
+data_cover = data.frame(TMB_emp = cov_emp_TMB, TMB_hat = cov_hat_TMB, TMB_honest = cov_hat_TMB_honest, lme4_emp = cov_emp_lme4, lme4_hat = cov_hat_lme4, lme4_honest = cov_hat_lme4_honest)
+
+cov_emp_TMB - cov_emp_lme4
+cov_hat_TMB - cov_hat_lme4
+cov_hat_TMB_honest - cov_hat_lme4_honest
+
+cov_emp_TMB - cov_hat_TMB
+cov_hat_TMB - cov_hat_TMB_honest
+cov_hat_lme4 - cov_hat_lme4_honest
+
+
+# ----------------------------- Mediation Effects ---------------------------- #
+true_MEs = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs = which_REs)
+
+
+cover_emp_TMB_ME = get_coverage_rates(all_ME_hats_TMB, emp_cov_ME_TMB, true_MEs)
+cover_emp_lme4_ME = get_coverage_rates(all_ME_hats_lme4, emp_cov_ME_lme4, true_MEs)
+
+cover_hat_TMB_ME = get_coverage_rates(all_ME_hats_TMB, mean_cov_hat_ME_TMB, true_MEs)
+cover_hat_lme4_ME = get_coverage_rates(all_ME_hats_lme4, mean_cov_hat_ME_lme4, true_MEs)
+
+cov_hat_TMB_ME_honest = get_coverage_rates_many_cov_mats(all_ME_hats_TMB, all_ME_cov_hats_TMB, true_MEs)
+cov_hat_lme4_ME_honest = get_coverage_rates_many_cov_mats(all_ME_hats_lme4, all_ME_cov_hats_lme4, true_MEs)
+
+data_cover_ME = data.frame(TMB_emp = cover_emp_TMB_ME, TMB_hat = cover_hat_TMB_ME, TMB_hat_honest = cov_hat_TMB_ME_honest, lme4_emp = cover_emp_lme4_ME, lme4_hat = cover_hat_lme4_ME, lme4_hat_honest = cov_hat_lme4_ME_honest)
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                                     Bias                                     #
+# ---------------------------------------------------------------------------- #
+
+# ------------------------------- Compute bias ------------------------------- #
+
+mean_Theta_hat_TMB = colMeans(all_Theta_hats_TMB)
+mean_Theta_hat_lme4 = colMeans(all_Theta_hats_lme4)
+
+mean_ME_hat_TMB = colMeans(all_ME_hats_TMB)
+mean_ME_hat_lme4 = colMeans(all_ME_hats_lme4)
+
+
+bias_Theta_TMB = mean_Theta_hat_TMB - all_reg_pars
+bias_Theta_lme4 = mean_Theta_hat_lme4 - all_reg_pars
+
+bias_ME_TMB = mean_ME_hat_TMB - true_MEs
+bias_ME_lme4 = mean_ME_hat_lme4 - true_MEs
+
+
+rel_bias_Theta_TMB = abs(bias_Theta_TMB / all_reg_pars)
+rel_bias_Theta_lme4 = abs(bias_Theta_lme4 / all_reg_pars)
+
+rel_bias_ME_TMB = abs(bias_ME_TMB / true_MEs)
+rel_bias_ME_lme4 = abs(bias_ME_lme4 / true_MEs)
+
+data_rel_bias = data.frame(TMB = rel_bias_Theta_TMB, lme4 = rel_bias_Theta_lme4)
+data_rel_bias_ME = data.frame(TMB = rel_bias_ME_TMB, lme4 = rel_bias_ME_lme4)
