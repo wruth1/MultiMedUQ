@@ -463,8 +463,8 @@ cbind(theta_lme4, theta_TMB)
 #                            MC Study of Single GLMM                           #
 # ---------------------------------------------------------------------------- #
 
-N = 100
-K = 200
+N = 200
+K = 500
 
 
 # Setup cluster
@@ -512,10 +512,21 @@ clusterSetRNGStream(cl = cl, 123)
 # summary(Y_info_lme4)
 
 
-# MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
-all_sim_results = pblapply(1:100, function(i) {
+set.seed(1)
+
+num_reps = 100
+
+save_data = pbsapply(1:num_reps, function(i) {
     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
-    # load(paste0("R/Paper MC Study/Datasets/", i, ".RData"))
+    save(data, file = paste0("R/Paper MC Study/Data - GLMM Par Bias/", i, ".RData"))
+})
+
+
+# MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
+all_sim_results = pblapply(1:num_reps, function(i) {
+    # data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
+    load(paste0("R/Paper MC Study/Data - GLMM Par Bias/", i, ".RData"))
+    tryCatch({
 
 
     # ------------------------------- TMB Analysis ------------------------------- #
@@ -534,6 +545,10 @@ all_sim_results = pblapply(1:100, function(i) {
     MEs_TMB = all_MEs_pars(scale, w, b_Y_TMB, theta_Y_TMB, b_M_TMB, theta_M_TMB, which_REs =  which_REs)
     cov_MEs_TMB = all_covs_MEs_pars(scale, w, cov_hat_TMB, b_Y_TMB, theta_Y_TMB, b_M_TMB, theta_M_TMB, which_REs =  which_REs)
 
+    # # TMB only
+    # output = list(Theta_hat_TMB = Theta_hat_TMB, cov_hat_TMB = cov_hat_TMB, MEs_TMB = MEs_TMB, cov_MEs_TMB = cov_MEs_TMB)
+    # save(output, file = paste0("R/Paper MC Study/Results - GLMM Par Bias/", i, ".RData"))
+    # return(output)
 
     # ------------------------------- lme4 Analysis ------------------------------ #
     fit_Y_lme4 = suppressMessages(lme4::glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "nlminbwrap", optCtrl = list(maxfun = 1e5))))
@@ -548,11 +563,14 @@ all_sim_results = pblapply(1:100, function(i) {
     cov_MEs_lme4 = all_covs_MEs_models(scale, w, cov_hat_lme4, fit_Y_lme4, fit_M_lme4, which_REs =  which_REs)
     
 
-    output = list(Theta_hat_TMB = Theta_hat_TMB, cov_hat_TMB = cov_hat_TMB, MEs_TMB = MEs_TMB, cov_MEs_TMB = cov_MEs_TMB,
-                    Theta_hat_lme4 = Theta_hat_lme4, cov_hat_lme4 = cov_hat_lme4, MEs_lme4 = MEs_lme4, cov_MEs_lme4 = cov_MEs_lme4)
+    output = list(Theta_hat_TMB = Theta_hat_TMB, cov_hat_TMB = cov_hat_TMB, MEs_TMB = MEs_TMB, cov_MEs_TMB = cov_MEs_TMB, Theta_hat_lme4 = Theta_hat_lme4, cov_hat_lme4 = cov_hat_lme4, MEs_lme4 = MEs_lme4, cov_MEs_lme4 = cov_MEs_lme4)
     save(output, file = paste0("R/Paper MC Study/Results - GLMM Par Bias/", i, ".RData"))
-
     return(output)
+    }, error = function(e){
+      output = NULL
+      save(output, file = paste0("R/Paper MC Study/Results - GLMM Par Bias/", i, ".RData"))
+      return(output)
+    })
 }, cl = cl)
 # })
 
@@ -560,8 +578,9 @@ stopCluster(cl)
 
 
 #* Load results and store in a single object
-all_sim_results = lapply(1:10, function(i) {
-    load(paste0("R/Paper MC Study/Results - GLMM Par Bias/", i, ".RData"))
+sim_file_names = list.files("R/Paper MC Study/Results - GLMM Par Bias/")
+all_sim_results = lapply(sim_file_names, function(this_name) {
+    load(paste0("R/Paper MC Study/Results - GLMM Par Bias/", this_name))
     return(output)
 })
 
@@ -582,10 +601,98 @@ all_ME_cov_hats_lme4 = lapply(all_sim_results, function(x) x$cov_MEs_lme4)
 #* Compare findings from TMB and lme4
 
 ## Empirical covariance of Theta hat
-
 emp_cov_Theta_TMB = cov(all_Theta_hats_TMB)
 emp_cov_Theta_lme4 = cov(all_Theta_hats_lme4)
 norm(emp_cov_Theta_TMB - emp_cov_Theta_lme4) / norm(emp_cov_Theta_TMB)
+
+## Mean estimated covariances of Theta hat
+mean_cov_hat_Theta_TMB = Reduce("+", all_Theta_cov_hats_TMB) / length(all_Theta_cov_hats_TMB)
+mean_cov_hat_Theta_lme4 = Reduce("+", all_Theta_cov_hats_lme4) / length(all_Theta_cov_hats_lme4)
+norm(mean_cov_hat_Theta_TMB - mean_cov_hat_Theta_lme4) / min(norm(mean_cov_hat_Theta_TMB), norm(mean_cov_hat_Theta_lme4)) 
+
+## Empirical covariance of ME hat
+emp_cov_ME_TMB = cov(all_ME_hats_TMB)
+emp_cov_ME_lme4 = cov(all_ME_hats_lme4)
+norm(emp_cov_ME_TMB - emp_cov_ME_lme4) / norm(emp_cov_ME_TMB)
+
+## Mean estimated covariances of ME hat
+mean_cov_hat_ME_TMB = Reduce("+", all_ME_cov_hats_TMB) / length(all_ME_cov_hats_TMB)
+mean_cov_hat_ME_lme4 = Reduce("+", all_ME_cov_hats_lme4) / length(all_ME_cov_hats_lme4)
+norm(mean_cov_hat_ME_TMB - mean_cov_hat_ME_lme4) / norm(mean_cov_hat_ME_TMB)
+
+
+
+
+
+
+#* Investigate performance of TMB and lme4
+
+## Empirical vs mean estimated covariance of Theta hat
+norm(emp_cov_Theta_TMB - mean_cov_hat_Theta_TMB) / norm(emp_cov_Theta_TMB)
+norm(emp_cov_Theta_lme4 - mean_cov_hat_Theta_lme4) / norm(emp_cov_Theta_lme4)
+
+### As above, but only variances
+norm(as.matrix(diag(emp_cov_Theta_TMB) - diag(mean_cov_hat_Theta_TMB))) / norm(as.matrix(diag(emp_cov_Theta_TMB)))
+norm(as.matrix(diag(emp_cov_Theta_lme4) - diag(mean_cov_hat_Theta_lme4))) / norm(as.matrix(diag(emp_cov_Theta_lme4)))
+
+data.frame(mean = diag(mean_cov_hat_Theta_TMB), emp = diag(emp_cov_Theta_TMB), diff = diag(emp_cov_Theta_TMB) - diag(mean_cov_hat_Theta_TMB))
+
+#? Distribution of bad variance estimates
+inds_bad_pars = c(7, 8, 10)
+
+all_bad_estimates = lapply(inds_bad_pars, function(i){
+    sapply(all_Theta_cov_hats_TMB, function(x) x[i, i])
+})
+
+for(i in seq_along(all_bad_estimates)){
+    some_estimates_raw = all_bad_estimates[[i]]
+    # some_estimates = some_estimates_raw %>% .[abs(.) < 1]
+    some_estimates = some_estimates_raw
+    hist(some_estimates, main = paste0("Parameter ", inds_bad_pars[i]), breaks = 100)
+    abline(v = all_reg_pars[inds_bad_pars[i]], col = "red")
+}
+
+# Find datasets with impossible correlations
+inds_bad_datasets = c()
+for(i in seq_along(all_bad_estimates)){
+    this_bad_estimates = all_bad_estimates[[i]]
+    this_bad_datasets = which(abs(this_bad_estimates) > 1)
+    inds_bad_datasets = c(inds_bad_datasets, this_bad_datasets)
+}
+inds_bad_datasets %<>% unique %>% sort
+
+
+
+
+
+
+
+
+
+data.frame(mean = diag(mean_cov_hat_Theta_lme4), emp = diag(emp_cov_Theta_lme4), diff = diag(emp_cov_Theta_lme4) - diag(mean_cov_hat_Theta_lme4))
+
+
+#* Compare estimates with true values
+
+## Theta
+### Matrix - vector subtraction matches on the first index (i.e. rows). Use lots of transposes to accommodate this
+Theta_hat_errs_TMB = t(t(all_Theta_hats_TMB) - all_reg_pars) - Theta_hat_errs_TMB
+Theta_hat_err_norms_TMB = apply(Theta_hat_errs_TMB, 1, function(x) norm(x, type = "2"))
+theta_hat_err_rel_norms_TMB = Theta_hat_err_norms_TMB / norm(all_reg_pars, type = "2")
+hist(theta_hat_err_rel_norms_TMB)
+
+## Componentwise errors in Theta
+
+abs((all_Theta_hats_TMB %>% as.data.frame %>% purrr::map_dbl(mean) - all_reg_pars) / all_reg_pars)
+
+
+purrr::map2( all_reg_pars, function(Theta_hats, Theta) abs((Theta_hats - Theta)/Theta) )
+
+purrr::map_dbl(all_Theta_hats_TMB, mean)
+
+# ---------------------------------------------------------------------------- #
+#                                      Old                                     #
+# ---------------------------------------------------------------------------- #
 
 all_theta_hats_TMB = t(sapply(all_sim_results, function(x) x$theta_hat_Y_TMB))
 all_cov_hats_TMB = lapply(all_sim_results, function(x) x$cov_hat_Y_TMB)
