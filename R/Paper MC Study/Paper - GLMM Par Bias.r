@@ -175,294 +175,6 @@ p = p_Y + p_M
 
 
 
-# Setup cluster
-# cl = makeCluster(detectCores() - 2)
-# cl = makeCluster(15)
-cl = makeCluster(10)
-# clusterExport(cl, c("N", "b_Y", "theta_Y", "b_M", "theta_M", "which_REs"))
-clusterExport(cl, c("w", "B", "scale", "which_REs", "N", "n", "K", "b_Y", "theta_Y", "b_M", "theta_M"))
-clusterEvalQ(cl, {
-    library(lme4)
-    library(merDeriv)
-    library(tictoc)
-    library(pbapply)
-    library(parallel)
-    library(magrittr)
-    library(dplyr)
-    library(kableExtra)
-    library(ggplot2)
-    library(ggmulti)
-    library(broom.mixed)
-    library(glmmTMB)
-    source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
-    source("R/Exact_Asymptotics/Imai Method.r")
-    devtools::load_all()
-})
-clusterSetRNGStream(cl = cl, 123)
-# clusterSetRNGStream(cl = cl, 11111111)
-
-
-
-# all_ME_hats = list()
-# all_cov_hats_delta = list()
-# all_cov_hats_MC_delta = list()
-
-# total_runtime_delta = 0
-# total_runtime_MC_delta = 0
-
-# #? Note: Extracting the SE matrix for the reg pars is slow (using merDeriv::vcov.glmerMod()). I don't want to duplicate this step (or fitting the models), so I separated out model fitting/SE extraction from my method and the MC delta.
-
-
-
-# MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
-all_sim_results = pblapply(1:50, function(i) {
-    data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
-    # load(paste0("R/Paper MC Study/Datasets/", i, ".RData"))
-
-    tryCatch({
-
-        # ----------------------------------- lme4 ----------------------------------- #
-
-        ## Note: glmer wasn't converging with default values. I chose one of the default optimizers, and increased the number of function evaluations. Both bobyqa and the other default use this limiter instead of the number of iterations.
-        # (fit_Y = suppressMessages(lme4::glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
-        # (fit_M = suppressMessages(lme4::glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = lme4::glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5)))))
-
-        # info_Y = get_model_pars(fit_Y)
-        # info_M = get_model_pars(fit_M)
-        # this_Theta_hat = c(unlist(info_Y), unlist(info_M))
-
-
-
-        # ---------------------------------- glmmTMB --------------------------------- #
-        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial)
-        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)
-
-
-        ## Extract model parameter estimates
-        info_Y = get_model_pars_TMB(fit_Y)
-        info_M = get_model_pars_TMB(fit_M)
-        this_Theta_hat = c(unlist(info_Y), unlist(info_M))
-
-        ## Estimate standard errors
-        cov_hat_Y = TMB_2_GLMM_SE(fit_Y)
-        cov_hat_M = TMB_2_GLMM_SE(fit_M)
-
-
-        
-
-        # ----------------------------- Mediation Effects ---------------------------- #
-        ## Compute MEs
-        b_Y_hat = info_Y$b
-        theta_Y_hat = info_Y$theta
-        b_M_hat = info_M$b
-        theta_M_hat = info_M$theta
-
-        this_MEs = all_MEs_pars(scale, w, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs = which_REs)
-
-
-        }, error = function(e){
-            this_Theta_hat = NULL
-            this_MEs = NULL
-    })
-
-    tryCatch({
-    output = list(this_Theta_hat = this_Theta_hat, this_MEs = this_MEs)
-
-    # save(output, file = paste0("R/Paper MC Study/Results (new) - Delta, MC Delta/", i, ".RData"))
-    return(output)
-    }, error = function(e){
-      output = list(this_Theta_hat = NULL, this_MEs = NULL)
-
-    #   save(output, file = paste0("R/Paper MC Study/Results (new) - Delta, MC Delta/", i, ".RData"))
-      return(output)
-    })
-
-    # stop("Error: Loop should never reach this point.")
-
-# })
-}, cl = cl)
-
-stopCluster(cl)
-
-all_theta_hats = lapply(all_sim_results, function(x) x[["this_Theta_hat"]])
-all_MEs = lapply(all_sim_results, function(x) x[["this_MEs"]])
-all_theta_cov_hats = lapply(all_sim_results, function(x) x[["this_Theta_cov"]])
-
-# MC_results_delta_MC_delta = MC_results_delta_MC_delta_old
-
-mean_reg_pars = MC_results_delta_MC_delta %>%
-  lapply(function(x) x[["this_Theta_hat"]]) %>%
-  Reduce(f = "rbind") %>%
-  colMeans()
-
-# load("R/Paper MC Study/True GLMM Pars.RData", verbose = TRUE)
-bias_reg_pars = mean_reg_pars - all_reg_pars
-rel_bias_reg_pars = abs(bias_reg_pars / all_reg_pars)
-
-
-data_bias_reg_pars = data.frame(par = names(mean_reg_pars), hat = mean_reg_pars, true = all_reg_pars, rel_bias = rel_bias_reg_pars)
-# new_output = data_bias_reg_pars
-# new_data = MC_results_delta_MC_delta
-
-
-
-
-
-# Bias in MEs
-mean_MEs = MC_results_delta_MC_delta %>%
-  lapply(function(x) x[["this_MEs"]]) %>%
-  Reduce(f = "rbind") %>%
-  colMeans()
-
-true_MEs = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs = which_REs)
-bias_MEs = mean_MEs - true_MEs
-rel_bias_MEs = abs(bias_MEs / true_MEs)
-
-data_bias_MEs = data.frame(par = names(mean_MEs), hat = mean_MEs, true = true_MEs, rel_bias = rel_bias_MEs)
-
-
-
-
-MC_results_lme4 = MC_results_delta_MC_delta
-
-
-
-
-# I did double-check that this is the correct point at which to evaluate the Jacobian of the gradient
-## Specifically, I evaluated fit$obj$fn at the point estimates. This matched the final objective function value reported in fit$fit.
-estimates = fit$fit$par
-grad_fun = fit$obj$gr
-SE_mat = solve(numDeriv::jacobian(grad_fun, estimates))
-
-
-
-
-
-
-TMB_pars = fit$fit$par
-TMB_FE_pars = TMB_pars[names(TMB_pars)=="beta"]
-TMB_RE_pars = TMB_pars[names(TMB_pars)=="theta"]
-
-# Map from TMB internal parameterization to my parameterization of RE parameters
-## Theirs is log-SDs, followed by scaled Cholesky factors of the correlation matrix. See https://github.com/glmmTMB/glmmTMB/blob/master/misc/glmmTMB_corcalcs.ipynb for details on how their correlation factors are defined and how to do the mapping.
-
-num_RE_pars = length(TMB_RE_pars)
-num_vars = (sqrt(1 + 8*num_RE_pars) - 1 ) / 2
-
-TMB_SD_pars = TMB_RE_pars[1:num_vars]
-TMB_corr_pars = TMB_RE_pars[(num_vars+1):length(TMB_RE_pars)]
-
-TMB_SDs = exp(TMB_SD_pars)
-
-## Compute correlation matrix
-TMB_corrs = get_cor(TMB_corr_pars, return_val = "vec")
-
-
-
-
-
-# Gradient of map from TMB internal parameterization to my parameterization of RE parameters
-TMB_pars = fit$fit$par
-TMB_FE_pars = TMB_pars[names(TMB_pars)=="beta"]
-TMB_RE_pars = TMB_pars[names(TMB_pars)=="theta"]
-
-num_pars = length(TMB_pars)
-num_FE_pars = length(TMB_FE_pars)
-
-num_RE_pars = length(TMB_RE_pars)
-num_vars = (sqrt(1 + 8*num_RE_pars) - 1 ) / 2
-num_SD_pars = num_vars
-num_corr_pars = num_RE_pars - num_vars
-
-TMB_SD_pars = TMB_RE_pars[1:num_vars]
-TMB_corr_pars = TMB_RE_pars[(num_vars+1):length(TMB_RE_pars)]
-
-
-
-## Jacobian of fixed effects (FE) parameters 
-d_FE_FE = diag(num_FE_pars)
-d_FE_RE = matrix(0, nrow = num_FE_pars, ncol = num_RE_pars)
-d_FE = cbind(d_FE_FE, d_FE_RE)
-
-## Jacobian of re-parameterization of SD parameters
-d_SD_FE = matrix(0, nrow = num_SD_pars, ncol = num_FE_pars)
-d_SD_SD = diag(exp(TMB_SD_pars))
-d_SD_corr = matrix(0, nrow = num_SD_pars, ncol = num_corr_pars)
-d_SD = cbind(d_SD_FE, d_SD_SD, d_SD_corr)
-
-## Jacobian of re-parameterization of correlation parameters
-d_corr_FE = matrix(0, nrow = num_corr_pars, ncol = num_FE_pars)
-d_corr_SD = matrix(0, nrow = num_corr_pars, ncol = num_SD_pars)
-d_corr_corr = t(numDeriv::jacobian(get_cor, TMB_corr_pars, return_val = "vec")) # jacobian output demension is range-by-domain
-d_corr = cbind(d_corr_FE, d_corr_SD, d_corr_corr)
-
-## Combined Jacobian
-d_TMB = rbind(d_FE, d_SD, d_corr)
-
-
-
-## Re-arrange d_SD and d_corr to get d_theta, the gradient of my parameterization of the RE parameters
-### Specifically, my theta is sd_1, corr_12, corr_13,..., sd_2, corr_23, ..., sd_n
-d_theta = matrix(0, nrow = num_pars, ncol = num_pars)
-
-## Fill-in gradient for fixed effects
-for(i in 1:num_FE_pars){
-    d_theta[i,] = d_TMB[i,]
-}
-
-# Leave space between SDs for correlations. This quantity was derived by hand.
-inds_SD = num_FE_pars + ((1:num_SD_pars) - 1) * (1+num_SD_pars - (1:num_SD_pars)/2) + 1
-
-## Fill-in gradients for SD and corr pars
-for(i in seq_len(num_SD_pars)){
-    ### SDs
-    theta_ind_SD = inds_SD[i]
-    d_theta[theta_ind_SD,] = d_SD[i,]
-
-    ### Correlations
-    this_num_corrs = num_SD_pars - i    # Number of correlations for this variable
-    num_corrs_so_far = (i-1)*(num_SD_pars - i/2)    # Number of correlations already accounted for (this helps us index d_corr)
-    for(j in seq_len(this_num_corrs)){
-        theta_ind_corr = theta_ind_SD + j   # Index in my theta of current correlation
-
-        this_corr_ind = num_corrs_so_far + j    # Index in d_corr of current correlation
-
-        d_theta[theta_ind_corr,] = d_corr[this_corr_ind,]
-    }
-}
-
-d_theta - TMB_2_GLMM_grad(fit)
-
-
-SE_mat_TMB = d_theta %*% SE_mat %*% t(d_theta)
-TMB_2_GLMM_SE(fit) - SE_mat_TMB
-
-
-
- SE_mat_lme4 = merDeriv::vcov.glmerMod(fit_Y, full=TRUE, ranpar = "sd")
-
-
-norm(SE_mat_lme4 - SE_mat_TMB, type = "2") / norm(SE_mat_lme4)
-
-fixef(fit_Y)
-fixef(fit)$cond
-
-theta_lme4 = get_model_pars(fit_Y)$theta
-theta_TMB = c(TMB_SDs[1],
-              TMB_corrs[1:2],
-              TMB_SDs[2],
-              TMB_corrs[3],
-              TMB_SDs[3])
-
-cbind(theta_lme4, theta_TMB)
-
-
-
-
-# ---------------------------------------------------------------------------- #
-#                            MC Study of Single GLMM                           #
-# ---------------------------------------------------------------------------- #
-
 N = 400
 K = 500
 
@@ -495,32 +207,32 @@ clusterSetRNGStream(cl = cl, 123)
 # clusterSetRNGStream(cl = cl, 11111111)
 
 
-
-# all_ME_hats = list()
-# all_cov_hats_delta = list()
-# all_cov_hats_MC_delta = list()
-
-# total_runtime_delta = 0
-# total_runtime_MC_delta = 0
-
-# #? Note: Extracting the SE matrix for the reg pars is slow (using merDeriv::vcov.glmerMod()). I don't want to duplicate this step (or fitting the models), so I separated out model fitting/SE extraction from my method and the MC delta.
-
-
+# # Choose a fitting algorithm for lme4
 # library(optimx)
 # library(dfoptim)
 # Y_info_lme4 = allFit(fit_Y_lme4)
 # summary(Y_info_lme4)
 
 
-set.seed(1)
 
-num_reps = 100
 
-save_data = pbsapply(1:num_reps, function(i) {
-    data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
-    save(data, file = paste0("R/Paper MC Study/Data - GLMM Par Bias/", i, ".RData"))
-})
 
+# -------------------------- Generate and save data -------------------------- #
+
+# set.seed(1)
+
+# num_reps = 1000
+
+# save_data = pbsapply(1:num_reps, function(i) {
+#     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
+#     save(data, file = paste0("R/Paper MC Study/Data - GLMM Par Bias/", i, ".RData"))
+# })
+
+
+
+
+
+# ---------------------------- Fit models to data ---------------------------- #
 
 # MC_results_delta_MC_delta = pblapply(1:num_reps, function(i) {
 all_sim_results = pblapply(1:num_reps, function(i) {
@@ -562,7 +274,7 @@ stopCluster(cl)
 
 #* Load results and store in a single object
 sim_file_names = list.files("R/Paper MC Study/Results - GLMM Par Bias/")
-all_sim_results = lapply(sim_file_names, function(this_name) {
+all_sim_results = pblapply(sim_file_names, function(this_name) {
     load(paste0("R/Paper MC Study/Results - GLMM Par Bias/", this_name))
     return(output)
 })
@@ -609,19 +321,15 @@ data.frame(mean = diag(mean_cov_hat_Theta), emp = diag(emp_cov_Theta), diff = di
 
 ## Theta
 ### Matrix - vector subtraction matches on the first index (i.e. rows). Use lots of transposes to accommodate this
-Theta_hat_errs = t(t(all_Theta_hats) - all_reg_pars) - Theta_hat_errs
+Theta_hat_errs = t(t(all_Theta_hats) - all_reg_pars)
 Theta_hat_err_norms = apply(Theta_hat_errs, 1, function(x) norm(x, type = "2"))
 theta_hat_err_rel_norms = Theta_hat_err_norms / norm(all_reg_pars, type = "2")
+mean(theta_hat_err_rel_norms)
+sd(theta_hat_err_rel_norms)
 hist(theta_hat_err_rel_norms)
 
 ## Componentwise errors in Theta
-
 abs((all_Theta_hats %>% as.data.frame %>% purrr::map_dbl(mean) - all_reg_pars) / all_reg_pars)
-
-
-purrr::map2( all_reg_pars, function(Theta_hats, Theta) abs((Theta_hats - Theta)/Theta) )
-
-purrr::map_dbl(all_Theta_hats, mean)
 
 
 
@@ -753,20 +461,25 @@ get_coverage_rates_many_cov_mats <- function(Theta_hats_data, cov_mat_list, true
         
 }
 
+
+
+
+
+
 # ------------------------------ GLMM Parameters ----------------------------- #
 
-cov_emp = get_coverage_rates(all_Theta_hats, emp_cov_Theta, all_reg_pars)
-cov_hat = get_coverage_rates(all_Theta_hats, mean_cov_hat_Theta, all_reg_pars)
+cover_emp = get_coverage_rates(all_Theta_hats, emp_cov_Theta, all_reg_pars)
+cover_hat = get_coverage_rates(all_Theta_hats, mean_cov_hat_Theta, all_reg_pars)
 
 ## CI for each dataset based on estimated SEs, not mean estimated SEs
 cov_hat_honest = get_coverage_rates_many_cov_mats(all_Theta_hats, all_Theta_cov_hats, all_reg_pars)
 
 
-data_cover = data.frame(emp = cov_emp, hat = cov_hat, honest = cov_hat_honest)
+data_cover = data.frame(emp = cover_emp, hat = cover_hat, honest = cov_hat_honest)
 
 
-cov_emp - cov_hat
-cov_hat - cov_hat_honest
+cover_emp - cover_hat
+cover_hat - cov_hat_honest
 
 
 # ----------------------------- Mediation Effects ---------------------------- #
