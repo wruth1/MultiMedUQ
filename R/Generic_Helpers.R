@@ -173,6 +173,12 @@ get_model_pars <- function(fit, format="list"){
 }
 
 
+#' Re-arrange a vector of SDs followed by correlations to my theta order
+#'
+#' @param sd_corr_vec A vector of SDs followed by correlations
+#'
+#' @returns A vector of SDs and correlations in my theta order. Order is column major; e.g., SD_1, corr_12, corr_13, SD_2, corr_23, SD_3 for a 3x3 covariance matrix.
+#' @export
 sds_corrs2theta <- function(sd_corr_vec){
   num_vars = (sqrt(1 + 8*length(sd_corr_vec)) - 1 ) / 2
 

@@ -15,7 +15,7 @@ library(broom.mixed)
 library(glmmTMB)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 source("R/Exact_Asymptotics/Imai Method.r")
-source("R/Paper MC Study/glmmTMB Helpers.r")
+# source("R/Paper MC Study/glmmTMB Helpers.r")
 devtools::load_all("D:/William/Research/MultiMedUQ")
 
 
@@ -200,7 +200,7 @@ clusterEvalQ(cl, {
     library(glmmTMB)
     source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
     source("R/Exact_Asymptotics/Imai Method.r")
-    source("R/Paper MC Study/glmmTMB Helpers.r")
+    # source("R/Paper MC Study/glmmTMB Helpers.r")
     devtools::load_all()
 })
 clusterSetRNGStream(cl = cl, 123)

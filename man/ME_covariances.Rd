@@ -43,6 +43,8 @@ all_covs_MEs_pars(
 \item{fit_Y, fit_M}{Fitted models for Y and M.}
 
 \item{which_REs}{Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.}
+
+\item{Sigma}{The \eqn{K}-adjusted covariance matrix for the GLMM parameters.}
 }
 \value{
 A covariance matrix for all mediation effects (total, direct and indirect) on the specified scale(s).
