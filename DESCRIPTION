@@ -17,12 +17,12 @@ Suggests:
     numDeriv,
     rje,
     rmarkdown,
-    smdata,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Config/testthat/start-first: Reg_Par_Covs
 Imports: 
     boot,
+    glmmTMB,
     lme4,
     MASS,
     merDeriv,

@@ -15,7 +15,7 @@ library(broom.mixed)
 library(glmmTMB)
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 source("R/Exact_Asymptotics/Imai Method.r")
-source("R/Paper MC Study/glmmTMB Helpers.r")
+# source("R/Paper MC Study/glmmTMB Helpers.r")
 devtools::load_all("D:/William/Research/MultiMedUQ")
 
 
@@ -355,7 +355,7 @@ TMB_corr_pars = TMB_RE_pars[(num_vars+1):length(TMB_RE_pars)]
 TMB_SDs = exp(TMB_SD_pars)
 
 ## Compute correlation matrix
-TMB_corrs = get_cor(TMB_corr_pars, return_val = "vec")
+TMB_corrs = glmmTMB::get_cor(TMB_corr_pars, return_val = "vec")
 
 
 
@@ -393,7 +393,7 @@ d_SD = cbind(d_SD_FE, d_SD_SD, d_SD_corr)
 ## Jacobian of re-parameterization of correlation parameters
 d_corr_FE = matrix(0, nrow = num_corr_pars, ncol = num_FE_pars)
 d_corr_SD = matrix(0, nrow = num_corr_pars, ncol = num_SD_pars)
-d_corr_corr = t(numDeriv::jacobian(get_cor, TMB_corr_pars, return_val = "vec")) # jacobian output demension is range-by-domain
+d_corr_corr = t(numDeriv::jacobian(glmmTMB::get_cor, TMB_corr_pars, return_val = "vec")) # jacobian output demension is range-by-domain
 d_corr = cbind(d_corr_FE, d_corr_SD, d_corr_corr)
 
 ## Combined Jacobian
@@ -488,7 +488,7 @@ clusterEvalQ(cl, {
     library(glmmTMB)
     source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
     source("R/Exact_Asymptotics/Imai Method.r")
-    source("R/Paper MC Study/glmmTMB Helpers.r")
+    # source("R/Paper MC Study/glmmTMB Helpers.r")
     devtools::load_all()
 })
 clusterSetRNGStream(cl = cl, 123)
