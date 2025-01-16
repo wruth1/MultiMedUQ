@@ -9,6 +9,24 @@
 #                       Functions to do MC-delta for MEs                       #
 # ---------------------------------------------------------------------------- #
 
+#! Try simulating a fixed number of valid Thetas instead of a fixed number of attempted Thetas
+#! Not effective yet
+sim_one_Theta_tilde = function(Theta_hat, cov_hat){
+    success = FALSE
+    num_attempts = 0
+    while(!success){
+        num_attempts = num_attempts + 1
+        print(paste0("Number of Attempts: ", num_attempts))
+        tryCatch({
+            this_Theta_tilde = MASS::mvrnorm(1, mu = Theta_hat, Sigma = cov_hat)
+            check_theta(this_Theta_tilde)
+            success = TRUE
+        }, error = function(e){
+            # print(e)
+        })
+    }
+    return(this_Theta_tilde)
+}
 
 #' Simulate parameter estimates for Monte Carlo delta-method
 #'
@@ -24,6 +42,7 @@
 #' @export
 sim_Theta_tildes = function(B, Theta_hat, cov_hat){
     MASS::mvrnorm(B, mu = Theta_hat, Sigma = cov_hat)
+    
 }
 
 #' Compute a sample of mediation effects from a sample of simulated parameter estimates
@@ -91,3 +110,12 @@ MC_delta = function(B, Theta_hat, cov_hat, scale = c("diff", "rat", "OR"), w, wh
     return(this_cov)
 
 }
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                      Simulate Using TMB Parameterization                     #
+# ---------------------------------------------------------------------------- #
+

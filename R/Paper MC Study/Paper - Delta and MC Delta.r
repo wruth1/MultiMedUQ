@@ -33,7 +33,7 @@ which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 # N=1000
 
 #* Main value
-N = 100
+N = 400
 n = N
 
 
@@ -43,7 +43,7 @@ n = N
 # K=1000
 
 #* Main value
-K = 200
+K = 500
 
 
 
@@ -177,19 +177,27 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
 
         # ---------------------------- Delta Method (ours) --------------------------- #
 
-        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial)
-        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)
+        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
+
+
+        # diagnose(fit_Y)
+        # diagnose(fit_M)
 
         theta_hat_Y = get_model_pars_TMB(fit_Y)
         theta_hat_M = get_model_pars_TMB(fit_M)
         Theta_hat = c(unlist(theta_hat_Y), unlist(theta_hat_M))
         cov_hat = all_pars_cov_mat_TMB(fit_Y, fit_M)
 
+        # cbind(Theta_hat, (diag(cov_hat)))
+
         b_Y = theta_hat_Y[["b"]]
         theta_Y = theta_hat_Y[["theta"]]
         b_M = theta_hat_M[["b"]]
         theta_M = theta_hat_M[["theta"]]
 
+        # data_est = data.frame(hat = Theta_hat, SE = sqrt(diag(cov_hat)))
+        # rownames(data_est) = names(Theta_hat)
 
         MEs = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
         cov_MEs_delta = all_covs_MEs_pars(scale, w, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
@@ -234,7 +242,7 @@ MC_results_delta_MC_delta = pblapply(seq_along(output_names), function(x) {
 })
 
 ## Remove NULL entries
-MC_results_delta_MC_delta = MC_results_delta_MC_delta[!sapply(MC_results_delta_MC_delta, function(x) is.null(x$this_MEs))]
+MC_results_delta_MC_delta = MC_results_delta_MC_delta[!sapply(MC_results_delta_MC_delta, is.null)]
 
 #* Extract results into separate lists
 all_ME_hats = t(sapply(MC_results_delta_MC_delta, function(x) x$this_MEs))
