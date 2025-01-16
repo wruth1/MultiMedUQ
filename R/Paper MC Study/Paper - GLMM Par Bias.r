@@ -1,5 +1,7 @@
 
 
+#! This script is the foundation for `Paper - Delta and MC Delta.r`
+
 
 library(lme4)
 library(merDeriv)

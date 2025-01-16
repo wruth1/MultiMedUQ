@@ -331,3 +331,61 @@ num_M_REs = function(which_REs){
 
   return(length(M_REs))
 }
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                           Validate model parameters                          #
+# ---------------------------------------------------------------------------- #
+
+
+#' Check for invalid RE parameters
+#'
+#' @param theta A vector of SDs and correlations arranged according to our parameterization
+#'
+#' @returns 1 if all parameters are in the interior of the parameter space. 0 if any are on the boundary (and gives a warning). Gives an error if any parameter values are invalid (e.g. SD < 0, abs(corr) > 1).
+#' @export
+check_theta <- function(theta){
+  num_pars = length(theta)
+
+  num_vars = (sqrt(1 + 8*num_pars) - 1) / 2
+
+  all_SDs = c()
+  all_corrs = c()
+
+  pointer = 1
+  for(i in 1:num_vars){
+    SD = theta[pointer]
+    all_SDs = c(all_SDs, SD)
+    pointer = pointer + 1
+
+    num_corrs = num_vars - i
+    for(j in seq_len(num_corrs)){
+      corr = theta[pointer]
+      all_corrs = c(all_corrs, corr)
+      pointer = pointer + 1
+    }
+  }
+
+  output = 1
+
+  if(any(all_SDs < 0)){
+    stop("SDs must be non-negative")
+  } else if (any(all_SDs == 0)){
+    warning("One or more SDs are zero")
+    output = 0
+  }
+
+  if(any(abs(all_corrs) > 1)){
+    stop("Correlations must be between -1 and 1")
+  } else if (any(abs(all_corrs) == 1)){
+    warning("One or more correlations are 1")
+    output = 0
+  }
+
+  return(output)
+}
+
+
+

@@ -38,29 +38,38 @@ sim_Theta_tildes = function(B, Theta_hat, cov_hat){
 Theta_tildes_2_MEs = function(scale = c("diff", "rat", "OR"), w, some_Theta_tildes, which_REs){
     some_ME_tildes = data.frame()
 
-    for(j in 1:nrow(some_Theta_tildes)){
+    for(j in seq_len(nrow(some_Theta_tildes))){
 
-        # if(j %% 1000 == 0) cat("j=", j, " of ", nrow(some_Theta_tildes), "\n", sep="")
+        tryCatch({
+            # print(j)
 
-
-
-        this_Theta_tilde = some_Theta_tildes[j,]
-
-        # The number of parameters in theta_Y based on the number of REs for Y
-        len_theta_Y = which_REs %>%
-                        num_Y_REs() %>%
-                        num_REs2theta_length()
+            # if(j %% 1000 == 0) cat("j=", j, " of ", nrow(some_Theta_tildes), "\n", sep="")
 
 
-        # Extract parameters
-        b_Y = this_Theta_tilde[1:5]
-        theta_Y = this_Theta_tilde[6:(5 + len_theta_Y)]
-        b_M = this_Theta_tilde[(6 + len_theta_Y):(9 + len_theta_Y)]
-        theta_M = this_Theta_tilde[(10 + len_theta_Y):length(this_Theta_tilde)]
+
+            this_Theta_tilde = some_Theta_tildes[j,]
+
+            # The number of parameters in theta_Y based on the number of REs for Y
+            len_theta_Y = which_REs %>%
+                            num_Y_REs() %>%
+                            num_REs2theta_length()
 
 
-        this_ME_tilde = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs=which_REs)
-        some_ME_tildes = rbind(some_ME_tildes, this_ME_tilde)
+            # Extract parameters
+            b_Y = this_Theta_tilde[1:5]
+            theta_Y = this_Theta_tilde[6:(5 + len_theta_Y)]
+            b_M = this_Theta_tilde[(6 + len_theta_Y):(9 + len_theta_Y)]
+            theta_M = this_Theta_tilde[(10 + len_theta_Y):length(this_Theta_tilde)]
+
+            check_theta(theta_Y)
+            check_theta(theta_M)
+
+
+            this_ME_tilde = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs=which_REs)
+            some_ME_tildes = rbind(some_ME_tildes, this_ME_tilde)
+        }, error = function(e){
+            # print(e)
+        })
 
     }
 
