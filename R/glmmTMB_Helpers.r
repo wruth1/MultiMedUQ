@@ -28,16 +28,13 @@ TMB_pars_list <- function(fit_TMB) {
     return(output)
 }
 
-#' Extract GLMM parameters from a glmmTMB object
+#' Convert a list of parameters from TMB parameterization to our parameterization.
 #'
-#' Uses our parameterization of SDs and correlations. Mostly serves to translate from glmmTMB parameterization.
-#'
-#' @inheritParams TMB_pars_list
+#' @param TMB_pars A list containing fixed effects (\code{TMB_FE_pars}), log-standard deviations (\code{TMB_SD_pars}), and Cholesky factors from the (scaled) correlation matrix (\code{TMB_corr_pars}).
 #'
 #' @returns A list containing fixed effects (\code{TMB_FEs}), standard deviations (\code{TMB_SDs}), and correlations (\code{TMB_corrs}).
 #' @export
-TMB_2_GLMM_pars_list <- function(fit_TMB) {
-    TMB_pars = TMB_pars_list(fit_TMB)
+TMB_2_GLMM_pars_list <- function(TMB_pars) {
 
     TMB_FEs = TMB_pars$TMB_FE_pars
     TMB_SD_pars = TMB_pars$TMB_SD_pars
@@ -52,6 +49,19 @@ TMB_2_GLMM_pars_list <- function(fit_TMB) {
     return(output)
 }
 
+# Re-arranges RE parameters into our parameterization and concatenates with FEs
+# Returns Theta under our parameterization
+organize_GLMM_par_list <- function(GLMM_par_list) {
+    TMB_FEs = GLMM_par_list$TMB_FEs
+    TMB_SDs = GLMM_par_list$TMB_SDs
+    TMB_corrs = GLMM_par_list$TMB_corrs
+
+    TMB_REs_shuffled = c(TMB_SDs, TMB_corrs)
+    TMB_REs = SDs_corrs_2_theta(TMB_REs_shuffled)
+
+    return(c(TMB_FEs, TMB_REs))
+}
+
 #' Extract GLMM parameters from a glmmTMB object
 #'
 #' Uses our parameterization of SDs and correlations. Output is a vector organized according to our usual parameterization (see, e.g., [Sigma2theta()])
@@ -60,19 +70,11 @@ TMB_2_GLMM_pars_list <- function(fit_TMB) {
 #'
 #' @returns Theta, a vector of model parameters. Order is FEs for Y, RE parameters for Y, FEs for M, RE parameters for M. See, e.g., [Sigma2theta()], for details on the order of RE parameters.
 #' @export
-TMB_2_GLMM_pars <- function(fit_TMB) {
-    pars_list = TMB_2_GLMM_pars_list(fit_TMB)
-
-    FEs = pars_list$TMB_FEs
-    SDs = pars_list$TMB_SDs
-    corrs = pars_list$TMB_corrs
-
-    TMB_theta = c(SDs, corrs)
-
-    my_theta = TMB_theta[SD_corr2theta_indices(num_pars = length(TMB_theta))]
-
-    output = c(FEs, my_theta)
-    return(output)
+TMB_fit_2_GLMM_pars <- function(fit_TMB) {
+    fit_TMB %>%
+        TMB_pars_list %>%           # Extract list of TMB parameters
+        TMB_2_GLMM_pars_list %>%    # Convert to GLMM parameters
+        organize_GLMM_par_list      # Re-organize to our parameterization
 }
 
 
@@ -192,9 +194,12 @@ TMB_2_GLMM_grad <- function(fit_TMB) {
 glmmTMB_SE_mat <- function(fit_TMB) {
     estimates = fit_TMB$fit$par
     grad_fun = fit_TMB$obj$gr
-    SE_mat = solve(numDeriv::jacobian(grad_fun, estimates))
+    hessian = numDeriv::jacobian(grad_fun, estimates)
+    hessian_symm = (hessian + t(hessian)) / 2
+    SE_mat = solve(hessian_symm)
+    SE_mat_symm = (SE_mat + t(SE_mat)) / 2
 
-    return(SE_mat)
+    return(SE_mat_symm)
 }
 
 #'

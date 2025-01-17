@@ -119,3 +119,89 @@ MC_delta = function(B, Theta_hat, cov_hat, scale = c("diff", "rat", "OR"), w, wh
 #                      Simulate Using TMB Parameterization                     #
 # ---------------------------------------------------------------------------- #
 
+
+get_num_vars_TMB <- function(fit){
+    p = length(fixef(fit)$cond)
+
+    num_pars = length(fit$fit$par)
+    num_RE_pars = num_pars - p
+    num_SDs = (sqrt(1 + 8*num_RE_pars) - 1) / 2
+    q = num_SDs
+
+    return(c(p, q))
+}
+
+# Split a vector of TMB pars into its consituents: FE, log-SDs and correlation Cholesky factors. Output a length-3 list
+# p: number of fixed effects covariates
+# q: number of random effects covariates
+TMB_par_vec_2_list <- function(par_vec, p, q){
+    FE_pars = par_vec[1:p]
+    SD_pars = par_vec[(p + 1):(p + q)]
+    corr_pars = par_vec[(p + q + 1):length(par_vec)]
+    
+    return(list(TMB_FE_pars = FE_pars, TMB_SD_pars = SD_pars, TMB_corr_pars = corr_pars))
+}
+
+sim_TMB_Theta_tildes = function(B, fit_Y, fit_M){
+    # Number of fixed and random effects in each model. Used later to subdivide the parameter vector
+    num_vars_Y = get_num_vars_TMB(fit_Y)
+    p_Y = num_vars_Y[1]
+    q_Y = num_vars_Y[2]
+
+    num_vars_M = get_num_vars_TMB(fit_M)
+    p_M = num_vars_M[1]
+    q_M = num_vars_M[2]
+
+
+    # Extract fitted parameters and covariances
+    TMB_pars_Y = TMB_pars_list(fit_Y) %>% unlist
+    TMB_pars_M = TMB_pars_list(fit_M) %>% unlist
+
+    TMB_cov_mat_Y = glmmTMB_SE_mat(fit_Y)
+    TMB_cov_mat_M = glmmTMB_SE_mat(fit_M)
+
+
+    # Simulate new parameter values
+    some_TMB_pars_Y_tilde = MASS::mvrnorm(B, mu = TMB_pars_Y, Sigma = TMB_cov_mat_Y)
+    some_TMB_pars_M_tilde = MASS::mvrnorm(B, mu = TMB_pars_M, Sigma = TMB_cov_mat_M)
+
+
+    # Split up simulated parameter vectors into FEs, log-SDs, and correlation Cholesky factors
+    some_par_lists_Y = apply(some_TMB_pars_Y_tilde, 1, TMB_par_vec_2_list, p=p_Y, q=q_Y)
+    some_par_lists_M = apply(some_TMB_pars_M_tilde, 1, TMB_par_vec_2_list, p=p_M, q=q_M)
+
+
+    # Convert TMB parameterization to our parameterization
+    GLMM_pars_Y = t(sapply(some_par_lists_Y, function(this_TMB_par_list){
+        this_TMB_par_list %>%
+            TMB_2_GLMM_pars_list %>%    # Convert from TMB parameters to GLMM parameters
+            organize_GLMM_par_list      # Re-organize REs to match our parameterization
+    }))
+
+    GLMM_pars_M = t(sapply(some_par_lists_M, function(this_TMB_par_list){
+        this_TMB_par_list %>%
+            TMB_2_GLMM_pars_list %>%    # Convert from TMB parameters to GLMM parameters
+            organize_GLMM_par_list      # Re-organize REs to match our parameterization
+    }))
+
+
+    output = cbind(GLMM_pars_Y, GLMM_pars_M)
+
+    return(output)
+
+}
+
+
+
+MC_delta_TMB = function(B, fit_Y, fit_M, scale = c("diff", "rat", "OR"), w, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+
+    some_TMB_Theta_tildes = sim_TMB_Theta_tildes(B, fit_Y, fit_M)
+    some_Theta_tildes = t(sapply(seq_len(B), function(i) TMB_Theta_2_Theta(some_TMB_Theta_tildes[i,]) ))
+
+    some_MEs = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs)
+
+    this_cov = cov(some_MEs)
+
+    return(this_cov)
+
+}

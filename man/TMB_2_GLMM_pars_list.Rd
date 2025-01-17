@@ -2,16 +2,16 @@
 % Please edit documentation in R/glmmTMB_Helpers.r
 \name{TMB_2_GLMM_pars_list}
 \alias{TMB_2_GLMM_pars_list}
-\title{Extract GLMM parameters from a glmmTMB object}
+\title{Convert a list of parameters from TMB parameterization to our parameterization.}
 \usage{
-TMB_2_GLMM_pars_list(fit_TMB)
+TMB_2_GLMM_pars_list(TMB_pars)
 }
 \arguments{
-\item{fit_TMB}{A model fit using \code{glmmTMB}}
+\item{TMB_pars}{A list containing fixed effects (\code{TMB_FE_pars}), log-standard deviations (\code{TMB_SD_pars}), and Cholesky factors from the (scaled) correlation matrix (\code{TMB_corr_pars}).}
 }
 \value{
 A list containing fixed effects (\code{TMB_FEs}), standard deviations (\code{TMB_SDs}), and correlations (\code{TMB_corrs}).
 }
 \description{
-Uses our parameterization of SDs and correlations. Mostly serves to translate from glmmTMB parameterization.
+Convert a list of parameters from TMB parameterization to our parameterization.
 }

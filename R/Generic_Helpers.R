@@ -179,7 +179,7 @@ get_model_pars <- function(fit, format="list"){
 #'
 #' @returns A vector of SDs and correlations in my theta order. Order is column major; e.g., SD_1, corr_12, corr_13, SD_2, corr_23, SD_3 for a 3x3 covariance matrix.
 #' @export
-sds_corrs2theta <- function(sd_corr_vec){
+SDs_corrs_2_theta <- function(sd_corr_vec){
   num_vars = (sqrt(1 + 8*length(sd_corr_vec)) - 1 ) / 2
 
   sds = sd_corr_vec[1:num_vars]
@@ -218,7 +218,7 @@ get_model_pars_TMB <- function(fit, format="list"){
   b = glmmTMB::fixef(fit)[[1]]
 
 
-  theta = broom.mixed::tidy(fit) %>% dplyr::filter(effect == "ran_pars") %>% dplyr::pull(estimate) %>% sds_corrs2theta
+  theta = broom.mixed::tidy(fit) %>% dplyr::filter(effect == "ran_pars") %>% dplyr::pull(estimate) %>% SDs_corrs_2_theta
   if(format == "list"){
       return(list(b=b, theta=theta))
     } else if(format == "vector"){

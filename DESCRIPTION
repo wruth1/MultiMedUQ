@@ -26,5 +26,6 @@ Imports:
     lme4,
     MASS,
     merDeriv,
-    purrr
+    purrr,
+    magrittr
 VignetteBuilder: knitr
