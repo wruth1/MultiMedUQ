@@ -30,10 +30,10 @@ which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 # N = 20
 # N = 40
 # N = 60
-# N=1000
+N=1000
 
 #* Main value
-N = 500
+# N = 500
 n = N
 
 
@@ -43,7 +43,8 @@ n = N
 # K=1000
 
 #* Main value
-K = 100
+# K = 100
+K=10
 
 
 
@@ -300,8 +301,9 @@ cover_rate_emp = get_coverage_rates(all_ME_hats, emp_cov, true_MEs)
 cover_rate_delta = get_coverage_rates_many_cov_mats(all_ME_hats, all_cov_hats_delta, true_MEs)
 cover_rate_MC_delta = get_coverage_rates_many_cov_mats(all_ME_hats, all_cov_hats_MC_delta, true_MEs)
 
-(data_cover = data.frame(emp = cover_rate_emp, delta = cover_rate_delta, MC_delta = cover_rate_MC_delta))
-
+data_cover = data.frame(emp = cover_rate_emp, delta = cover_rate_delta, MC_delta = cover_rate_MC_delta)
+rownames(data_cover) = names(true_MEs)
+data_cover
 
 
 
