@@ -225,7 +225,7 @@ TMB_2_GLMM_SE <- function(fit_TMB) {
 #' @returns Estimated sampling covariance matrix for all parameters from both models following our parameterization.
 #' @export
 #'
-all_pars_cov_mat_TMB <- function(fit_Y, fit_M) {
+all_pars_cov_mat_TMB <- function(fit_Y, fit_M, return_separate_covs = FALSE) {
     Y_cov = TMB_2_GLMM_SE(fit_Y)
     M_cov = TMB_2_GLMM_SE(fit_M)
 
@@ -237,7 +237,14 @@ all_pars_cov_mat_TMB <- function(fit_Y, fit_M) {
 
     # Make output matrix symmetric
     joint_cov = (joint_cov + t(joint_cov))/2
-    return(joint_cov)
+
+    if(!return_separate_covs){
+        output = joint_cov
+    } else {
+        output = list(Y_cov = Y_cov, M_cov = M_cov, joint_cov = joint_cov)
+    }
+
+    return(output)
 }
 
 

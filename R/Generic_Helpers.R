@@ -190,12 +190,15 @@ SDs_corrs_2_theta <- function(sd_corr_vec){
   # Build SD-Correlation matrix
   sd_corr_mat = matrix(0, nrow = num_vars, ncol = num_vars)
 
+  next_corr_ind = 1
   for(i in 1:num_vars){
-    for(j in 1:num_vars){
+    for(j in i:num_vars){
       if(i == j) {
         sd_corr_mat[i,j] = sds[i]
       } else {
-         sd_corr_mat[i,j] = corrs[(i - 1) + (j - 1)]
+         sd_corr_mat[i,j] = corrs[next_corr_ind]
+         sd_corr_mat[j,i] = corrs[next_corr_ind]
+         next_corr_ind = next_corr_ind + 1
       }
     }
   }

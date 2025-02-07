@@ -51,11 +51,17 @@ sim_Theta_tildes = function(B, Theta_hat, cov_hat){
 #' @param w A vector of values for the model confounders.
 #' @param some_Theta_tildes Sample of parameter estimates. Rows index sample, columns index parameter.
 #' @param which_REs Which random effects have been included in the model.
+#' @param len_par_vecs Number of parameters in each parameter vector. Order is b_Y, theta_Y, b_M, theta_M
 #'
 #' @return A sample of mediation effects, with rows indexing sample and columns indexing effect.
 #' @export
-Theta_tildes_2_MEs = function(scale = c("diff", "rat", "OR"), w, some_Theta_tildes, which_REs){
+Theta_tildes_2_MEs = function(scale = c("diff", "rat", "OR"), w, some_Theta_tildes, which_REs, len_par_vecs){
     some_ME_tildes = data.frame()
+
+    len_b_Y = len_par_vecs[1]
+    len_theta_Y = len_par_vecs[2]
+    len_b_M = len_par_vecs[3]
+    len_theta_M = len_par_vecs[4]
 
     for(j in seq_len(nrow(some_Theta_tildes))){
 
@@ -68,18 +74,17 @@ Theta_tildes_2_MEs = function(scale = c("diff", "rat", "OR"), w, some_Theta_tild
 
             this_Theta_tilde = some_Theta_tildes[j,]
 
-            # The number of parameters in theta_Y based on the number of REs for Y
-            len_theta_Y = which_REs %>%
-                            num_Y_REs() %>%
-                            num_REs2theta_length()
 
 
             # Extract parameters
-            b_Y = this_Theta_tilde[1:5]
-            theta_Y = this_Theta_tilde[6:(5 + len_theta_Y)]
-            b_M = this_Theta_tilde[(6 + len_theta_Y):(9 + len_theta_Y)]
-            theta_M = this_Theta_tilde[(10 + len_theta_Y):length(this_Theta_tilde)]
+            b_Y = this_Theta_tilde[1:len_b_Y]
+            theta_Y = this_Theta_tilde[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+            b_M = this_Theta_tilde[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+            theta_M = this_Theta_tilde[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
 
+            # Check that parameter extraction happened correctly
+            sum_par_len = length(b_Y) + length(theta_Y) + length(b_M) + length(theta_M)
+            if(sum_par_len != length(this_Theta_tilde)) stop("Parameter extraction failed")
             check_theta(theta_Y)
             check_theta(theta_M)
 
@@ -142,7 +147,7 @@ TMB_par_vec_2_list <- function(par_vec, p, q){
     return(list(TMB_FE_pars = FE_pars, TMB_SD_pars = SD_pars, TMB_corr_pars = corr_pars))
 }
 
-sim_TMB_Theta_tildes = function(B, fit_Y, fit_M){
+sim_TMB_Theta_tildes = function(B, fit_Y, fit_M, cov_hat_Y = NULL, cov_hat_M = NULL){
     # Number of fixed and random effects in each model. Used later to subdivide the parameter vector
     num_vars_Y = get_num_vars_TMB(fit_Y)
     p_Y = num_vars_Y[1]
@@ -153,12 +158,22 @@ sim_TMB_Theta_tildes = function(B, fit_Y, fit_M){
     q_M = num_vars_M[2]
 
 
-    # Extract fitted parameters and covariances
+    # Extract fitted parameters and covariances (latter only if necessary)
     TMB_pars_Y = TMB_pars_list(fit_Y) %>% unlist
     TMB_pars_M = TMB_pars_list(fit_M) %>% unlist
 
-    TMB_cov_mat_Y = glmmTMB_SE_mat(fit_Y)
-    TMB_cov_mat_M = glmmTMB_SE_mat(fit_M)
+
+    if(is.null(cov_hat_Y)){
+        TMB_cov_mat_Y = glmmTMB_SE_mat(fit_Y)
+    } else {
+        TMB_cov_mat_Y = cov_hat_Y
+    }
+
+    if(is.null(cov_hat_M)){
+        TMB_cov_mat_M = glmmTMB_SE_mat(fit_M)
+    } else {
+        TMB_cov_mat_M = cov_hat_M
+    }
 
 
     # Simulate new parameter values
