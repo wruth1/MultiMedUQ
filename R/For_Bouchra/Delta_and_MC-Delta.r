@@ -13,10 +13,8 @@ library(ggplot2)
 library(ggmulti)
 library(broom.mixed)
 library(glmmTMB)
-library(stringr)
-library(tibble)
-source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
-source("R/Exact_Asymptotics/Imai Method.r")
+source("R/For_Bouchra/Exact_Asymptotics_Helpers.r")
+source("R/For_Bouchra/Imai Method.r")
 devtools::load_all()
 
 
@@ -44,18 +42,13 @@ B = 500     # Number of samples to generate for MC delta
 scale = c("diff", "rat", "OR")      # What scales should we compute mediation effects on?
 which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables have random effects? Eventually, I will need a better way to specify this
 
-# Number of groups
-K = 100
-# K=10
-
-# Observations per group
-N = 500
-# N=1000
-# N = 10000
+# N = 500
+N=1000
 n = N
 
 
-
+# k = 100
+K=10
 
 
 
@@ -68,7 +61,8 @@ w = c(2,3)
 ## Non-trivial values for the b's and theta's. Former based on output from another MC study. Latter chosen arbitrarily.
 ## Crucially, no parameters are equal to zero.
 ##? We choose the intercepts to that the mean of the linear predictor is zero. Doing this for M makes it easier to do so for Y.
-#! Scale factor for coefficients and SDs
+
+# Scale factor for coefficients and SDs
 scale_factor = 1
 
 b_Y_X = 0.966486302988689
@@ -87,12 +81,12 @@ b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2) * scale_factor
 
 
 
-
-# Choose theta_Y and theta_M based on the values of b_Y and b_M
+# Covariance parameters for random effects. See above note for details
 theta_Y = c(scale_factor*sqrt(0.5), 0.3, 0.4, scale_factor, 0.5, scale_factor*sqrt(0.8)) / 3
 theta_M = c(scale_factor*sqrt(0.5), -0.5, scale_factor) / 3
 
 
+# This is also called Theta
 all_reg_pars = c(b_Y, theta_Y, b_M, theta_M)
 
 
@@ -103,14 +97,23 @@ p_M = length(b_M)
 p = p_Y + p_M
 
 
+
+
+
+
+# ----------------- Tell script where to find data and output ---------------- #
 folder_suffix = paste0("K=", K, ", N=", N)
-dir.create(paste0("R/Paper MC Study/Data - ", folder_suffix), showWarnings = F)
-dir.create(paste0("R/Paper MC Study/Results - ", folder_suffix), showWarnings = F)
+dir.create(paste0("R/For_Bouchra/Data - ", folder_suffix), showWarnings = F)
+dir.create(paste0("R/For_Bouchra/Results - ", folder_suffix), showWarnings = F)
 
 
 
 
-# Setup cluster
+
+
+
+# ------------------------------- Setup cluster ------------------------------ #
+
 # cl = makeCluster(detectCores() - 2)
 # cl = makeCluster(15)
 cl = makeCluster(10)
@@ -129,8 +132,8 @@ clusterEvalQ(cl, {
     library(ggmulti)
     library(broom.mixed)
     library(glmmTMB)
-    source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
-    source("R/Exact_Asymptotics/Imai Method.r")
+    source("R/For_Bouchra/Exact_Asymptotics_Helpers.r")
+    source("R/For_Bouchra/Imai Method.r")
     devtools::load_all()
 })
 clusterSetRNGStream(cl = cl, 123)
@@ -141,23 +144,30 @@ num_datasets = 200
 
 
 
-# -------------------------- Generate and save data -------------------------- #
+
+# ---------------------------------------------------------------------------- #
+#                            Generate and save data                            #
+# ---------------------------------------------------------------------------- #
 
 
 set.seed(1)
 
 # First, delete any datasets currently in the target directory
-unlink(paste0("R/Paper MC Study/Data - ", folder_suffix, "/*"))
+unlink(paste0("R/For_Bouchra/Data - ", folder_suffix, "/*"))
 
 # Generate and save datasets
 save_data = pbsapply(1:num_datasets, function(i) {
     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
-    save(data, file = paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"))
+    save(data, file = paste0("R/For_Bouchra/Data - ", folder_suffix, "/", i, ".RData"))
 })
 
 
 
-# ------------------------ Fit models and save results ----------------------- #
+
+
+# ---------------------------------------------------------------------------- #
+#                          Fit models and save results                         #
+# ---------------------------------------------------------------------------- #
 
 
 # total_runtime_delta = 0
@@ -167,12 +177,12 @@ save_data = pbsapply(1:num_datasets, function(i) {
 
 
 # First, delete any results currently in the target directory
-unlink(paste0("R/Paper MC Study/Results - ", folder_suffix, "/*"))
+unlink(paste0("R/For_Bouchra/Results - ", folder_suffix, "/*"))
 
 # Fit models, extract MEs, estimate covariance matrices and save results
 MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
 # MC_results_delta_MC_delta = pblapply(1:3, function(i) {
-    load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
+    load(paste0("R/For_Bouchra/Data - ", folder_suffix, "/", i, ".RData"))
 
 
     tryCatch({
@@ -230,13 +240,13 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
         this_time = toc()
         this_timings$get_MEs = this_time$toc - this_time$tic
 
+
+
         # ------------------------------ MC Delta Method ----------------------------- #
         tic()
         some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
         some_ME_tildes = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
         cov_MEs_MC_delta = cov(some_ME_tildes)
-
-
 
         this_time = toc()
         this_timings$MC_delta = this_time$toc - this_time$tic
@@ -245,12 +255,13 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
         # ------------------------ Compile and return results ------------------------ #
         output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
 
-        save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/For_Bouchra/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     }, error = function(e){
+        #? Sometimes, the optimization fails. I'm not too worried about this, because in practice you would just try a different optimization algorithm. I can't really do that for a Monte Carlo Study, however. Furthermore, this only really comes up for small values of k.
         output = NULL
 
-        save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/For_Bouchra/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     })
 
@@ -265,14 +276,19 @@ stopCluster(cl)
 
 
 
+# ---------------------------------------------------------------------------- #
+#                                Clean-Up Output                               #
+# ---------------------------------------------------------------------------- #
+
+
 #* Build list of all output
-output_names = list.files(paste0("R/Paper MC Study/Results - ", folder_suffix, "/"))
+output_names = list.files(paste0("R/For_Bouchra/Results - ", folder_suffix, "/"))
 MC_results_delta_MC_delta = pblapply(seq_along(output_names), function(x) {
-    load(paste0("R/Paper MC Study/Results - ", folder_suffix, "/", x, ".RData"))
+    load(paste0("R/For_Bouchra/Results - ", folder_suffix, "/", x, ".RData"))
     return(output)
 })
 
-## Remove NULL entries
+## Remove NULL entries (see above note in the `error` part of the tryCatch function)
 MC_results_delta_MC_delta = MC_results_delta_MC_delta[!sapply(MC_results_delta_MC_delta, is.null)]
 
 
@@ -283,9 +299,15 @@ all_cov_hats_MC_delta = lapply(MC_results_delta_MC_delta, function(x) x$cov_MEs_
 all_timings = t(sapply(MC_results_delta_MC_delta, function(x) unlist(x$this_timings)))
 
 
+
+
+# ---------------------------------------------------------------------------- #
+#                                Analyze Output                                #
+# ---------------------------------------------------------------------------- #
+
+
 #* Compute total time spent on both methods
 mean_times = colMeans(all_timings)
-
 
 
 
@@ -305,97 +327,3 @@ rownames(data_cover) = names(true_MEs)
 data_cover
 
 
-
-
-
-
-# ---------------------------------------------------------------------------- #
-#                               mediation Package                              #
-# ---------------------------------------------------------------------------- #
-
-library(mediation)
-
-MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
-# MC_results_delta_MC_delta = pblapply(1:3, function(i) {
-    load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
-
-
-    tryCatch({
-
-        # ----------------------------- mediation Package ---------------------------- #
-
-        fit_Y_lme4 = glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M_lme4 = glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
-
-
-        covariate_values = list(C1 = w[1], C2 = w[2])
-        MC_delta_info = mediate(fit_M_lme4, fit_Y_lme4, treat = "X", mediator = "M", sims = B, covariates = covariate_values)
-        summary(MC_delta_info)
-
-
-
-
-        # --------------------------------- My Method -------------------------------- #
-    
-        #* Fit models. glmmTMB is much faster than glmer
-        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
-
-        # #* Fit models. glmmTMB is much faster than glmer
-        # fit_Y = glmmTMB(Y ~ X + M + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        # fit_M = glmmTMB(M ~ X +  (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
-
-
-        #* Extract fitted parameters
-        theta_hat_Y = get_model_pars_TMB(fit_Y)
-        theta_hat_M = get_model_pars_TMB(fit_M)
-        Theta_hat = c(unlist(theta_hat_Y), unlist(theta_hat_M))
-        cov_hat = all_pars_cov_mat_TMB(fit_Y, fit_M)
-
-
-        b_Y = theta_hat_Y[["b"]]
-        theta_Y = theta_hat_Y[["theta"]]
-        b_M = theta_hat_M[["b"]]
-        theta_M = theta_hat_M[["theta"]]
-        len_par_vecs = sapply(list(b_Y, theta_Y, b_M, theta_M), length)
-
-
-
-        #* Compute mediation effects
-        MEs = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
-
-
-        #* My MC-delta
-        some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
-        some_ME_tildes = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
-        cov_MEs_MC_delta = cov(some_ME_tildes)
-
-        MC_delta_SEs = cov_mat_2_SEs(cov_MEs_MC_delta)
-        MC_delta_CIs = build_CIs_one_par(MEs, MC_delta_SEs) %>% as.data.frame() %>% mutate(estimate = MEs) %>%
-            rownames_to_column() %>% 
-            filter(str_detect(rowname, "diff")) %>%                                    # Keep only effects on difference scale
-            mutate(effect = str_extract(rowname, "^\\w+(?=_)"), .keep = "unused") %>%  # Shorten effects' names
-            dplyr::select(effect, estimate, lcl, ucl)                                            # Re-arrange columns
-
-
-    # A regular expression selecting all letters before the first underscore
-
-
-
-
-
-
-        # ------------------------ Compile and return results ------------------------ #
-        output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
-
-        save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
-        return(output)
-    }, error = function(e){
-        output = NULL
-
-        save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
-        return(output)
-    })
-
-
-}, cl = cl)

@@ -1,12 +1,10 @@
 .Rproj.user
 .Rhistory
-.RData
-!./*.RData
+**/*.RData
 .Ruserdata
 inst/doc
 *.code-workspace
 R/Paper MC Study/Datasets/*
 R/Paper MC Study/Old Datasets and Output/*
 R/Paper MC Study/Results - Delta, MC Delta/*
-R/Paper MC Study/*/*.RData
 R/Paper MC Study/* Package Source/*
