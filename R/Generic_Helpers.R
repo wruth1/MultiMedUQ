@@ -392,3 +392,12 @@ check_theta <- function(theta){
 
 
 
+
+
+# ---------------------------------------------------------------------------- #
+#                                 Miscellaneous                                #
+# ---------------------------------------------------------------------------- #
+
+mat_rel_err <- function(A, B, type = "2"){
+  norm(A - B, type = type) / min(norm(A, type = type), norm(B, type = type))
+}

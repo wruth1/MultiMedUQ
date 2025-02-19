@@ -190,7 +190,7 @@ all_MEs_models <- function(scale = c("diff", "rat", "OR"), w, fit_Y, fit_M, x_re
 }
 
 
-#' @param ENCs A vector of expected nested counterfactuals
+#' @param ENCs A vector of expected nested counterfactuals. Order for Y(x, M(x')) is (1,1), (1,0), (0,1), (0,0).
 #'
 #' @rdname all_MEs
 #' @export

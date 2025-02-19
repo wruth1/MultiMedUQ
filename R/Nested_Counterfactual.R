@@ -153,7 +153,7 @@ ENC <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y
 #' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
 #'
 #' @name all_ENCs
-#' 
+#'
 #' @details
 #' The following shorthands for random effects are available:
 #' \itemize{
@@ -185,7 +185,7 @@ all_ENCs <- function(w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X"
 
 #' @param Theta A vector of all parameters from both models.
 #' @rdname all_ENCs
-#' 
+#'
 #' @export
 all_ENCs_theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   RE_names = expand_REs(which_REs)
@@ -352,7 +352,7 @@ grad_gamma_Y <- function(m, x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c
   if (all(c("Y.X", "Y.M") %in% RE_names)) d_cor_Y_XM = 2*x*m * s_Y_X * s_Y_M else d_cor_Y_XM = NULL
   if ("Y.M" %in% RE_names) d_s_Y_M = 2 * m^2 * s_Y_M + 2 * m * s_Y_0 * cor_Y_0M + 2 * x * m * s_Y_X * cor_Y_XM else d_s_Y_M = NULL
 
-  
+
 
   d_theta_Y = c(d_s_Y_0, d_cor_Y_0X, d_cor_Y_0M, d_s_Y_X, d_cor_Y_XM, d_s_Y_M)
 
@@ -407,7 +407,7 @@ grad_gamma_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y
   ## I used to hold the length of the gradient fixed. Upon reflection, it's better to adjust based on which_REs.
   # d_theta_Y = rep(0, times = length(theta_Y))
 
-  
+
 
   # Fixed effects for M
   d_b_M = rep(0, times = length(b_M))
@@ -685,7 +685,7 @@ Jacob_ENC_Theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.In
 #' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
 #' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
 #' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
-#' 
+#'
 #' @name ENC_covariances
 #'
 #' @details
@@ -719,16 +719,82 @@ all_covs_ENC <- function(w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "
 
 
 #' @rdname ENC_covariances
-#' @export 
+#' @export
 all_covs_ENC_Sigma <- function(w, Sigma, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   Jacob = Jacob_ENC_models(w, fit_Y, fit_M, which_REs)
   return(Jacob %*% Sigma %*% t(Jacob))
 }
 
 #' @rdname ENC_covariances
-#' @export 
+#' @export
 all_covs_ENC_pars <- function(w, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   Jacob = Jacob_ENC_pars(w, b_Y, theta_Y, b_M, theta_M, which_REs)
   return(Jacob %*% Sigma %*% t(Jacob))
 }
 
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                               Cross-Covariances                              #
+# ---------------------------------------------------------------------------- #
+
+#? The cross-covariance between two random vectors, X and Y (of the same length), is defined as Cov(X,Y) = E[XY] - E[X]E[Y]
+#? This quantity arises in our formula for the sampling variance of the confounder-averaged ENC estimator.
+
+#' Cross-Covariances for ENCs
+#'
+#' @param w1,w2 Two vectors of confounders
+#' @param fit_Y,fit_M Fitted models for Y and M.
+#' @param Sigma Covariance matrix of the model parameters.
+#' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
+#' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
+#' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
+#'
+#' @name ENC_cross_covariances
+#'
+#' @details
+#' Note: Uses the \eqn{K}-adjusted covariance matrix, not the asymptotic covariance matrix.
+#'
+#' Note: Setting `w1==w2` will give the covariance matrix of the ENC estimates.
+#'
+#' The following shorthands for random effects are available:
+#' \itemize{
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
+#' }
+#' Additionally, individual REs can be specified:
+#' \itemize{
+#' \item "Y.Int": Intercept for Y
+#' \item "Y.X": Slope for X in Y
+#' \item "Y.M": Slope for M in Y
+#' \item "M.Int": Intercept for M
+#' \item "M.X": Slope for M
+#' }
+#'
+#' @return The cross-covariance matrix of all ENC estimates evaluated at two levels of the confounders. Order of \eqn{(X, X_M)} levels is (1,1), (1,0), (0,1), (0,0).
+#' @export
+cross_cov_ENC <- function(w1, w2, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  Sigma = all_pars_cov_mat(fit_Y, fit_M)
+  Jacob1 = Jacob_ENC_models(w1, fit_Y, fit_M, which_REs)
+  Jacob2 = Jacob_ENC_models(w2, fit_Y, fit_M, which_REs)
+  return(Jacob1 %*% Sigma %*% t(Jacob2))
+}
+
+#' @rdname ENC_cross_covariances
+#' @export
+cross_cov_ENC_Sigma <- function(w1, w2, Sigma, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  Jacob1 = Jacob_ENC_models(w1, fit_Y, fit_M, which_REs)
+  Jacob2 = Jacob_ENC_models(w2, fit_Y, fit_M, which_REs)
+  return(Jacob1 %*% Sigma %*% t(Jacob2))
+}
+
+#' @rdname ENC_cross_covariances
+#' @export
+cross_cov_ENC_pars <- function(w1, w2, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  Jacob1 = Jacob_ENC_pars(w1, b_Y, theta_Y, b_M, theta_M, which_REs)
+  Jacob2 = Jacob_ENC_pars(w2, b_Y, theta_Y, b_M, theta_M, which_REs)
+  return(Jacob1 %*% Sigma %*% t(Jacob2))
+}

@@ -50,8 +50,8 @@ K = 100
 # K=10
 
 # Observations per group
-N = 500
-# N=1000
+# N = 500
+N=1000
 # N = 10000
 n = N
 
@@ -119,17 +119,45 @@ group_name = "group"
 # Takes a data frame. Extracts only the confounders. 
 # Returns a list with two entries. First is a list of all unique values of the confounders. Second is a list of the frequencies of each unique value of the confounders.
 get_confounder_freq <- function(data, outcome_name, exposure_name, mediator_name, group_name){
-    data_confounders = data %>% select(-all_of(c(outcome_name, exposure_name, mediator_name, group_name)))
+    data_confounders = data %>% dplyr::select(-all_of(c(outcome_name, exposure_name, mediator_name, group_name)))
 
     info_confounders = data_confounders %>% group_by(across(everything())) %>% summarize(.freq = n(), .groups = "drop")
 
-    vals_confounders = info_confounders %>% select(-.freq) %>% split(seq_len(nrow(.))) %>% lapply(unlist)
+    vals_confounders = info_confounders %>% dplyr::select(-.freq) %>% split(seq_len(nrow(.))) %>% lapply(unlist)
     freqs_confounders = info_confounders$.freq
 
     output = list(values = vals_confounders, freqs = freqs_confounders)
     return(output)
 }
 
+
+
+
+
+# cl = makeCluster(detectCores() - 2)
+# cl = makeCluster(15)
+cl = makeCluster(10)
+# clusterExport(cl, c("N", "b_Y", "theta_Y", "b_M", "theta_M", "which_REs"))
+clusterExport(cl, c("w", "B", "scale", "which_REs", "N", "n", "K", "b_Y", "theta_Y", "b_M", "theta_M", "folder_suffix", "get_confounder_freq", "outcome_name", "exposure_name", "mediator_name", "group_name"))
+clusterEvalQ(cl, {
+    library(lme4)
+    library(merDeriv)
+    library(tictoc)
+    library(pbapply)
+    library(parallel)
+    library(magrittr)
+    library(dplyr)
+    library(kableExtra)
+    library(ggplot2)
+    library(ggmulti)
+    library(broom.mixed)
+    library(glmmTMB)
+    source("R/For_Bouchra/Exact_Asymptotics_Helpers.r")
+    source("R/For_Bouchra/Imai Method.r")
+    devtools::load_all()
+})
+clusterSetRNGStream(cl = cl, 123)
+# clusterSetRNGStream(cl = cl, 11111111)
 
 
 
@@ -195,7 +223,7 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
 
         mean_ME_hat = rep(0, times = 3 * length(scale))
         mean_ME_hat_sq = rep(0, times = 3 * length(scale))
-        mean_cov_hat = array(0, nrow = 3 * length(scale), ncol = 3 * length(scale))
+        mean_cov_hat = matrix(0, nrow = 3 * length(scale), ncol = 3 * length(scale))
 
         ME_hat_weights = freqs_confounders / sum(freqs_confounders)     # Weights for averaging based on observed frequencies of confounders
 
@@ -243,7 +271,7 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
 })
 
 
-
+stopCluster(cl)
 
 
 
@@ -262,39 +290,33 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
 #                                     ENCs                                     #
 # ---------------------------------------------------------------------------- #
 
+clusterSetRNGStream(cl = cl, 123)
 
 
-# Fit models, extract MEs, estimate covariance matrices and save results
+num_datasets = length(list.files(paste0("R/Paper MC Study/Data - ", folder_suffix)))
+num_datasets = 10
+
+# Fit models, extract ENCs, estimate covariance matrices and save results
 #! Before running, un-comment cl=cl and both save()'s
-MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
+MC_results_ENC = pblapply(1:num_datasets, function(i) {
 # MC_results_delta_MC_delta = pblapply(1:3, function(i) {
     load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
 
 
+
+
     tryCatch({
-
-        this_timings = list()
-
 
         # ---------------------------- Delta Method (ours) --------------------------- #
 
         # Fit models
-        tic()
-
-        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
-
-        this_time = toc()
-        this_timings$fit_models = this_time$toc - this_time$tic
-
-        # diagnose(fit_Y)
-        # diagnose(fit_M)
+        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
 
 
 
         # Extract fitted parameters
 
-        tic()
 
         theta_hat_Y = get_model_pars_TMB(fit_Y)
         theta_hat_M = get_model_pars_TMB(fit_M)
@@ -310,55 +332,100 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
         len_par_vecs = sapply(list(b_Y, theta_Y, b_M, theta_M), length)
 
 
-        this_time = toc()
-        this_timings$get_pars = this_time$toc - this_time$tic
-        # data_est = data.frame(hat = Theta_hat, SE = sqrt(diag(cov_hat)))
-        # rownames(data_est) = names(Theta_hat)
 
+        # --- Compute mediation effects, averaging over the EDF of the confounders --- #
 
-
-        # Compute mediation effects, averaging over the EDF of the confounders
-        tic()
+        # Also, estimate sampling covariance matrix of (wt) average mediation effect, averaging over the EDF of the confounders appropriately using the conditional variance decomposition formula.
 
         info_confounders = get_confounder_freq(data, outcome_name, exposure_name, mediator_name, group_name)
         all_confounders = info_confounders$values
         freqs_confounders = info_confounders$freq
 
-        mean_ME_hat = rep(0, times = 3 * length(scale))
-        mean_ME_hat_sq = rep(0, times = 3 * length(scale))
-        mean_cov_hat = array(0, nrow = 3 * length(scale), ncol = 3 * length(scale))
+        mean_ENC_hat = rep(0, times = 4)
+        mean_ENC_hat_sq = matrix(0, nrow = 4, ncol = 4)
+        mean_cov_hat = matrix(0, nrow = 4, ncol = 4)
 
-        ME_hat_weights = freqs_confounders / sum(freqs_confounders)     # Weights for averaging based on observed frequencies of confounders
+        ENC_hat_weights = freqs_confounders / sum(freqs_confounders)     # Weights for averaging based on observed frequencies of confounders
 
 
         for(j in seq_along(all_confounders)){
             this_confounder_val = all_confounders[[j]]
 
-            this_MEs = all_MEs_pars(scale, this_confounder_val, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
-            this_cov_MEs_delta = all_covs_MEs_pars(scale, this_confounder_val, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+            this_ENCs = all_ENCs(this_confounder_val, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+            this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
 
-            mean_ME_hat = mean_ME_hat + ME_hat_weights[j] * this_MEs
-            mean_ME_hat_sq = mean_ME_hat_sq + ME_hat_weights[j] * this_MEs^2
+            this_ENCs_sq = this_ENCs %*% t(this_ENCs)
+
+            mean_ENC_hat = mean_ENC_hat + ENC_hat_weights[j] * this_ENCs
+            mean_ENC_hat_sq = mean_ENC_hat_sq + ENC_hat_weights[j] * this_ENCs_sq
+            mean_cov_hat = mean_cov_hat + ENC_hat_weights[j] * this_cov_ENCs_delta
         }
 
-
-        this_time = toc()
-        this_timings$get_MEs = this_time$toc - this_time$tic
-
-        # ------------------------------ MC Delta Method ----------------------------- #
-        tic()
-        some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
-        some_ME_tildes = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
-        cov_MEs_MC_delta = cov(some_ME_tildes)
+        #TODO Remove all covariance stuff above here !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
+        # ------------ Estimate sampling covariance of averaged estimator ------------ #
 
-        this_time = toc()
-        this_timings$MC_delta = this_time$toc - this_time$tic
+        cov_hat_mean_ENCs = matrix(0, nrow=4, ncol=4)
 
 
-        # ------------------------ Compile and return results ------------------------ #
-        output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
+        #* Diagonal elements
+
+        diag_terms = matrix(0, nrow=4, ncol=4)
+
+        for(j in seq_along(all_confounders)){
+            this_confounder_val = all_confounders[[j]]
+
+            this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
+            diag_terms = diag_terms + ENC_hat_weights[j]^2 * this_cov_ENCs_delta
+        }
+
+        cov_hat_mean_ENCs = cov_hat_mean_ENCs + diag_terms
+
+        #* Off-diagonal elements
+
+        off_diag_terms = matrix(0, nrow=4, ncol=4)
+
+        num_confounders = length(all_confounders)
+        for(j1 in 1:(num_confounders-1)){
+            for(j2 in (j1+1):num_confounders){
+                this_confounder_val1 = all_confounders[[j1]]
+                this_confounder_val2 = all_confounders[[j2]]
+
+                this_cross_cov = cross_cov_ENC_pars(this_confounder_val1, this_confounder_val2, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
+                off_diag_terms = off_diag_terms + 2 * ENC_hat_weights[j1] * ENC_hat_weights[j2] * this_cross_cov
+            }
+        }
+
+        cov_hat_mean_ENCs = cov_hat_mean_ENCs + off_diag_terms
+
+
+
+
+
+        # ---------------- Compute variance using alternative formula ---------------- #
+
+
+
+        output = list(this_ENCs = mean_ENC_hat, cov_hat_mean_ENCs = cov_hat_mean_ENCs,
+                        mean_ENC_hat_sq = mean_ENC_hat_sq, sq_mean_ENC_hat = sq_mean_ENC_hat, mean_cov_hat = mean_cov_hat)
+
+        # # ------------------------------ MC Delta Method ----------------------------- #
+        # tic()
+        # some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
+        # some_ME_tildes = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
+        # cov_MEs_MC_delta = cov(some_ME_tildes)
+
+
+
+        # this_time = toc()
+        # this_timings$MC_delta = this_time$toc - this_time$tic
+
+
+        # # ------------------------ Compile and return results ------------------------ #
+        # output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
 
         # save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
@@ -370,5 +437,42 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
     })
 
 
-# }, cl = cl)
-})
+}, cl = cl)
+# })
+
+
+
+# ------------------------------ Extract results ----------------------------- #
+
+#* Remove iterations with negative variances
+MC_results_ENC_raw = MC_results_ENC
+all_covs_raw = lapply(MC_results_ENC, function(x) x$cov_hat_mean_ENCs)
+inds_remove = sapply(all_covs, function(x) any(diag(x) < 0))
+MC_results_ENC = MC_results_ENC[!inds_remove]
+
+
+all_ENCs = sapply(MC_results_ENC, function(x) x$this_ENCs) %>% t()
+all_covs = lapply(MC_results_ENC, function(x) x$cov_hat_mean_ENCs)
+
+all_mean_sq = lapply(MC_results_ENC, function(x) x$mean_ENC_hat_sq)
+all_sq_mean = lapply(MC_results_ENC, function(x) x$sq_mean_ENC_hat)
+all_mean_cov = lapply(MC_results_ENC, function(x) x$mean_cov_hat)
+
+all_var_of_means = purrr::map2(all_mean_sq, all_sq_mean, function(x, y) x - y)
+
+emp_cov = cov(all_MEs)
+mean_cov_hat = Reduce("+", all_covs) / length(all_covs)
+mean_cov_hat = (mean_cov_hat + t(mean_cov_hat)) / 2
+
+
+norm(emp_cov - mean_cov_hat, "2") / min(norm(emp_cov, "2"), norm(mean_cov_hat, "2"))
+
+mean_mean_sq = Reduce("+", all_mean_sq) / length(all_mean_sq)
+mean_sq_mean = Reduce("+", all_sq_mean) / length(all_sq_mean)
+
+mean_var_of_means = Reduce("+", all_var_of_means) / length(all_var_of_means)
+mean_mean_cov = Reduce("+", all_mean_cov) / length(all_mean_cov)
+
+
+mat_rel_err(emp_cov, mean_mean_cov)
+

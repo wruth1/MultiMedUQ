@@ -4,7 +4,7 @@
 \alias{all_pars_cov_mat_TMB}
 \title{Estimated sampling covariance matrix for all GLMM parameters (i.e. from both models)}
 \usage{
-all_pars_cov_mat_TMB(fit_Y, fit_M)
+all_pars_cov_mat_TMB(fit_Y, fit_M, return_separate_covs = FALSE)
 }
 \arguments{
 \item{fit_Y}{A GLMM fit using \code{glmmTMB} for the outcome model}

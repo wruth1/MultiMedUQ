@@ -50,7 +50,7 @@ all_MEs_ENCs(
 
 \item{fit_Y, fit_M}{Models for \eqn{Y} and \eqn{M}, respectively.}
 
-\item{ENCs}{A vector of expected nested counterfactuals}
+\item{ENCs}{A vector of expected nested counterfactuals. Order for Y(x, M(x')) is (1,1), (1,0), (0,1), (0,0).}
 }
 \value{
 All mediation effects (total, direct and indirect), on the specified scale(s). Order is total, direct, indirect. Within each effect, order is as specified in \code{scale}. Default is difference, ratio, odds-ratio.
