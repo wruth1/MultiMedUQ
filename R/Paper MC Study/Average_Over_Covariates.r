@@ -342,8 +342,6 @@ MC_results_ENC = pblapply(1:num_datasets, function(i) {
         freqs_confounders = info_confounders$freq
 
         mean_ENC_hat = rep(0, times = 4)
-        mean_ENC_hat_sq = matrix(0, nrow = 4, ncol = 4)
-        mean_cov_hat = matrix(0, nrow = 4, ncol = 4)
 
         ENC_hat_weights = freqs_confounders / sum(freqs_confounders)     # Weights for averaging based on observed frequencies of confounders
 
@@ -352,16 +350,10 @@ MC_results_ENC = pblapply(1:num_datasets, function(i) {
             this_confounder_val = all_confounders[[j]]
 
             this_ENCs = all_ENCs(this_confounder_val, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
-            this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
-
-            this_ENCs_sq = this_ENCs %*% t(this_ENCs)
 
             mean_ENC_hat = mean_ENC_hat + ENC_hat_weights[j] * this_ENCs
-            mean_ENC_hat_sq = mean_ENC_hat_sq + ENC_hat_weights[j] * this_ENCs_sq
-            mean_cov_hat = mean_cov_hat + ENC_hat_weights[j] * this_cov_ENCs_delta
         }
 
-        #TODO Remove all covariance stuff above here !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
         # ------------ Estimate sampling covariance of averaged estimator ------------ #
@@ -405,12 +397,10 @@ MC_results_ENC = pblapply(1:num_datasets, function(i) {
 
 
 
-        # ---------------- Compute variance using alternative formula ---------------- #
 
 
 
-        output = list(this_ENCs = mean_ENC_hat, cov_hat_mean_ENCs = cov_hat_mean_ENCs,
-                        mean_ENC_hat_sq = mean_ENC_hat_sq, sq_mean_ENC_hat = sq_mean_ENC_hat, mean_cov_hat = mean_cov_hat)
+        output = list(this_ENCs = mean_ENC_hat, cov_hat_mean_ENCs = cov_hat_mean_ENCs, diag_terms = diag_terms, off_diag_terms = off_diag_terms)
 
         # # ------------------------------ MC Delta Method ----------------------------- #
         # tic()
@@ -447,18 +437,16 @@ MC_results_ENC = pblapply(1:num_datasets, function(i) {
 #* Remove iterations with negative variances
 MC_results_ENC_raw = MC_results_ENC
 all_covs_raw = lapply(MC_results_ENC, function(x) x$cov_hat_mean_ENCs)
-inds_remove = sapply(all_covs, function(x) any(diag(x) < 0))
+inds_remove = sapply(all_covs_raw, function(x) any(diag(x) < 0))
+any(inds_remove)
 MC_results_ENC = MC_results_ENC[!inds_remove]
 
+cov_hat_ew_mins = sapply(all_covs_raw, function(x) min(Re(eigen(x)$values)))
+hist(cov_hat_ew_mins[inds_remove])
 
 all_ENCs = sapply(MC_results_ENC, function(x) x$this_ENCs) %>% t()
 all_covs = lapply(MC_results_ENC, function(x) x$cov_hat_mean_ENCs)
 
-all_mean_sq = lapply(MC_results_ENC, function(x) x$mean_ENC_hat_sq)
-all_sq_mean = lapply(MC_results_ENC, function(x) x$sq_mean_ENC_hat)
-all_mean_cov = lapply(MC_results_ENC, function(x) x$mean_cov_hat)
-
-all_var_of_means = purrr::map2(all_mean_sq, all_sq_mean, function(x, y) x - y)
 
 emp_cov = cov(all_ENCs)
 mean_cov_hat = Reduce("+", all_covs) / length(all_covs)
@@ -467,12 +455,11 @@ mean_cov_hat = (mean_cov_hat + t(mean_cov_hat)) / 2
 
 norm(emp_cov - mean_cov_hat, "2") / min(norm(emp_cov, "2"), norm(mean_cov_hat, "2"))
 
-mean_mean_sq = Reduce("+", all_mean_sq) / length(all_mean_sq)
-mean_sq_mean = Reduce("+", all_sq_mean) / length(all_sq_mean)
 
-mean_var_of_means = Reduce("+", all_var_of_means) / length(all_var_of_means)
-mean_mean_cov = Reduce("+", all_mean_cov) / length(all_mean_cov)
+all_cov_hat_errs = sapply(all_covs, function(x) mat_rel_err(emp_cov, x))
+hist(all_cov_hat_errs)
 
 
 mat_rel_err(emp_cov, mean_mean_cov)
+
 

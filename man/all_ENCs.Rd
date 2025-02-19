@@ -2,7 +2,7 @@
 % Please edit documentation in R/Nested_Counterfactual.R
 \name{all_ENCs}
 \alias{all_ENCs}
-\alias{all_ENCs_theta}
+\alias{all_ENCs_Theta}
 \title{Expected nested counterfactuals for all configurations of \eqn{X} and \eqn{X_M}.}
 \usage{
 all_ENCs(
@@ -14,7 +14,7 @@ all_ENCs(
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 
-all_ENCs_theta(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
+all_ENCs_Theta(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
 }
 \arguments{
 \item{w}{Level of covariates, \eqn{W}.}

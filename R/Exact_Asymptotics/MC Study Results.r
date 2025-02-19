@@ -161,7 +161,7 @@ for(i in seq_along(all_Ks)){
 
     # Point estimates
     some_Thetas = MASS::mvrnorm(n = B, mu = Theta_0, Sigma = Gamma_0)
-    some_ENCs = t(apply(some_Thetas, 1, all_ENCs_theta, w = w, which_REs = which_REs))
+    some_ENCs = t(apply(some_Thetas, 1, all_ENCs_Theta, w = w, which_REs = which_REs))
 
     list_Thetas[[i]] = some_Thetas
     list_ENCs[[i]] = some_ENCs

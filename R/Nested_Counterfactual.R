@@ -187,7 +187,7 @@ all_ENCs <- function(w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X"
 #' @rdname all_ENCs
 #'
 #' @export
-all_ENCs_theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+all_ENCs_Theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
   RE_names = expand_REs(which_REs)
   num_Y_REs = sum(grepl("^Y\\.", RE_names))
   num_M_REs = sum(grepl("^M\\.", RE_names))
