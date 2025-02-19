@@ -46,8 +46,8 @@ scale = c("diff", "rat", "OR")      # What scales should we compute mediation ef
 which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables have random effects? Eventually, I will need a better way to specify this
 
 # Number of groups
-K = 100
-# K=10
+# K = 100
+K=10
 
 # Observations per group
 # N = 500
@@ -403,15 +403,11 @@ MC_results_ENC = pblapply(1:num_datasets, function(i) {
         output = list(this_ENCs = mean_ENC_hat, cov_hat_mean_ENCs = cov_hat_mean_ENCs, diag_terms = diag_terms, off_diag_terms = off_diag_terms)
 
         # # ------------------------------ MC Delta Method ----------------------------- #
-        # tic()
         # some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
-        # some_ME_tildes = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
+        # some_ENC_tildes = Theta_tildes_2_ENCs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
         # cov_MEs_MC_delta = cov(some_ME_tildes)
 
 
-
-        # this_time = toc()
-        # this_timings$MC_delta = this_time$toc - this_time$tic
 
 
         # # ------------------------ Compile and return results ------------------------ #
@@ -463,3 +459,28 @@ hist(all_cov_hat_errs)
 mat_rel_err(emp_cov, mean_mean_cov)
 
 
+
+# ---------------------------- Get Coverage Rates ---------------------------- #
+
+#* Compute true marginal ENCs (i.e. averaged over the confounder distribution)
+# Super inelegant way of doing this, but for now I'm just going to make it work
+
+load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/1.RData"), verbose = T)
+
+info_confounders = get_confounder_freq(data, outcome_name, exposure_name, mediator_name, group_name)
+all_confounders = info_confounders$values
+probs_confounders = rep(1 / length(all_confounders), times=length(all_confounders)) 
+
+
+all_true_conditional_ENCs = lapply(all_confounders, function(this_confounder_val) all_ENCs_Theta(this_confounder_val, all_reg_pars, which_REs = which_REs))
+
+true_ENCs = rep(0, times=4)
+for(i in seq_along(all_true_conditional_ENCs)){
+    true_ENCs = true_ENCs + probs_confounders[i] * all_true_conditional_ENCs[[i]]
+}
+
+
+
+#* Compute coverage rates
+cover_rate_emp = get_coverage_rates(all_ENCs, emp_cov, true_ENCs)
+cover_rate_cov_hat = get_coverage_rates_many_cov_mats(all_ENCs, all_covs, true_ENCs)

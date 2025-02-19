@@ -45,6 +45,56 @@ sim_Theta_tildes = function(B, Theta_hat, cov_hat){
     
 }
 
+
+#! This function does conditional ENCs, not marginal ENCs
+Theta_tildes_2_ENCs = function(scale = c("diff", "rat", "OR"), w, some_Theta_tildes, which_REs, len_par_vecs){
+    some_ENC_tildes = data.frame()
+
+    len_b_Y = len_par_vecs[1]
+    len_theta_Y = len_par_vecs[2]
+    len_b_M = len_par_vecs[3]
+    len_theta_M = len_par_vecs[4]
+
+    for(j in seq_len(nrow(some_Theta_tildes))){
+
+        tryCatch({
+            # print(j)
+
+            # if(j %% 1000 == 0) cat("j=", j, " of ", nrow(some_Theta_tildes), "\n", sep="")
+
+
+
+            this_Theta_tilde = some_Theta_tildes[j,]
+
+
+
+            # Extract parameters
+            b_Y = this_Theta_tilde[1:len_b_Y]
+            theta_Y = this_Theta_tilde[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+            b_M = this_Theta_tilde[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+            theta_M = this_Theta_tilde[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
+
+            # Check that parameter extraction happened correctly
+            sum_par_len = length(b_Y) + length(theta_Y) + length(b_M) + length(theta_M)
+            if(sum_par_len != length(this_Theta_tilde)) stop("Parameter extraction failed")
+            check_theta(theta_Y)
+            check_theta(theta_M)
+
+
+            this_ENC_tilde = all_ENCs(w, b_Y, theta_Y, b_M, theta_M, which_REs=which_REs)
+            some_ENC_tildes = rbind(some_ENC_tildes, this_ENC_tilde)
+        }, error = function(e){
+            # print(e)
+        })
+
+    }
+
+
+    return(some_ENC_tildes)
+}
+
+
+
 #' Compute a sample of mediation effects from a sample of simulated parameter estimates
 #'
 #' @param scale Scale(s) on which to construct mediation effects.

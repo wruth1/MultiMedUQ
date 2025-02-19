@@ -153,7 +153,7 @@ unlink(paste0("R/Paper MC Study/Data - ", folder_suffix, "/*"))
 save_data = pbsapply(1:num_datasets, function(i) {
     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
     save(data, file = paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"))
-})
+}, cl=cl)
 
 
 
