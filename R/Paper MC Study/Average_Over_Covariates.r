@@ -460,7 +460,7 @@ all_mean_cov = lapply(MC_results_ENC, function(x) x$mean_cov_hat)
 
 all_var_of_means = purrr::map2(all_mean_sq, all_sq_mean, function(x, y) x - y)
 
-emp_cov = cov(all_MEs)
+emp_cov = cov(all_ENCs)
 mean_cov_hat = Reduce("+", all_covs) / length(all_covs)
 mean_cov_hat = (mean_cov_hat + t(mean_cov_hat)) / 2
 
