@@ -152,12 +152,229 @@ clusterEvalQ(cl, {
     library(ggmulti)
     library(broom.mixed)
     library(glmmTMB)
-    source("R/For_Bouchra/Exact_Asymptotics_Helpers.r")
-    source("R/For_Bouchra/Imai Method.r")
+    source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
+    source("R/Exact_Asymptotics/Imai Method.r")
     devtools::load_all()
 })
 clusterSetRNGStream(cl = cl, 123)
 # clusterSetRNGStream(cl = cl, 11111111)
+
+
+
+
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                                     ENCs                                     #
+# ---------------------------------------------------------------------------- #
+
+clusterSetRNGStream(cl = cl, 123)
+
+
+num_datasets = length(list.files(paste0("R/Paper MC Study/Data - ", folder_suffix)))
+num_datasets = 10
+
+# Fit models, extract ENCs, estimate covariance matrices and save results
+#! Before running, un-comment cl=cl and both save()'s
+MC_results_ENC = pblapply(1:num_datasets, function(i) {
+# MC_results_delta_MC_delta = pblapply(1:3, function(i) {
+    load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
+
+
+
+
+    tryCatch({
+
+        # ---------------------------- Delta Method (ours) --------------------------- #
+
+        # Fit models
+        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+
+
+
+        # Extract fitted parameters
+
+
+        theta_hat_Y = get_model_pars_TMB(fit_Y)
+        theta_hat_M = get_model_pars_TMB(fit_M)
+        Theta_hat = c(unlist(theta_hat_Y), unlist(theta_hat_M))
+        cov_hat = all_pars_cov_mat_TMB(fit_Y, fit_M)
+
+        # cbind(Theta_hat, (diag(cov_hat)))
+
+        b_Y = theta_hat_Y[["b"]]
+        theta_Y = theta_hat_Y[["theta"]]
+        b_M = theta_hat_M[["b"]]
+        theta_M = theta_hat_M[["theta"]]
+        len_par_vecs = sapply(list(b_Y, theta_Y, b_M, theta_M), length)
+
+
+
+        # --- Compute mediation effects, averaging over the EDF of the confounders --- #
+
+        # Also, estimate sampling covariance matrix of (wt) average mediation effect, averaging over the EDF of the confounders appropriately using the conditional variance decomposition formula.
+
+        info_confounders = get_confounder_freq(data, outcome_name, exposure_name, mediator_name, group_name)
+        all_confounders = info_confounders$values
+        freqs_confounders = info_confounders$freq
+
+        confounder_probs = freqs_confounders / sum(freqs_confounders)
+
+        mean_ENC_hat = mean_ENC_Theta(Theta_hat, all_confounders, ENC_hat_weights, which_REs = which_REs)
+
+
+        # ------------ Estimate sampling covariance of averaged estimator ------------ #
+
+        cov_hat_mean_ENCs = matrix(0, nrow=4, ncol=4)
+
+
+        #* Diagonal elements
+
+        diag_terms = matrix(0, nrow=4, ncol=4)
+
+        for(j in seq_along(all_confounders)){
+            this_confounder_val = all_confounders[[j]]
+
+            this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
+            diag_terms = diag_terms + ENC_hat_weights[j]^2 * this_cov_ENCs_delta
+        }
+
+        cov_hat_mean_ENCs = cov_hat_mean_ENCs + diag_terms
+
+        #* Off-diagonal elements
+
+        off_diag_terms = matrix(0, nrow=4, ncol=4)
+
+        num_confounders = length(all_confounders)
+        for(j1 in 1:(num_confounders-1)){
+            for(j2 in (j1+1):num_confounders){
+                this_confounder_val1 = all_confounders[[j1]]
+                this_confounder_val2 = all_confounders[[j2]]
+
+                this_cross_cov = cross_cov_ENC_pars(this_confounder_val1, this_confounder_val2, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
+                off_diag_terms = off_diag_terms + 2 * ENC_hat_weights[j1] * ENC_hat_weights[j2] * this_cross_cov
+            }
+        }
+
+        cov_hat_mean_ENCs = cov_hat_mean_ENCs + off_diag_terms
+
+
+
+
+
+
+
+
+        output = list(this_ENCs = mean_ENC_hat, cov_hat_mean_ENCs = cov_hat_mean_ENCs, diag_terms = diag_terms, off_diag_terms = off_diag_terms)
+
+        # # ------------------------------ MC Delta Method ----------------------------- #
+        # some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
+        # some_ENC_tildes = Theta_tildes_2_ENCs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
+        # cov_MEs_MC_delta = cov(some_ME_tildes)
+
+
+
+
+        # # ------------------------ Compile and return results ------------------------ #
+        # output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
+
+        # save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
+        return(output)
+    }, error = function(e){
+        output = NULL
+
+        # save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
+        return(output)
+    })
+
+
+}, cl = cl)
+# })
+
+stopCluster(cl)
+
+
+
+# ------------------------------ Extract results ----------------------------- #
+
+#* Remove iterations with negative variances
+MC_results_ENC_raw = MC_results_ENC
+all_covs_raw = lapply(MC_results_ENC, function(x) x$cov_hat_mean_ENCs)
+inds_remove = sapply(all_covs_raw, function(x) any(diag(x) < 0))
+any(inds_remove)
+MC_results_ENC = MC_results_ENC[!inds_remove]
+
+cov_hat_ew_mins = sapply(all_covs_raw, function(x) min(Re(eigen(x)$values)))
+hist(cov_hat_ew_mins[inds_remove])
+
+all_ENCs = sapply(MC_results_ENC, function(x) x$this_ENCs) %>% t()
+all_covs = lapply(MC_results_ENC, function(x) x$cov_hat_mean_ENCs)
+
+
+emp_cov = cov(all_ENCs)
+mean_cov_hat = Reduce("+", all_covs) / length(all_covs)
+mean_cov_hat = (mean_cov_hat + t(mean_cov_hat)) / 2
+
+
+norm(emp_cov - mean_cov_hat, "2") / min(norm(emp_cov, "2"), norm(mean_cov_hat, "2"))
+
+
+all_cov_hat_errs = sapply(all_covs, function(x) mat_rel_err(emp_cov, x))
+hist(all_cov_hat_errs)
+
+
+mat_rel_err(emp_cov, mean_mean_cov)
+
+
+
+# ---------------------------- Get Coverage Rates ---------------------------- #
+
+#* Compute true marginal ENCs (i.e. averaged over the confounder distribution)
+# Super inelegant way of doing this, but for now I'm just going to make it work
+
+load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/1.RData"), verbose = T)
+
+info_confounders = get_confounder_freq(data, outcome_name, exposure_name, mediator_name, group_name)
+all_confounders = info_confounders$values
+probs_confounders = rep(1 / length(all_confounders), times=length(all_confounders)) 
+
+
+all_true_conditional_ENCs = lapply(all_confounders, function(this_confounder_val) all_ENCs_Theta(this_confounder_val, all_reg_pars, which_REs = which_REs))
+
+true_ENCs = rep(0, times=4)
+for(i in seq_along(all_true_conditional_ENCs)){
+    true_ENCs = true_ENCs + probs_confounders[i] * all_true_conditional_ENCs[[i]]
+}
+
+
+
+#* Compute coverage rates
+cover_rate_emp = get_coverage_rates(all_ENCs, emp_cov, true_ENCs)
+cover_rate_cov_hat = get_coverage_rates_many_cov_mats(all_ENCs, all_covs, true_ENCs)
+
+
+
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                               Mediation Effects                              #
+# ---------------------------------------------------------------------------- #
+
 
 
 
@@ -275,212 +492,3 @@ stopCluster(cl)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-# ---------------------------------------------------------------------------- #
-#                                     ENCs                                     #
-# ---------------------------------------------------------------------------- #
-
-clusterSetRNGStream(cl = cl, 123)
-
-
-num_datasets = length(list.files(paste0("R/Paper MC Study/Data - ", folder_suffix)))
-num_datasets = 10
-
-# Fit models, extract ENCs, estimate covariance matrices and save results
-#! Before running, un-comment cl=cl and both save()'s
-MC_results_ENC = pblapply(1:num_datasets, function(i) {
-# MC_results_delta_MC_delta = pblapply(1:3, function(i) {
-    load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
-
-
-
-
-    tryCatch({
-
-        # ---------------------------- Delta Method (ours) --------------------------- #
-
-        # Fit models
-        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-
-
-
-        # Extract fitted parameters
-
-
-        theta_hat_Y = get_model_pars_TMB(fit_Y)
-        theta_hat_M = get_model_pars_TMB(fit_M)
-        Theta_hat = c(unlist(theta_hat_Y), unlist(theta_hat_M))
-        cov_hat = all_pars_cov_mat_TMB(fit_Y, fit_M)
-
-        # cbind(Theta_hat, (diag(cov_hat)))
-
-        b_Y = theta_hat_Y[["b"]]
-        theta_Y = theta_hat_Y[["theta"]]
-        b_M = theta_hat_M[["b"]]
-        theta_M = theta_hat_M[["theta"]]
-        len_par_vecs = sapply(list(b_Y, theta_Y, b_M, theta_M), length)
-
-
-
-        # --- Compute mediation effects, averaging over the EDF of the confounders --- #
-
-        # Also, estimate sampling covariance matrix of (wt) average mediation effect, averaging over the EDF of the confounders appropriately using the conditional variance decomposition formula.
-
-        info_confounders = get_confounder_freq(data, outcome_name, exposure_name, mediator_name, group_name)
-        all_confounders = info_confounders$values
-        freqs_confounders = info_confounders$freq
-
-        mean_ENC_hat = rep(0, times = 4)
-
-        ENC_hat_weights = freqs_confounders / sum(freqs_confounders)     # Weights for averaging based on observed frequencies of confounders
-
-
-        for(j in seq_along(all_confounders)){
-            this_confounder_val = all_confounders[[j]]
-
-            this_ENCs = all_ENCs(this_confounder_val, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
-
-            mean_ENC_hat = mean_ENC_hat + ENC_hat_weights[j] * this_ENCs
-        }
-
-
-
-        # ------------ Estimate sampling covariance of averaged estimator ------------ #
-
-        cov_hat_mean_ENCs = matrix(0, nrow=4, ncol=4)
-
-
-        #* Diagonal elements
-
-        diag_terms = matrix(0, nrow=4, ncol=4)
-
-        for(j in seq_along(all_confounders)){
-            this_confounder_val = all_confounders[[j]]
-
-            this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
-
-            diag_terms = diag_terms + ENC_hat_weights[j]^2 * this_cov_ENCs_delta
-        }
-
-        cov_hat_mean_ENCs = cov_hat_mean_ENCs + diag_terms
-
-        #* Off-diagonal elements
-
-        off_diag_terms = matrix(0, nrow=4, ncol=4)
-
-        num_confounders = length(all_confounders)
-        for(j1 in 1:(num_confounders-1)){
-            for(j2 in (j1+1):num_confounders){
-                this_confounder_val1 = all_confounders[[j1]]
-                this_confounder_val2 = all_confounders[[j2]]
-
-                this_cross_cov = cross_cov_ENC_pars(this_confounder_val1, this_confounder_val2, cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
-
-                off_diag_terms = off_diag_terms + 2 * ENC_hat_weights[j1] * ENC_hat_weights[j2] * this_cross_cov
-            }
-        }
-
-        cov_hat_mean_ENCs = cov_hat_mean_ENCs + off_diag_terms
-
-
-
-
-
-
-
-
-        output = list(this_ENCs = mean_ENC_hat, cov_hat_mean_ENCs = cov_hat_mean_ENCs, diag_terms = diag_terms, off_diag_terms = off_diag_terms)
-
-        # # ------------------------------ MC Delta Method ----------------------------- #
-        # some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
-        # some_ENC_tildes = Theta_tildes_2_ENCs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
-        # cov_MEs_MC_delta = cov(some_ME_tildes)
-
-
-
-
-        # # ------------------------ Compile and return results ------------------------ #
-        # output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
-
-        # save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
-        return(output)
-    }, error = function(e){
-        output = NULL
-
-        # save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
-        return(output)
-    })
-
-
-}, cl = cl)
-# })
-
-
-
-# ------------------------------ Extract results ----------------------------- #
-
-#* Remove iterations with negative variances
-MC_results_ENC_raw = MC_results_ENC
-all_covs_raw = lapply(MC_results_ENC, function(x) x$cov_hat_mean_ENCs)
-inds_remove = sapply(all_covs_raw, function(x) any(diag(x) < 0))
-any(inds_remove)
-MC_results_ENC = MC_results_ENC[!inds_remove]
-
-cov_hat_ew_mins = sapply(all_covs_raw, function(x) min(Re(eigen(x)$values)))
-hist(cov_hat_ew_mins[inds_remove])
-
-all_ENCs = sapply(MC_results_ENC, function(x) x$this_ENCs) %>% t()
-all_covs = lapply(MC_results_ENC, function(x) x$cov_hat_mean_ENCs)
-
-
-emp_cov = cov(all_ENCs)
-mean_cov_hat = Reduce("+", all_covs) / length(all_covs)
-mean_cov_hat = (mean_cov_hat + t(mean_cov_hat)) / 2
-
-
-norm(emp_cov - mean_cov_hat, "2") / min(norm(emp_cov, "2"), norm(mean_cov_hat, "2"))
-
-
-all_cov_hat_errs = sapply(all_covs, function(x) mat_rel_err(emp_cov, x))
-hist(all_cov_hat_errs)
-
-
-mat_rel_err(emp_cov, mean_mean_cov)
-
-
-
-# ---------------------------- Get Coverage Rates ---------------------------- #
-
-#* Compute true marginal ENCs (i.e. averaged over the confounder distribution)
-# Super inelegant way of doing this, but for now I'm just going to make it work
-
-load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/1.RData"), verbose = T)
-
-info_confounders = get_confounder_freq(data, outcome_name, exposure_name, mediator_name, group_name)
-all_confounders = info_confounders$values
-probs_confounders = rep(1 / length(all_confounders), times=length(all_confounders)) 
-
-
-all_true_conditional_ENCs = lapply(all_confounders, function(this_confounder_val) all_ENCs_Theta(this_confounder_val, all_reg_pars, which_REs = which_REs))
-
-true_ENCs = rep(0, times=4)
-for(i in seq_along(all_true_conditional_ENCs)){
-    true_ENCs = true_ENCs + probs_confounders[i] * all_true_conditional_ENCs[[i]]
-}
-
-
-
-#* Compute coverage rates
-cover_rate_emp = get_coverage_rates(all_ENCs, emp_cov, true_ENCs)
-cover_rate_cov_hat = get_coverage_rates_many_cov_mats(all_ENCs, all_covs, true_ENCs)

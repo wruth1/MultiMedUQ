@@ -1,0 +1,107 @@
+
+
+#? This script contains functions for averaging mediation effects over the confounder distribution
+
+
+
+# ---------------------------------------------------------------------------- #
+#                                   Utilities                                  #
+# ---------------------------------------------------------------------------- #
+
+#' Extract the distribution of confounders from a dataset
+#'
+#' @param data A data frame containing mediation variables and confounders
+#' @param outcome_name,exposure_name,mediator_name,group_name Names of the outcome, exposure, mediator, and group variables respectively. Must be strings.
+#'
+#' @returns A list with two components: `values`, a list of vectors of confounder values, and `freqs`, a vector of frequencies of each confounder value.
+#' @export
+data_2_confounder_dist <- function(data, outcome_name, exposure_name, mediator_name, group_name){
+    data_confounders = data %>% dplyr::select(-dplyr::all_of(c(outcome_name, exposure_name, mediator_name, group_name)))
+
+    info_confounders = data_confounders %>% dplyr::group_by(dplyr::across(dplyr::everything())) %>% dplyr::summarize(.freq = dplyr::n(), .groups = "drop")
+
+    vals_confounders = info_confounders %>% dplyr::select(-.freq) %>% split(seq_len(nrow(.))) %>% lapply(unlist)
+    freqs_confounders = info_confounders$.freq
+
+    output = list(values = vals_confounders, freqs = freqs_confounders)
+    return(output)
+}
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                             Estimator of Mean ENC                            #
+# ---------------------------------------------------------------------------- #
+
+#' Marginal ENC
+#'
+#' Compute the marginal ENC by averaging conditional ENCs over the provided confounder distribution
+#'
+#' @param b_Y,b_M Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.
+#' @param theta_Y,theta_M Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.
+#' @param Theta Vector of parameters from both models. Order is b_Y, theta_Y, b_M, theta_M
+#' @param all_confounders A list of all possible values of the confounder variables. Each element is a vector.
+#' @param confounder_probs A vector of probabilities, with element `i` corresponding to the probability of the `i`th element of `all_confounders`.
+#' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
+#'
+#' @name Marginal_ENCs
+#'
+#' @details
+#' The following shorthands for random effects are available:
+#' \itemize{
+#' \item "All": All REs
+#' \item "Y.All": All REs for Y
+#' \item "M.All": All REs for M
+#' }
+#' Additionally, individual REs can be specified:
+#' \itemize{
+#' \item "Y.Int": Intercept for Y
+#' \item "Y.X": Slope for X in Y
+#' \item "Y.M": Slope for M in Y
+#' \item "M.Int": Intercept for M
+#' \item "M.X": Slope for M
+#' }
+#'
+#'
+#' @returns A vector of marginal expected nested counterfactuals (i.e. averaged over the confounder distribution). Order of output is \code{ENC(1,1), ENC(1,0), ENC(0,1), ENC(0,0)}, where the former argument is \eqn{X} and the latter is \eqn{X_M}.
+#' @export
+mean_ENC_pars <- function(b_Y, theta_Y, b_M, theta_M, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+
+    mean_ENC_hat = rep(0, times = 4)
+
+    for(j in seq_along(all_confounders)){
+        this_confounder_val = all_confounders[[j]]
+
+        this_ENCs = all_ENCs(this_confounder_val, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
+        mean_ENC_hat = mean_ENC_hat + confounder_probs[j] * this_ENCs
+    }
+
+    return(mean_ENC_hat)
+}
+
+
+#' @rdname Marginal_ENCs
+#' @export
+mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+
+    mean_ENC_hat = rep(0, times = 4)
+
+    for(j in seq_along(all_confounders)){
+        this_confounder_val = all_confounders[[j]]
+
+        this_ENCs = all_ENCs_Theta(this_confounder_val, Theta, which_REs =  which_REs)
+
+        mean_ENC_hat = mean_ENC_hat + confounder_probs[j] * this_ENCs
+    }
+
+    return(mean_ENC_hat)
+}
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                        Sampling Covariance of Mean ENC                       #
+# ---------------------------------------------------------------------------- #

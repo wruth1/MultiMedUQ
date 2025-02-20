@@ -203,11 +203,13 @@ all_ENCs_Theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int
 }
 
 
-# Gradient of ENC ####
+# ---------------------------------------------------------------------------- #
+#                                Gradient of ENC                               #
+# ---------------------------------------------------------------------------- #
 
 ## First, gradients of the arguments to psi. ####
 
-### Means
+# ----------------------------------- Means ---------------------------------- #
 
 grad_mu_Y <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
 
@@ -285,7 +287,8 @@ grad_b_Y_M <- function(x, x_m, w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.I
 }
 
 
-### SDs
+# ------------------------------------ SDs ----------------------------------- #
+
 
 # Note the additional argument, m, at the front.
 ## Note:  Length of return vector is influenced by which random effects are included in which_REs.
