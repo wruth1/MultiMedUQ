@@ -20,7 +20,8 @@ mean_ENC_Theta(
   Theta,
   all_confounders,
   confounder_probs,
-  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+  which_REs,
+  len_par_vecs
 )
 }
 \arguments{
@@ -35,6 +36,8 @@ mean_ENC_Theta(
 \item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
 
 \item{Theta}{Vector of parameters from both models. Order is b_Y, theta_Y, b_M, theta_M}
+
+\item{len_par_vecs}{Number of entries in each parameter vector. Order is b_Y, theta_Y, b_M, theta_M}
 }
 \value{
 A vector of marginal expected nested counterfactuals (i.e. averaged over the confounder distribution). Order of output is \code{ENC(1,1), ENC(1,0), ENC(0,1), ENC(0,0)}, where the former argument is \eqn{X} and the latter is \eqn{X_M}.

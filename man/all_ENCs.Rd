@@ -14,7 +14,7 @@ all_ENCs(
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 
-all_ENCs_Theta(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
+all_ENCs_Theta(w, Theta, which_REs, len_par_vecs)
 }
 \arguments{
 \item{w}{Level of covariates, \eqn{W}.}

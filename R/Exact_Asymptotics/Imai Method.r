@@ -101,7 +101,7 @@ Theta_tildes_2_ENCs = function(scale = c("diff", "rat", "OR"), w, some_Theta_til
 #' @param w A vector of values for the model confounders.
 #' @param some_Theta_tildes Sample of parameter estimates. Rows index sample, columns index parameter.
 #' @param which_REs Which random effects have been included in the model.
-#' @param len_par_vecs Number of parameters in each parameter vector. Order is b_Y, theta_Y, b_M, theta_M
+#' @param len_par_vecs Number of entries in each parameter vector. Order is b_Y, theta_Y, b_M, theta_M
 #'
 #' @return A sample of mediation effects, with rows indexing sample and columns indexing effect.
 #' @export

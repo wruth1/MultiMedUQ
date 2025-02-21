@@ -187,17 +187,16 @@ all_ENCs <- function(w, b_Y, theta_Y, b_M, theta_M, which_REs = c("Y.Int", "Y.X"
 #' @rdname all_ENCs
 #'
 #' @export
-all_ENCs_Theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
-  RE_names = expand_REs(which_REs)
-  num_Y_REs = sum(grepl("^Y\\.", RE_names))
-  num_M_REs = sum(grepl("^M\\.", RE_names))
+all_ENCs_Theta <- function(w, Theta, which_REs, len_par_vecs){
+  len_b_Y = len_par_vecs[1]
+  len_theta_Y = len_par_vecs[2]
+  len_b_M = len_par_vecs[3]
+  len_theta_M = len_par_vecs[4]
 
-  len_theta_Y = num_REs2theta_length(num_Y_REs)
-
-  this_b_Y = Theta[1:5]
-  this_theta_Y = Theta[6:(5 + len_theta_Y)]
-  this_b_M = Theta[(6 + len_theta_Y):(9 + len_theta_Y)]
-  this_theta_M = Theta[(10 + len_theta_Y):length(Theta)]
+  this_b_Y = Theta[1:len_b_Y]
+  this_theta_Y = Theta[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+  this_b_M = Theta[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+  this_theta_M = Theta[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
 
   return(all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs = which_REs))
 }

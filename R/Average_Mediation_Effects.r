@@ -44,6 +44,7 @@ data_2_confounder_dist <- function(data, outcome_name, exposure_name, mediator_n
 #' @param all_confounders A list of all possible values of the confounder variables. Each element is a vector.
 #' @param confounder_probs A vector of probabilities, with element `i` corresponding to the probability of the `i`th element of `all_confounders`.
 #' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
+#' @param len_par_vecs Number of entries in each parameter vector. Order is b_Y, theta_Y, b_M, theta_M
 #'
 #' @name Marginal_ENCs
 #'
@@ -84,14 +85,14 @@ mean_ENC_pars <- function(b_Y, theta_Y, b_M, theta_M, all_confounders, confounde
 
 #' @rdname Marginal_ENCs
 #' @export
-mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, which_REs, len_par_vecs){
 
     mean_ENC_hat = rep(0, times = 4)
 
     for(j in seq_along(all_confounders)){
         this_confounder_val = all_confounders[[j]]
 
-        this_ENCs = all_ENCs_Theta(this_confounder_val, Theta, which_REs =  which_REs)
+        this_ENCs = all_ENCs_Theta(this_confounder_val, Theta, which_REs =  which_REs, len_par_vecs = len_par_vecs)
 
         mean_ENC_hat = mean_ENC_hat + confounder_probs[j] * this_ENCs
     }
@@ -99,6 +100,15 @@ mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, which_REs =
     return(mean_ENC_hat)
 }
 
+
+
+# ---------------------------------------------------------------------------- #
+#                           Monte Carlo Delta Method                           #
+# ---------------------------------------------------------------------------- #
+
+mean_ENC_Theta_tilde <- function(Theta, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+    
+}
 
 
 

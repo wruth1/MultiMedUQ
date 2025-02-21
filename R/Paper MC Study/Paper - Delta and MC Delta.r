@@ -104,8 +104,8 @@ p = p_Y + p_M
 
 
 folder_suffix = paste0("K=", K, ", N=", N)
-dir.create(paste0("R/Paper MC Study/Data - ", folder_suffix), showWarnings = F)
-dir.create(paste0("R/Paper MC Study/Results - ", folder_suffix), showWarnings = F)
+dir.create(paste0("R/Paper MC Study/Data/Data - ", folder_suffix), showWarnings = F)
+dir.create(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix), showWarnings = F)
 
 
 
@@ -147,12 +147,12 @@ num_datasets = 200
 set.seed(1)
 
 # First, delete any datasets currently in the target directory
-unlink(paste0("R/Paper MC Study/Data - ", folder_suffix, "/*"))
+unlink(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/*"))
 
 # Generate and save datasets
 save_data = pbsapply(1:num_datasets, function(i) {
     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
-    save(data, file = paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"))
+    save(data, file = paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"))
 }, cl=cl)
 
 
@@ -167,12 +167,12 @@ save_data = pbsapply(1:num_datasets, function(i) {
 
 
 # First, delete any results currently in the target directory
-unlink(paste0("R/Paper MC Study/Results - ", folder_suffix, "/*"))
+unlink(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/*"))
 
 # Fit models, extract MEs, estimate covariance matrices and save results
 MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
 # MC_results_delta_MC_delta = pblapply(1:3, function(i) {
-    load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
+    load(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
 
 
     tryCatch({
@@ -245,12 +245,12 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
         # ------------------------ Compile and return results ------------------------ #
         output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
 
-        save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     }, error = function(e){
         output = NULL
 
-        save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     })
 
@@ -266,9 +266,9 @@ stopCluster(cl)
 
 
 #* Build list of all output
-output_names = list.files(paste0("R/Paper MC Study/Results - ", folder_suffix, "/"))
+output_names = list.files(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/"))
 MC_results_delta_MC_delta = pblapply(seq_along(output_names), function(x) {
-    load(paste0("R/Paper MC Study/Results - ", folder_suffix, "/", x, ".RData"))
+    load(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", x, ".RData"))
     return(output)
 })
 
@@ -317,7 +317,7 @@ library(mediation)
 
 MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
 # MC_results_delta_MC_delta = pblapply(1:3, function(i) {
-    load(paste0("R/Paper MC Study/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
+    load(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
 
 
     tryCatch({
@@ -391,12 +391,12 @@ MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
         # ------------------------ Compile and return results ------------------------ #
         output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
 
-        save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     }, error = function(e){
         output = NULL
 
-        save(output, file = paste0("R/Paper MC Study/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     })
 
