@@ -5,6 +5,7 @@
 \alias{all_cov_MEs}
 \alias{all_covs_MEs_models}
 \alias{all_covs_MEs_pars}
+\alias{all_covs_MEs_ENCs}
 \title{Covariance matrix of all mediation effects on various scales.}
 \usage{
 all_cov_MEs(
@@ -34,6 +35,13 @@ all_covs_MEs_pars(
   theta_M,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
+
+all_covs_MEs_ENCs(
+  scale,
+  ENCs,
+  ENC_cov,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 }
 \arguments{
 \item{scale}{The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".}
@@ -45,6 +53,8 @@ all_covs_MEs_pars(
 \item{which_REs}{Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.}
 
 \item{Sigma}{The \eqn{K}-adjusted covariance matrix for the GLMM parameters.}
+
+\item{ENCs, ENC_cov}{Estimated ENCs and their sampling covariance matrix, respectively.}
 }
 \value{
 A covariance matrix for all mediation effects (total, direct and indirect) on the specified scale(s).

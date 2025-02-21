@@ -133,3 +133,59 @@ get_coverage_rates_many_cov_mats <- function(Theta_hats_data, cov_mat_list, true
     return(coverage_rates)
 
 }
+
+
+
+# ---------------------------------------------------------------------------- #
+#                                    Widths                                    #
+# ---------------------------------------------------------------------------- #
+
+get_widths_one_par <- function(CIs){
+    some_lcls = CIs$lcl
+    some_ucls = CIs$ucl
+
+    some_widths = some_ucls - some_lcls
+
+    return(some_widths)
+}
+
+many_widths <- function(CIs){
+    lapply(seq_along(CIs), function(i){
+        this_CIs = CIs[[i]]
+
+        return(get_widths_one_par(this_CIs))
+    })
+}
+
+
+get_widths <- function(Theta_hats_data, cov_mat){
+    SEs = cov_mat_2_SEs(cov_mat)
+    CIs = build_many_CIs(Theta_hats_data, SEs)
+    all_widths = many_widths(CIs)
+
+    mean_widths = sapply(all_widths, mean)
+
+    return(mean_widths)
+}
+
+
+get_widths_many_cov_mats <- function(Theta_hats_data, cov_mat_list){
+    SEs_list = lapply(cov_mat_list, cov_mat_2_SEs)
+
+    # Nesting structure is [dataset][parameter][lcl/ucl]
+    # Needs to be [parameter][lcl/ucl][dataset]
+    CIs_raw = build_many_CIs_by_dataset(Theta_hats_data, SEs_list)
+
+    CIs = lapply(seq_len(ncol(Theta_hats_data)), function(i){
+        this_lcls = sapply(seq_len(nrow(Theta_hats_data)), function(j) CIs_raw[[j]][[i]]$lcl) %>% unname()
+        this_ucls = sapply(seq_len(nrow(Theta_hats_data)), function(j) CIs_raw[[j]][[i]]$ucl) %>% unname()
+
+        return(list(lcl = this_lcls, ucl = this_ucls))
+    })
+
+    all_widths = many_widths(CIs)
+    mean_widths = sapply(all_widths, mean)
+
+    return(mean_widths)
+
+}

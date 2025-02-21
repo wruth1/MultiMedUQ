@@ -1,6 +1,6 @@
 
 
-#? This script contains functions for averaging mediation effects over the confounder distribution
+#? This script contains functions for averaging ENCs over the confounder distribution
 
 
 
@@ -100,15 +100,6 @@ mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, which_REs, 
     return(mean_ENC_hat)
 }
 
-
-
-# ---------------------------------------------------------------------------- #
-#                           Monte Carlo Delta Method                           #
-# ---------------------------------------------------------------------------- #
-
-mean_ENC_Theta_tilde <- function(Theta, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
-    
-}
 
 
 

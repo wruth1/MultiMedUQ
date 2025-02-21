@@ -396,6 +396,7 @@ all_grad_MEs_ENCs <- function(scale, ENCs, which_REs = c("Y.Int", "Y.X", "Y.M", 
 #' @param scale The scale(s) of the mediation effect. Can be "diff", "rat" or "OR".
 #' @param w Level of covariates, \eqn{W}.
 #' @param fit_Y,fit_M Fitted models for Y and M.
+#' @param ENCs,ENC_cov Estimated ENCs and their sampling covariance matrix, respectively.
 #' @param which_REs Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.
 #' 
 #' @name ME_covariances
@@ -452,4 +453,17 @@ all_covs_MEs_pars <- function(scale = c("diff", "rat", "OR"), w, Sigma, b_Y, the
   Jacob = Jacob_MEs %*% Jacob_ENCs                                                # Parameters to MEs
 
   return(Jacob %*% Sigma %*% t(Jacob))
+}
+
+
+
+#' @rdname ME_covariances
+#' @export
+all_covs_MEs_ENCs <- function(scale, ENCs, ENC_cov, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+
+  grad_ENCs_2_MEs = all_grad_MEs_ENCs(scale, ENCs, which_REs)
+  cov_MEs = grad_ENCs_2_MEs %*% ENC_cov %*% t(grad_ENCs_2_MEs)
+
+  return(cov_MEs)
+
 }
