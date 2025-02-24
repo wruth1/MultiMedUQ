@@ -12,6 +12,14 @@ build_CIs_one_par <- function(Theta_hats, SE){
     return(list(lcl = lcls, ucl = ucls))
 }
 
+
+all_CIs_one_dataset <- function(Theta_hats, cov_mat){
+    SEs = cov_mat_2_SEs(cov_mat)
+    some_CIs = lapply(seq_along(Theta_hats), function(i) build_CIs_one_par(Theta_hats[i], SEs[i]))
+
+    return(some_CIs)
+}
+
 build_many_CIs <- function(Theta_hats_data, SEs){
     lapply(seq_along(SEs), function(i){
         this_Theta_hats = Theta_hats_data[,i]

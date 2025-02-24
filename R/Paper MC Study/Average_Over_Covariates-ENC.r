@@ -46,8 +46,8 @@ scale = c("diff", "rat", "OR")      # What scales should we compute mediation ef
 which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables have random effects? Eventually, I will need a better way to specify this
 
 # Number of groups
-# K = 100
-K=10
+K = 100
+# K=10
 
 # Observations per group
 # N = 500
@@ -325,8 +325,8 @@ stopCluster(cl)
 
 # ------------------------------ Read-in Results ----------------------------- #
 output_names = list.files(paste0("R/Paper MC Study/Results/Marginal_ENCs/Results - ", folder_suffix, "/"))
-MC_results_ENC = pblapply(seq_along(output_names), function(x) {
-    load(paste0("R/Paper MC Study/Results/Marginal_ENCs/Results - ", folder_suffix, "/", x, ".RData"))
+MC_results_ENC = pblapply(output_names, function(x) {
+    load(paste0("R/Paper MC Study/Results/Marginal_ENCs/Results - ", folder_suffix, "/", x))
     return(output)
 })
 
@@ -399,7 +399,7 @@ all_cov_tilde_errs %>% Filter(function(x) x < 3, .) %>% hist(breaks = 20)
 # ---------------------------- Get Coverage Rates ---------------------------- #
 
 #* Compute true marginal ENCs (i.e. averaged over the confounder distribution)
-# Super inelegant way of doing this, but for now I'm just going to make it work
+# Super inelegant way of getting the confounder distribution, but for now I'm just going to make it work
 
 load(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/1.RData"), verbose = T)
 
