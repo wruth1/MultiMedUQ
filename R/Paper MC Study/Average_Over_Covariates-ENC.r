@@ -435,9 +435,9 @@ data_cover_rate
 
 # ------------------------------- Get CI Widths ------------------------------ #
 
-mean_CI_width_emp = get_widths(all_ENCs, emp_cov)
-mean_CI_width_cov_hat = get_widths_many_cov_mats(all_ENCs, all_covs)
-mean_CI_width_cov_tilde = get_widths_many_cov_mats(all_ENCs, all_cov_tildes)
+mean_CI_width_emp = mean_widths_one_cov_mat(all_ENCs, emp_cov)
+mean_CI_width_cov_hat = mean_widths_many_cov_mats(all_ENCs, all_covs)
+mean_CI_width_cov_tilde = mean_widths_many_cov_mats(all_ENCs, all_cov_tildes)
 
 data_CI_width = data.frame(
     emp = mean_CI_width_emp,

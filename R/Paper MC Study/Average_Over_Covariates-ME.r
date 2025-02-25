@@ -392,6 +392,10 @@ MC_results_ME = pblapply(output_names, function(x) {
 MC_results_ME_raw = MC_results_ME
 # MC_results_ME = MC_results_ME_raw
 
+#* Check which entries are null
+check_null = sapply(MC_results_ME_raw, is.null)
+inds_null = which(check_null)
+
 #* Remove null entries
 MC_results_ME = MC_results_ME %>% Filter(Negate(is.null), .)
 length(MC_results_ME)
@@ -431,12 +435,11 @@ mean_cov_tilde = Reduce("+", all_cov_tildes) / length(all_cov_tildes)
 mean_cov_tilde = (mean_cov_tilde + t(mean_cov_tilde)) / 2
 
 
-norm(emp_cov - mean_cov_hat, "2") / min(norm(emp_cov, "2"), norm(mean_cov_hat, "2"))
-
 
 #* Investigate distribution of errors
 all_cov_hat_errs = sapply(all_covs, function(x) mat_rel_err(emp_cov, x))
 hist(all_cov_hat_errs)
+hist(all_cov_hat_errs[-which.max(all_cov_hat_errs)])
 which(all_cov_hat_errs > 100)
 all_covs[[58]]
 all_cov_hat_errs %>% Filter(function(x) x < 15, .) %>% hist(breaks = 20)
@@ -444,6 +447,7 @@ all_cov_hat_errs %>% Filter(function(x) x < 15, .) %>% hist(breaks = 20)
 
 all_cov_tilde_errs = sapply(all_cov_tildes, function(x) mat_rel_err(emp_cov, x))
 hist(all_cov_tilde_errs)
+hist(all_cov_tilde_errs[-which.max(all_cov_tilde_errs)])
 which(all_cov_tilde_errs > 3)
 all_cov_tildes[[65]]
 all_cov_tilde_errs %>% Filter(function(x) x < 3, .) %>% hist(breaks = 20)
@@ -519,9 +523,9 @@ data_cover_rate_mediation
 
 # ------------------------------- Get CI Widths ------------------------------ #
 
-mean_CI_width_emp = get_widths(all_MEs, emp_cov)
-mean_CI_width_cov_hat = get_widths_many_cov_mats(all_MEs, all_covs)
-mean_CI_width_cov_tilde = get_widths_many_cov_mats(all_MEs, all_cov_tildes)
+mean_CI_width_emp = mean_widths_one_cov_mat(all_MEs, emp_cov)
+mean_CI_width_cov_hat = mean_widths_many_cov_mats(all_MEs, all_covs)
+mean_CI_width_cov_tilde = mean_widths_many_cov_mats(all_MEs, all_cov_tildes)
 
 data_CI_width = data.frame(
     emp = mean_CI_width_emp,
@@ -539,3 +543,50 @@ all_CI_widths_mediation = many_widths(all_mediation_CIs)
 mean_CI_widths_mediation = sapply(all_CI_widths_mediation, mean)
 data_CI_width_mediation$mediation = mean_CI_widths_mediation
 data_CI_width_mediation
+
+
+
+
+SD_CI_width_cov_hat = SD_widths_many_cov_mats(all_MEs, all_covs)
+SD_CI_width_cov_tilde = SD_widths_many_cov_mats(all_MEs, all_cov_tildes)
+
+COV_CI_width_cov_hat = SD_CI_width_cov_hat / mean_CI_width_cov_hat
+COV_CI_width_cov_tilde = SD_CI_width_cov_tilde / mean_CI_width_cov_tilde
+COV_CI_width_cov_hat
+COV_CI_width_cov_tilde
+
+
+all_widths_delta = get_widths_many_cov_mats(all_MEs, all_covs)
+all_widths_MC_delta = get_widths_many_cov_mats(all_MEs, all_cov_tildes)
+
+i=1
+
+for(i in seq_along(all_widths_delta)){
+    this_widths_delta = all_widths_delta[[i]]
+    this_widths_MC_delta = all_widths_MC_delta[[i]]
+    this_width_data = data.frame(width = c(this_widths_delta, this_widths_MC_delta),
+                                type = c(rep("delta", times=length(this_widths_delta)), rep("MC", times=length(this_widths_MC_delta))))
+
+    this_ME_name = colnames(all_MEs)[i]
+
+    this_fig = ggplot(this_width_data, aes(x = width)) +
+        geom_histogram() +
+        facet_wrap(~type, ncol = 2)  +
+        ggtitle(paste0(this_ME_name, " - ", i)) +
+        theme(plot.title = element_text(hjust = 0.5, size = 20))
+
+    plot(this_fig)
+
+}
+
+
+ind_weird = which(all_widths_delta[[1]] > 6)
+
+vals_weird = sapply(all_widths_delta, function(x) x[ind_weird])
+
+
+test_widths_delta = lapply(all_widths_delta, function(x) x[-ind_weird])
+test_mean_delta = sapply(test_widths_delta, mean)
+
+test_mean_delta
+mean_CI_width_cov_tilde
