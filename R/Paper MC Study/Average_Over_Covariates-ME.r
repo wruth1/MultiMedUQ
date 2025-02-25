@@ -547,6 +547,9 @@ data_CI_width_mediation
 
 
 
+
+# ------------------------ Investigate large CI widths ----------------------- #
+
 SD_CI_width_cov_hat = SD_widths_many_cov_mats(all_MEs, all_covs)
 SD_CI_width_cov_tilde = SD_widths_many_cov_mats(all_MEs, all_cov_tildes)
 
@@ -559,8 +562,8 @@ COV_CI_width_cov_tilde
 all_widths_delta = get_widths_many_cov_mats(all_MEs, all_covs)
 all_widths_MC_delta = get_widths_many_cov_mats(all_MEs, all_cov_tildes)
 
-i=1
 
+#* Plot histograms of widths for each parameter using delta and MC-delta
 for(i in seq_along(all_widths_delta)){
     this_widths_delta = all_widths_delta[[i]]
     this_widths_MC_delta = all_widths_MC_delta[[i]]
@@ -579,7 +582,7 @@ for(i in seq_along(all_widths_delta)){
 
 }
 
-
+#* Investigate single large width
 ind_weird = which(all_widths_delta[[1]] > 6)
 
 vals_weird = sapply(all_widths_delta, function(x) x[ind_weird])
