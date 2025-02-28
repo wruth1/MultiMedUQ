@@ -49,10 +49,10 @@ which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables ha
 
 # Number of groups
 # K = 10
-K = 50
+# K = 50
 # K = 100
 # K = 200
-# K = 500
+K = 500
 
 # Observations per group
 N = 100
@@ -403,9 +403,9 @@ stopCluster(cl)
 
 
 
-# K = 50
-# N = 500
-# folder_suffix = paste0("K=", K, ", N=", N)
+K = 50
+N = 500
+folder_suffix = paste0("K=", K, ", N=", N)
 
 # ------------------------------ Read-in Results ----------------------------- #
 output_names = list.files(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/"))
