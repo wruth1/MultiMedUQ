@@ -17,6 +17,7 @@ library(glmmTMB)
 library(stringr)
 library(tibble)
 library(mediation)
+library(outliers)       # Grubbs' test for outliers
 source("R/Exact_Asymptotics/Exact_Asymptotics_Helpers.r")
 source("R/Exact_Asymptotics/Imai Method.r")
 devtools::load_all()
@@ -54,7 +55,8 @@ K = 50
 # K = 500
 
 # Observations per group
-N = 500
+N = 100
+# N = 500
 # N=1000
 # N = 10000
 n = N
@@ -194,7 +196,6 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
 
 
-
     tryCatch({
 
         this_timings = list()
@@ -205,8 +206,23 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
         # Fit models
         tic()
 
-        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial)#, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)#, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        Y_fit_warning = NULL
+        M_fit_warning = NULL
+
+        #? Some model fits produce warnings. I want to capture these for later investigation
+        fit_Y = withCallingHandlers(glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial), 
+                                     warning = function(w) {
+                                         Y_fit_warning <<- w
+                                     })
+        fit_M = withCallingHandlers(glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial), 
+                                     warning = function(w) {
+                                         M_fit_warning <<- w
+                                     }) 
+
+        model_fit_warnings = list(Y = Y_fit_warning, M = M_fit_warning)
+
+        # fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial)#, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        # fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)#, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
 
         this_time = toc()
         this_timings$fit_models = this_time$toc - this_time$tic
@@ -328,35 +344,35 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
 
 
-        # ----------------------------- mediation Package ---------------------------- #
+        # # ----------------------------- mediation Package ---------------------------- #
 
-        tic()
+        # tic()
 
-        fit_Y_lme4 = glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M_lme4 = glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
+        # fit_Y_lme4 = glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        # fit_M_lme4 = glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
 
-        this_time = toc()
-        this_timings$mediation_fit_models = this_time$toc - this_time$tic
+        # this_time = toc()
+        # this_timings$mediation_fit_models = this_time$toc - this_time$tic
 
 
-        tic()
+        # tic()
 
-        MC_delta_info = mediate(fit_M_lme4, fit_Y_lme4, treat = "X", mediator = "M", sims = B)
+        # MC_delta_info = mediate(fit_M_lme4, fit_Y_lme4, treat = "X", mediator = "M", sims = B)
 
-        #* Extract relevant results from mediation output, bypassing the table produced by `summarise`
-        ME_hats_mediate = with(MC_delta_info, c(total = tau.coef, direct = z0, indirect = d1))
-        ME_CIs_mediate = with(MC_delta_info, list(total = tau.ci, direct = z0.ci, indirect = d1.ci))
+        # #* Extract relevant results from mediation output, bypassing the table produced by `summarise`
+        # ME_hats_mediate = with(MC_delta_info, c(total = tau.coef, direct = z0, indirect = d1))
+        # ME_CIs_mediate = with(MC_delta_info, list(total = tau.ci, direct = z0.ci, indirect = d1.ci))
 
-        this_time = toc()
-        this_timings$mediation_get_cov = this_time$toc - this_time$tic
+        # this_time = toc()
+        # this_timings$mediation_get_cov = this_time$toc - this_time$tic
 
 
 
         # ------------------------ Compile and return results ------------------------ #
         #* With mediation package
-        output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, cov_MEs_MC_delta = cov_MEs_MC_delta, mediation_estimates = ME_hats_mediate, mediation_CIs = ME_CIs_mediate, this_timings = this_timings)
+        # output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, cov_MEs_MC_delta = cov_MEs_MC_delta, mediation_estimates = ME_hats_mediate, mediation_CIs = ME_CIs_mediate, this_timings = this_timings)
         #* Without mediation package
-        # output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
+        output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings, model_fit_warnings = model_fit_warnings, dataset_index = i)
 
         save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
@@ -376,6 +392,20 @@ print(folder_suffix)
 stopCluster(cl)
 
 
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                        Analysis of Simulation Results                        #
+# ---------------------------------------------------------------------------- #
+
+
+
+# K = 50
+# N = 500
+# folder_suffix = paste0("K=", K, ", N=", N)
 
 # ------------------------------ Read-in Results ----------------------------- #
 output_names = list.files(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/"))
@@ -416,41 +446,123 @@ min(cov_hat_ew_mins)
 
 # ------------------------------ Extract results ----------------------------- #
 
+all_warnings = lapply(MC_results_ME, function(x) x$model_fit_warnings)
+warnings_check = sapply(all_warnings, function(x) !all(is.null(unlist(x))))
+inds_warnings = which(warnings_check)
+inds_warnings
+length(inds_warnings)
 
-all_MEs = sapply(MC_results_ME, function(x) x$this_MEs) %>% t()
-all_covs = lapply(MC_results_ME, function(x) x$cov_hat_MEs)
-all_cov_tildes = lapply(MC_results_ME, function(x) x$cov_MEs_MC_delta)
+MC_results_ME = MC_results_ME[!warnings_check]
+
+
+all_MEs_raw = sapply(MC_results_ME, function(x) x$this_MEs) %>% t()
+all_covs_raw = lapply(MC_results_ME, function(x) x$cov_hat_MEs)
+all_cov_tildes_raw = lapply(MC_results_ME, function(x) x$cov_MEs_MC_delta)
 
 all_timings = t(sapply(MC_results_ME, function(x) unlist(x$this_timings)))
 mean_times = colMeans(all_timings)
 mean_times
 
 
-emp_cov = cov(all_MEs)
-
-mean_cov_hat = Reduce("+", all_covs) / length(all_covs)
-mean_cov_hat = (mean_cov_hat + t(mean_cov_hat)) / 2
-
-mean_cov_tilde = Reduce("+", all_cov_tildes) / length(all_cov_tildes)
-mean_cov_tilde = (mean_cov_tilde + t(mean_cov_tilde)) / 2
 
 
 
-#* Investigate distribution of errors
-all_cov_hat_errs = sapply(all_covs, function(x) mat_rel_err(emp_cov, x))
+emp_cov = cov(all_MEs_raw)
+
+mean_cov_hat_raw = Reduce("+", all_covs_raw) / length(all_covs_raw)
+mean_cov_hat_raw = (mean_cov_hat_raw + t(mean_cov_hat_raw)) / 2
+
+mean_cov_tilde_raw = Reduce("+", all_cov_tildes_raw) / length(all_cov_tildes_raw)
+mean_cov_tilde_raw = (mean_cov_tilde_raw + t(mean_cov_tilde_raw)) / 2
+
+
+
+
+# --------- Remove runs with pathologically large covariance matrices -------- #
+
+#? Significance level threshold for declaring outliers under Grubbs' Test
+sig_level = 1e-10
+
+#* Get all deviations from empirical covariance for both delta and MC-delta
+all_cov_hat_errs = sapply(all_covs_raw, function(x) mat_rel_err(emp_cov, x))
+all_cov_tilde_errs = sapply(all_cov_tildes_raw, function(x) mat_rel_err(emp_cov, x))
+
+
+#* Use Grubbs' Test to detect outliers
+
+# Like negative indexing, but can handle inds == c()
+remove_indices <- function(X, inds){
+    if(is.null(inds)){
+        return(X)
+    } else{
+        return(X[-inds])
+    }
+}
+
+remove_rows <- function(mat, inds){
+    if(is.null(inds)){
+        return(mat)
+    } else{
+        return(mat[-inds,])
+    }
+}
+
+# Return indices of all outliers as determined by Grubbs' Test
+find_all_outliers <- function(X, sig_level = 1e-5){
+    outlier_inds = c()
+    done = F
+
+    while(!done){
+        X_smaller = remove_indices(X, outlier_inds)
+
+        grubbs_info = grubbs.test(X_smaller)
+        p_val = grubbs_info$p.value
+
+        if(p_val > sig_level){
+            done = T
+        } else{
+            this_outlier_val = max(X_smaller)
+            this_outlier_ind = which(X == this_outlier_val)
+            outlier_inds = c(outlier_inds, this_outlier_ind)
+        }
+
+        # hist(X_smaller)
+
+        # print(p_val)
+    }
+
+    return(outlier_inds)
+}
+
+
+#* Identify runs corresponding to error outliers
+bad_runs_delta = find_all_outliers(all_cov_hat_errs, sig_level = sig_level)
+bad_runs_MC_delta = find_all_outliers(all_cov_tilde_errs, sig_level = sig_level)
+all_bad_runs = unique(c(bad_runs_delta, bad_runs_MC_delta))
+
+length(all_bad_runs)
+length(all_bad_runs) / length(all_covs_raw)
+
+
+#* Remove runs corresponding to error outliers
+all_MEs = remove_rows(all_MEs_raw, all_bad_runs)
+all_covs = remove_indices(all_covs_raw, all_bad_runs)
+all_cov_tildes = remove_indices(all_cov_tildes_raw, all_bad_runs)
+
+
+#* Diagnostic plots for covariance matrix outliers
 hist(all_cov_hat_errs)
-hist(all_cov_hat_errs[-which.max(all_cov_hat_errs)])
-which(all_cov_hat_errs > 100)
-all_covs[[58]]
-all_cov_hat_errs %>% Filter(function(x) x < 15, .) %>% hist(breaks = 20)
+# hist(all_cov_hat_errs[-which.max(all_cov_hat_errs)])
+# which(all_cov_hat_errs > 100)
+# all_covs[[58]]
+# all_cov_hat_errs %>% Filter(function(x) x < 15, .) %>% hist(breaks = 20)
 
 
-all_cov_tilde_errs = sapply(all_cov_tildes, function(x) mat_rel_err(emp_cov, x))
 hist(all_cov_tilde_errs)
-hist(all_cov_tilde_errs[-which.max(all_cov_tilde_errs)])
-which(all_cov_tilde_errs > 3)
-all_cov_tildes[[65]]
-all_cov_tilde_errs %>% Filter(function(x) x < 3, .) %>% hist(breaks = 20)
+# hist(all_cov_tilde_errs[-which.max(all_cov_tilde_errs)])
+# which(all_cov_tilde_errs > 3)
+# all_cov_tildes[[65]]
+# all_cov_tilde_errs %>% Filter(function(x) x < 3, .) %>% hist(breaks = 20)
 
 
 #* mediation package
@@ -497,7 +609,28 @@ true_MEs = all_MEs_ENCs(scale, true_ENCs, which_REs = which_REs)
 
 
 
-#* Compute coverage rates
+#* Coverage rates before removing outliers
+cover_rate_emp_raw = get_coverage_rates(all_MEs_raw, emp_cov, true_MEs)
+cover_rate_cov_hat_raw = get_coverage_rates_many_cov_mats(all_MEs_raw, all_covs_raw, true_MEs)
+cover_rate_cov_tilde_raw = get_coverage_rates_many_cov_mats(all_MEs_raw, all_cov_tildes_raw, true_MEs)
+
+data_cover_rate_raw = data.frame(
+    emp = cover_rate_emp_raw,
+    cov_hat = cover_rate_cov_hat_raw,
+    cov_tilde = cover_rate_cov_tilde_raw
+)
+rownames(data_cover_rate_raw) = colnames(all_MEs_raw)
+data_cover_rate_raw
+
+
+# Relative coverage rates compared to emp
+data_cover_rate_rel_raw = data_cover_rate_raw / cover_rate_emp_raw
+data_cover_rate_rel_raw
+
+
+
+
+#* Coverage rates after removing outliers
 cover_rate_emp = get_coverage_rates(all_MEs, emp_cov, true_MEs)
 cover_rate_cov_hat = get_coverage_rates_many_cov_mats(all_MEs, all_covs, true_MEs)
 cover_rate_cov_tilde = get_coverage_rates_many_cov_mats(all_MEs, all_cov_tildes, true_MEs)
@@ -509,6 +642,11 @@ data_cover_rate = data.frame(
 )
 rownames(data_cover_rate) = colnames(all_MEs)
 data_cover_rate
+
+
+# Relative coverage rates compared to emp
+data_cover_rate_rel = data_cover_rate / cover_rate_emp
+data_cover_rate_rel
 
 
 #* Incorporate mediation package
@@ -523,6 +661,26 @@ data_cover_rate_mediation
 
 # ------------------------------- Get CI Widths ------------------------------ #
 
+#* Before removing outliers
+mean_CI_width_emp_raw = mean_widths_one_cov_mat(all_MEs_raw, emp_cov)
+mean_CI_width_cov_hat_raw = mean_widths_many_cov_mats(all_MEs_raw, all_covs_raw)
+mean_CI_width_cov_tilde_raw = mean_widths_many_cov_mats(all_MEs_raw, all_cov_tildes_raw)
+
+data_CI_width_raw = data.frame(
+    emp = mean_CI_width_emp_raw,
+    cov_hat = mean_CI_width_cov_hat_raw,
+    cov_tilde = mean_CI_width_cov_tilde_raw
+)
+rownames(data_CI_width_raw) = colnames(all_MEs_raw)
+data_CI_width_raw
+
+# Average widths relative to empirical
+data_CI_rel_widths_raw = data_CI_width_raw / mean_CI_width_emp_raw
+data_CI_rel_widths_raw
+apply(data_CI_rel_widths_raw, 2, function(x) max(abs(x - 1)))
+
+
+#* After removing outliers
 mean_CI_width_emp = mean_widths_one_cov_mat(all_MEs, emp_cov)
 mean_CI_width_cov_hat = mean_widths_many_cov_mats(all_MEs, all_covs)
 mean_CI_width_cov_tilde = mean_widths_many_cov_mats(all_MEs, all_cov_tildes)
@@ -535,6 +693,11 @@ data_CI_width = data.frame(
 rownames(data_CI_width) = colnames(all_MEs)
 data_CI_width
 
+#* Average widths relative to empirical
+data_CI_rel_widths = data_CI_width / mean_CI_width_emp
+data_CI_rel_widths
+apply(data_CI_rel_widths, 2, function(x) max(abs(x - 1)))
+
 
 #* mediation package
 data_CI_width_mediation = data_CI_width[c(1,4,7),]
@@ -545,51 +708,3 @@ data_CI_width_mediation$mediation = mean_CI_widths_mediation
 data_CI_width_mediation
 
 
-
-
-
-# ------------------------ Investigate large CI widths ----------------------- #
-
-SD_CI_width_cov_hat = SD_widths_many_cov_mats(all_MEs, all_covs)
-SD_CI_width_cov_tilde = SD_widths_many_cov_mats(all_MEs, all_cov_tildes)
-
-COV_CI_width_cov_hat = SD_CI_width_cov_hat / mean_CI_width_cov_hat
-COV_CI_width_cov_tilde = SD_CI_width_cov_tilde / mean_CI_width_cov_tilde
-COV_CI_width_cov_hat
-COV_CI_width_cov_tilde
-
-
-all_widths_delta = get_widths_many_cov_mats(all_MEs, all_covs)
-all_widths_MC_delta = get_widths_many_cov_mats(all_MEs, all_cov_tildes)
-
-
-#* Plot histograms of widths for each parameter using delta and MC-delta
-for(i in seq_along(all_widths_delta)){
-    this_widths_delta = all_widths_delta[[i]]
-    this_widths_MC_delta = all_widths_MC_delta[[i]]
-    this_width_data = data.frame(width = c(this_widths_delta, this_widths_MC_delta),
-                                type = c(rep("delta", times=length(this_widths_delta)), rep("MC", times=length(this_widths_MC_delta))))
-
-    this_ME_name = colnames(all_MEs)[i]
-
-    this_fig = ggplot(this_width_data, aes(x = width)) +
-        geom_histogram() +
-        facet_wrap(~type, ncol = 2)  +
-        ggtitle(paste0(this_ME_name, " - ", i)) +
-        theme(plot.title = element_text(hjust = 0.5, size = 20))
-
-    plot(this_fig)
-
-}
-
-#* Investigate single large width
-ind_weird = which(all_widths_delta[[1]] > 6)
-
-vals_weird = sapply(all_widths_delta, function(x) x[ind_weird])
-
-
-test_widths_delta = lapply(all_widths_delta, function(x) x[-ind_weird])
-test_mean_delta = sapply(test_widths_delta, mean)
-
-test_mean_delta
-mean_CI_width_cov_tilde

@@ -238,7 +238,7 @@ get_widths_many_cov_mats <- function(Theta_hats_data, cov_mat_list){
 #' @returns A vector of mean CI widths, one component for each parameter.
 #' @export
 mean_widths_one_cov_mat <- function(Theta_hats_data, cov_mat){
-    all_widths = get_widths(Theta_hats_data, cov_mat)
+    all_widths = get_widths_one_cov_mat(Theta_hats_data, cov_mat)
     mean_widths = sapply(all_widths, mean)
 
     return(mean_widths)
