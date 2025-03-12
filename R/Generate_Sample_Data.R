@@ -134,6 +134,7 @@ list_2_data_make_labels <- function(X_list, group_labels = NULL){
 #' make_validation_data(n, K, all_reg_pars, output_list = FALSE)
 make_validation_data <-
   function(n, K, b_Y, theta_Y, b_M, theta_M,
+           num_confounders = 2,
            output_list = FALSE,
            return_REs = FALSE,
            which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
@@ -153,7 +154,7 @@ make_validation_data <-
 
 
     # Generate data as a list
-    data_list_output = make_validation_data_list(n, K, all_reg_pars, return_REs, which_REs)
+    data_list_output = make_validation_data_list(n, K, all_reg_pars, num_confounders = num_confounders, return_REs = return_REs, which_REs = which_REs)
     if (!return_REs) {
       data_list = data_list_output
     } else{
@@ -179,9 +180,10 @@ make_validation_data <-
 
 
 make_validation_data_list <-
-  function(n, K, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+  function(n, K, all_reg_pars, 
+            num_confounders = 2, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
     output_list = purrr::map(1:K,
-                             ~ make_one_group_validation(n, all_reg_pars, return_REs, which_REs))
+                             ~ make_one_group_validation(n, all_reg_pars, num_confounders = num_confounders, return_REs = return_REs, which_REs = which_REs))
 
     if (!return_REs) {
       return(output_list)
@@ -194,9 +196,10 @@ make_validation_data_list <-
 
 
 make_one_group_validation <-
-  function(n, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+  function(n, all_reg_pars, 
+            num_confounders = 2, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
     X = make_X_validation(n)
-    all_Cs = make_C_validation(n)
+    all_Cs = make_C_validation(n, num_confounders = num_confounders) 
 
     M_info = make_M_validation(X, all_Cs, all_reg_pars, return_REs, which_REs)
 
@@ -234,11 +237,21 @@ make_X_validation <- function(n) {
   return(stats::rbinom(n, 1, 0.5))
 }
 
-make_C_validation <- function(n) {
-  C1 = stats::rbinom(n, 1, 0.5)
-  C2 = stats::rbinom(n, 1, 0.5)
+make_C_validation <- function(n, num_confounders = 2) {
+  confounder_data_raw = matrix(nrow = n, ncol = num_confounders)
 
-  return(data.frame(C1 = C1, C2 = C2))
+  for (i in 1:num_confounders) {
+    this_confounder = stats::rbinom(n, 1, 0.5)
+
+    confounder_data_raw[, i] = this_confounder
+  }
+
+  confounder_data = data.frame(confounder_data_raw)
+  for(i in 1:num_confounders){
+    colnames(confounder_data)[i] = paste0("C", i)
+  }
+
+  return(confounder_data)
 }
 
 

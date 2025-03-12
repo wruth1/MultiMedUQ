@@ -55,8 +55,8 @@ which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables ha
 K = 500
 
 # Observations per group
-N = 100
-# N = 500
+# N = 100
+N = 500
 # N=1000
 # N = 10000
 n = N
@@ -113,6 +113,7 @@ p = p_Y + p_M
 folder_suffix = paste0("K=", K, ", N=", N)
 dir.create(paste0("R/Paper MC Study/Data/Data - ", folder_suffix), showWarnings = F)
 dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix), showWarnings = F)
+# dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix), showWarnings = F)
 
 
 
@@ -188,6 +189,7 @@ num_datasets = length(list.files(paste0("R/Paper MC Study/Data/Data - ", folder_
 # num_datasets = 10
 
 unlink(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/*"))
+# unlink(paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix, "/*"))
 
 # Fit models, extract ENCs, estimate covariance matrices and save results
 MC_results_ME = pblapply(1:num_datasets, function(i) {
@@ -221,8 +223,8 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
         model_fit_warnings = list(Y = Y_fit_warning, M = M_fit_warning)
 
-        # fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial)#, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        # fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)#, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        # fit_Y_BFGS = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        # fit_M_BFGS = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial)#, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
 
         this_time = toc()
         this_timings$fit_models = this_time$toc - this_time$tic
@@ -235,6 +237,8 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
         theta_hat_M = get_model_pars_TMB(fit_M)
         Theta_hat = c(unlist(theta_hat_Y), unlist(theta_hat_M))
         cov_hat = all_pars_cov_mat_TMB(fit_Y, fit_M)
+
+        # eigen(cov_hat)$values
 
         # cbind(Theta_hat, (diag(cov_hat)))
 
@@ -373,13 +377,17 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
         # output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, cov_MEs_MC_delta = cov_MEs_MC_delta, mediation_estimates = ME_hats_mediate, mediation_CIs = ME_CIs_mediate, this_timings = this_timings)
         #* Without mediation package
         output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings, model_fit_warnings = model_fit_warnings, dataset_index = i)
+        #* Only delta
+        # output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, this_timings = this_timings, model_fit_warnings = model_fit_warnings, dataset_index = i)
 
         save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/", i, ".RData"))
+        # save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     }, error = function(e){
-        output = NULL
+        output = e
 
         save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/", i, ".RData"))
+        # save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     })
 
@@ -403,7 +411,7 @@ stopCluster(cl)
 
 
 
-K = 50
+K = 10
 N = 500
 folder_suffix = paste0("K=", K, ", N=", N)
 
@@ -417,6 +425,11 @@ MC_results_ME = pblapply(output_names, function(x) {
 
 
 # ----------------------------- Clean-up Results ----------------------------- #
+
+check_lengths = sapply(MC_results_ME, length)
+which(check_lengths < 6)
+MC_results_ME = remove_indices(MC_results_ME, which(check_lengths < 6))
+length(MC_results_ME)
 
 #* Backup raw output from simulation
 MC_results_ME_raw = MC_results_ME
@@ -435,6 +448,7 @@ all_covs_raw = lapply(MC_results_ME, function(x) x$cov_hat_MEs)
 inds_remove = sapply(all_covs_raw, function(x) any(diag(x) < 0))
 any(inds_remove)
 MC_results_ME = MC_results_ME[!inds_remove]
+length(MC_results_ME)
 
 cov_hat_ew_mins = sapply(all_covs_raw, function(x) min(Re(eigen(x)$values)))
 # hist(cov_hat_ew_mins)
@@ -462,7 +476,8 @@ all_cov_tildes_raw = lapply(MC_results_ME, function(x) x$cov_MEs_MC_delta)
 all_timings = t(sapply(MC_results_ME, function(x) unlist(x$this_timings)))
 mean_times = colMeans(all_timings)
 mean_times
-
+sd_times = apply(all_timings, 2, sd)
+sd_times
 
 
 
@@ -539,6 +554,7 @@ find_all_outliers <- function(X, sig_level = 1e-5){
 bad_runs_delta = find_all_outliers(all_cov_hat_errs, sig_level = sig_level)
 bad_runs_MC_delta = find_all_outliers(all_cov_tilde_errs, sig_level = sig_level)
 all_bad_runs = unique(c(bad_runs_delta, bad_runs_MC_delta))
+# all_bad_runs = bad_runs_delta
 
 length(all_bad_runs)
 length(all_bad_runs) / length(all_covs_raw)
@@ -622,6 +638,7 @@ data_cover_rate_raw = data.frame(
 rownames(data_cover_rate_raw) = colnames(all_MEs_raw)
 data_cover_rate_raw
 
+colMeans(data_cover_rate_raw)
 
 # Relative coverage rates compared to emp
 data_cover_rate_rel_raw = data_cover_rate_raw / cover_rate_emp_raw
