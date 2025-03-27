@@ -40,6 +40,8 @@ devtools::load_all()
 
 # Set parameters
 
+num_confounders = 3
+
 B = 500     # Number of samples to generate for MC delta
 scale = c("diff", "rat", "OR")      # What scales should we compute mediation effects on?
 which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables have random effects? Eventually, I will need a better way to specify this
@@ -71,19 +73,21 @@ w = c(2,3)
 #! Scale factor for coefficients and SDs
 scale_factor = 1
 
+set.seed(123)
+
 b_Y_X = 0.966486302988689
 b_Y_M = 1.99644760563721
-b_Y_C1 = -1
-b_Y_C2 = 1
-b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) / 2       # ~ -1.48
-b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) * scale_factor
+b_Y_Cs = sample(c(-1, 1), num_confounders, replace = T)
+b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_Cs) / 2       # ~ -1.48
+b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_Cs) * scale_factor
 
+
+set.seed(321)
 
 b_M_X = 1.76353928991247
-b_M_C1 = 1
-b_M_C2 = -1
-b_M_int = -sum(b_M_X, b_M_C1, b_M_C2) / 2       # ~ -0.89
-b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2) * scale_factor
+b_M_Cs = sample(c(-1, 1), num_confounders, replace = T)
+b_M_int = -sum(b_M_X, b_M_Cs) / 2       # ~ -0.89
+b_M = c(b_M_int, b_M_X, b_M_Cs) * scale_factor
 
 
 
@@ -137,21 +141,21 @@ clusterSetRNGStream(cl = cl, 123)
 # clusterSetRNGStream(cl = cl, 11111111)
 
 
-num_datasets = 200
 
 
 
 # -------------------------- Generate and save data -------------------------- #
 
-
-set.seed(1)
+num_datasets = 200
 
 # First, delete any datasets currently in the target directory
 unlink(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/*"))
 
+set.seed(1)
+
 # Generate and save datasets
 save_data = pbsapply(1:num_datasets, function(i) {
-    data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, output_list = F, which_REs = which_REs)
+    data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, num_confounders = num_confounders, output_list = F, which_REs = which_REs)
     save(data, file = paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"))
 }, cl=cl)
 

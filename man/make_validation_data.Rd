@@ -11,6 +11,7 @@ make_validation_data(
   theta_Y,
   b_M,
   theta_M,
+  num_confounders = 2,
   output_list = FALSE,
   return_REs = FALSE,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")

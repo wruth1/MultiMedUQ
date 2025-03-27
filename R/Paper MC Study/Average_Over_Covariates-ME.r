@@ -43,16 +43,19 @@ devtools::load_all()
 
 # Set parameters
 
+# num_confounders = 3
+num_confounders = 5
+
 B = 500     # Number of samples to generate for MC delta
 scale = c("diff", "rat", "OR")      # What scales should we compute mediation effects on?
 which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables have random effects? Eventually, I will need a better way to specify this
 
 # Number of groups
 # K = 10
-# K = 50
+K = 50
 # K = 100
 # K = 200
-K = 500
+# K = 500
 
 # Observations per group
 # N = 100
@@ -78,19 +81,21 @@ w = c(2,3)
 #! Scale factor for coefficients and SDs
 scale_factor = 1
 
+set.seed(123)
+
 b_Y_X = 0.966486302988689
 b_Y_M = 1.99644760563721
-b_Y_C1 = -1
-b_Y_C2 = 1
-b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) / 2       # ~ -1.48
-b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) * scale_factor
+b_Y_Cs = sample(c(-1, 1), num_confounders, replace = T)
+b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_Cs) / 2       # ~ -1.48
+b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_Cs) * scale_factor
 
+
+set.seed(321)
 
 b_M_X = 1.76353928991247
-b_M_C1 = 1
-b_M_C2 = -1
-b_M_int = -sum(b_M_X, b_M_C1, b_M_C2) / 2       # ~ -0.89
-b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2) * scale_factor
+b_M_Cs = sample(c(-1, 1), num_confounders, replace = T)
+b_M_int = -sum(b_M_X, b_M_Cs) / 2       # ~ -0.89
+b_M = c(b_M_int, b_M_X, b_M_Cs) * scale_factor
 
 
 
@@ -110,7 +115,7 @@ p_M = length(b_M)
 p = p_Y + p_M
 
 
-folder_suffix = paste0("K=", K, ", N=", N)
+folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_confounders)
 dir.create(paste0("R/Paper MC Study/Data/Data - ", folder_suffix), showWarnings = F)
 dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix), showWarnings = F)
 # dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix), showWarnings = F)
@@ -145,7 +150,7 @@ get_confounder_freq <- function(data, outcome_name, exposure_name, mediator_name
 # cl = makeCluster(15)
 cl = makeCluster(10)
 # clusterExport(cl, c("N", "b_Y", "theta_Y", "b_M", "theta_M", "which_REs"))
-clusterExport(cl, c("w", "B", "scale", "which_REs", "N", "n", "K", "b_Y", "theta_Y", "b_M", "theta_M", "folder_suffix", "get_confounder_freq", "outcome_name", "exposure_name", "mediator_name", "group_name"))
+clusterExport(cl, c("w", "B", "scale", "which_REs", "N", "n", "K", "b_Y", "theta_Y", "b_M", "theta_M", "folder_suffix", "get_confounder_freq", "outcome_name", "exposure_name", "mediator_name", "group_name", "num_confounders"))
 clusterEvalQ(cl, {
     library(lme4)
     library(merDeriv)
@@ -166,7 +171,6 @@ clusterEvalQ(cl, {
 })
 clusterSetRNGStream(cl = cl, 123)
 # clusterSetRNGStream(cl = cl, 11111111)
-
 
 
 
@@ -208,15 +212,24 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
         # Fit models
         tic()
 
+        ## Build formulas for model fitting
+        ### Y ~ X + M + C1 + ... + Cr + (X + M | group)
+        pred_vars_Y <- setdiff(names(data), c("Y", "group"))
+        formula_Y <- as.formula(paste("Y ~", paste(pred_vars_Y, collapse = " + "), " + (X + M | group)"))
+
+        ### M ~ X + C1 + ... + Cr + (X | group)
+        pred_vars_M <- setdiff(names(data), c("Y", "M", "group"))
+        formula_M <- as.formula(paste("M ~", paste(pred_vars_M, collapse = " + "), " + (X | group)"))
+
         Y_fit_warning = NULL
         M_fit_warning = NULL
 
         #? Some model fits produce warnings. I want to capture these for later investigation
-        fit_Y = withCallingHandlers(glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial), 
+        fit_Y = withCallingHandlers(glmmTMB(formula_Y, data = data, family = binomial), 
                                      warning = function(w) {
                                          Y_fit_warning <<- w
                                      })
-        fit_M = withCallingHandlers(glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial), 
+        fit_M = withCallingHandlers(glmmTMB(formula_M, data = data, family = binomial), 
                                      warning = function(w) {
                                          M_fit_warning <<- w
                                      }) 
@@ -297,9 +310,9 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
         off_diag_terms = matrix(0, nrow=4, ncol=4)
 
-        num_confounders = length(all_confounders)
-        for(j1 in 1:(num_confounders-1)){
-            for(j2 in (j1+1):num_confounders){
+        num_confounder_combinations = length(all_confounders)
+        for(j1 in 1:(num_confounder_combinations-1)){
+            for(j2 in (j1+1):num_confounder_combinations){
                 this_confounder_val1 = all_confounders[[j1]]
                 this_confounder_val2 = all_confounders[[j2]]
 
@@ -329,6 +342,7 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
 
         # ------------------------------ MC Delta Method ----------------------------- #
+        
         tic()
 
         #* Note: It's important to use lapply instead of apply(., 1) here, because the latter sometimes returns a list and sometimes returns a vector, whereas the former always returns a list. Therefore, `lapply` is always compatible with the subsequent post-processing line (`apply` sometimes gave a 1x1 covariance matrix)
@@ -411,9 +425,9 @@ stopCluster(cl)
 
 
 
-K = 10
+K = 100
 N = 500
-folder_suffix = paste0("K=", K, ", N=", N)
+folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_confounders)
 
 # ------------------------------ Read-in Results ----------------------------- #
 output_names = list.files(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/"))
@@ -473,11 +487,26 @@ all_MEs_raw = sapply(MC_results_ME, function(x) x$this_MEs) %>% t()
 all_covs_raw = lapply(MC_results_ME, function(x) x$cov_hat_MEs)
 all_cov_tildes_raw = lapply(MC_results_ME, function(x) x$cov_MEs_MC_delta)
 
+
+
+# Timings
 all_timings = t(sapply(MC_results_ME, function(x) unlist(x$this_timings)))
 mean_times = colMeans(all_timings)
 mean_times
 sd_times = apply(all_timings, 2, sd)
 sd_times
+
+## Group timings by method
+both_methods_timings = all_timings[,1] + all_timings[,2] + all_timings[,3]
+delta_only_timings = all_timings[,4] + all_timings[,5]
+MC_delta_only_timings = all_timings[,6]
+
+mean_both_methods_timings = mean(both_methods_timings)
+mean_delta_only_timings = mean(delta_only_timings)
+mean_MC_delta_only_timings = mean(MC_delta_only_timings)
+mean_timings = c(mean_both_methods_timings, mean_delta_only_timings, mean_MC_delta_only_timings)
+names(mean_timings) = c("Both Methods", "Delta Only", "MC-Delta Only")
+mean_timings
 
 
 
@@ -614,6 +643,11 @@ all_confounders = info_confounders$values
 probs_confounders = rep(1 / length(all_confounders), times=length(all_confounders))
 
 len_par_vecs = sapply(list(b_Y, theta_Y, b_M, theta_M), length)
+
+
+
+
+
 all_true_conditional_ENCs = lapply(all_confounders, function(this_confounder_val) all_ENCs_Theta(this_confounder_val, all_reg_pars, which_REs = which_REs, len_par_vecs = len_par_vecs))
 
 true_ENCs = rep(0, times=4)

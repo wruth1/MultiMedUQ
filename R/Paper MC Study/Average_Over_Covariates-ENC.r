@@ -41,17 +41,20 @@ devtools::load_all()
 
 # Set parameters
 
+num_confounders = 3
+
 B = 500     # Number of samples to generate for MC delta
 scale = c("diff", "rat", "OR")      # What scales should we compute mediation effects on?
 which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables have random effects? Eventually, I will need a better way to specify this
 
 # Number of groups
-K = 100
+# K = 100
 # K=10
+K=50
 
 # Observations per group
-# N = 500
-N=1000
+N = 500
+# N=1000
 # N = 10000
 n = N
 
@@ -72,19 +75,21 @@ w = c(2,3)
 #! Scale factor for coefficients and SDs
 scale_factor = 1
 
+set.seed(123)
+
 b_Y_X = 0.966486302988689
 b_Y_M = 1.99644760563721
-b_Y_C1 = -1
-b_Y_C2 = 1
-b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) / 2       # ~ -1.48
-b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_C1, b_Y_C2) * scale_factor
+b_Y_Cs = sample(c(-1, 1), num_confounders, replace = T)
+b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_Cs) / 2       # ~ -1.48
+b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_Cs) * scale_factor
 
+
+set.seed(321)
 
 b_M_X = 1.76353928991247
-b_M_C1 = 1
-b_M_C2 = -1
-b_M_int = -sum(b_M_X, b_M_C1, b_M_C2) / 2       # ~ -0.89
-b_M = c(b_M_int, b_M_X, b_M_C1, b_M_C2) * scale_factor
+b_M_Cs = sample(c(-1, 1), num_confounders, replace = T)
+b_M_int = -sum(b_M_X, b_M_Cs) / 2       # ~ -0.89
+b_M = c(b_M_int, b_M_X, b_M_Cs) * scale_factor
 
 
 
@@ -104,7 +109,7 @@ p_M = length(b_M)
 p = p_Y + p_M
 
 
-folder_suffix = paste0("K=", K, ", N=", N)
+folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_confounders)
 dir.create(paste0("R/Paper MC Study/Data/Data - ", folder_suffix), showWarnings = F)
 dir.create(paste0("R/Paper MC Study/Results/Marginal_ENCs/Results - ", folder_suffix), showWarnings = F)
 
@@ -138,7 +143,7 @@ get_confounder_freq <- function(data, outcome_name, exposure_name, mediator_name
 # cl = makeCluster(15)
 cl = makeCluster(10)
 # clusterExport(cl, c("N", "b_Y", "theta_Y", "b_M", "theta_M", "which_REs"))
-clusterExport(cl, c("w", "B", "scale", "which_REs", "N", "n", "K", "b_Y", "theta_Y", "b_M", "theta_M", "folder_suffix", "get_confounder_freq", "outcome_name", "exposure_name", "mediator_name", "group_name"))
+clusterExport(cl, c("w", "B", "scale", "which_REs", "N", "n", "K", "b_Y", "theta_Y", "b_M", "theta_M", "folder_suffix", "get_confounder_freq", "outcome_name", "exposure_name", "mediator_name", "group_name", "num_confounders"))
 clusterEvalQ(cl, {
     library(lme4)
     library(merDeriv)
@@ -158,12 +163,6 @@ clusterEvalQ(cl, {
 })
 clusterSetRNGStream(cl = cl, 123)
 # clusterSetRNGStream(cl = cl, 11111111)
-
-
-
-
-
-
 
 
 
@@ -198,8 +197,19 @@ MC_results_ENC = pblapply(1:num_datasets, function(i) {
         # Fit models
         tic()
 
-        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        ## Build formulas for model fitting
+        ### Y ~ X + M + C1 + ... + Cr + (X + M | group)
+        pred_vars_Y <- setdiff(names(data), c("Y", "group"))
+        formula_Y <- as.formula(paste("Y ~", paste(pred_vars_Y, collapse = " + "), " + (X + M | group)"))
+
+        ### M ~ X + C1 + ... + Cr + (X | group)
+        pred_vars_M <- setdiff(names(data), c("Y", "M", "group"))
+        formula_M <- as.formula(paste("M ~", paste(pred_vars_M, collapse = " + "), " + (X | group)"))
+
+
+        ## Run model fitting
+        fit_Y = glmmTMB(formula_Y, data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+        fit_M = glmmTMB(formula_M, data = data, family = binomial, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
 
         this_time = toc()
         this_timings$fit_models = this_time$toc - this_time$tic
