@@ -45,6 +45,8 @@ data_2_confounder_dist <- function(data, outcome_name, exposure_name, mediator_n
 #' @param confounder_probs A vector of probabilities, with element `i` corresponding to the probability of the `i`th element of `all_confounders`.
 #' @param which_REs Which random effects to include in the calculation. Default is all. Shorthands are available. See details.
 #' @param len_par_vecs Number of entries in each parameter vector. Order is b_Y, theta_Y, b_M, theta_M
+#' @param fast Should the mean be approximated by Monte Carlo?
+#' @param n_samples Number of samples to use in the Monte Carlo approximation
 #'
 #' @name Marginal_ENCs
 #'
@@ -67,16 +69,32 @@ data_2_confounder_dist <- function(data, outcome_name, exposure_name, mediator_n
 #'
 #' @returns A vector of marginal expected nested counterfactuals (i.e. averaged over the confounder distribution). Order of output is \code{ENC(1,1), ENC(1,0), ENC(0,1), ENC(0,0)}, where the former argument is \eqn{X} and the latter is \eqn{X_M}.
 #' @export
-mean_ENC_pars <- function(b_Y, theta_Y, b_M, theta_M, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+mean_ENC_pars <- function(b_Y, theta_Y, b_M, theta_M, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 5000){
+
+    num_confounder_vals = length(all_confounders)
 
     mean_ENC_hat = rep(0, times = 4)
 
-    for(j in seq_along(all_confounders)){
-        this_confounder_val = all_confounders[[j]]
+    if(!fast || (num_confounder_vals <= n_samples)){ # Compute expected value over confounder distribution exactly
+        
+        for(j in seq_along(all_confounders)){
+            this_confounder_val = all_confounders[[j]]
 
-        this_ENCs = all_ENCs(this_confounder_val, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+            this_ENCs = all_ENCs(this_confounder_val, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
 
-        mean_ENC_hat = mean_ENC_hat + confounder_probs[j] * this_ENCs
+            mean_ENC_hat = mean_ENC_hat + confounder_probs[j] * this_ENCs
+        }
+    } else{ # Compute expected value over confounder distribution by sampling
+        
+        some_confounder_inds = sample(num_confounder_vals, size = n_samples, replace = FALSE, prob = confounder_probs)
+
+        for(j in some_confounder_inds){
+            this_confounder_val = all_confounders[[j]]
+
+            this_ENCs = all_ENCs(this_confounder_val, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
+            mean_ENC_hat = mean_ENC_hat + this_ENCs / n_samples
+        }
     }
 
     return(mean_ENC_hat)
@@ -85,16 +103,32 @@ mean_ENC_pars <- function(b_Y, theta_Y, b_M, theta_M, all_confounders, confounde
 
 #' @rdname Marginal_ENCs
 #' @export
-mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, which_REs, len_par_vecs){
+mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, len_par_vecs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 5000){
+
+    num_confounder_vals = length(all_confounders)
 
     mean_ENC_hat = rep(0, times = 4)
 
-    for(j in seq_along(all_confounders)){
-        this_confounder_val = all_confounders[[j]]
+    if(!fast || (num_confounder_vals <= n_samples)){ # Compute expected value over confounder distribution exactly
 
-        this_ENCs = all_ENCs_Theta(this_confounder_val, Theta, which_REs =  which_REs, len_par_vecs = len_par_vecs)
+        for(j in seq_along(all_confounders)){
+            if(j %% 100 == 0) print(j)
+            this_confounder_val = all_confounders[[j]]
 
-        mean_ENC_hat = mean_ENC_hat + confounder_probs[j] * this_ENCs
+            this_ENCs = all_ENCs_Theta(this_confounder_val, Theta, which_REs =  which_REs, len_par_vecs = len_par_vecs)
+
+            mean_ENC_hat = mean_ENC_hat + confounder_probs[j] * this_ENCs
+        }
+    } else{ # Compute expected value over confounder distribution by sampling
+        some_confounder_inds = sample(num_confounder_vals, size = n_samples, replace = FALSE, prob = confounder_probs)
+
+        for(j in some_confounder_inds){
+            this_confounder_val = all_confounders[[j]]
+
+            this_ENCs = all_ENCs_Theta(this_confounder_val, Theta, which_REs =  which_REs, len_par_vecs = len_par_vecs)
+
+            mean_ENC_hat = mean_ENC_hat + this_ENCs / n_samples
+        }
     }
 
     return(mean_ENC_hat)
@@ -106,3 +140,35 @@ mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, which_REs, 
 # ---------------------------------------------------------------------------- #
 #                        Sampling Covariance of Mean ENC                       #
 # ---------------------------------------------------------------------------- #
+
+marginal_cov_hat_diag_terms <- function(Sigma, b_Y, theta_Y, b_M, theta_M, all_confounders, confounder_probs, len_par_vecs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 5000){
+        diag_terms = matrix(0, nrow=4, ncol=4)
+
+    if(!fast || (num_confounder_vals <= n_samples)){ # Compute expected value over confounder distribution exactly
+
+        for(j in seq_along(all_confounders)){
+            this_confounder_val = all_confounders[[j]]
+
+            this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
+            diag_terms = diag_terms + confounder_probs[j]^2 * this_cov_ENCs_delta
+        }
+    } else{ # Compute expected value over confounder distribution by sampling
+
+        some_confounder_inds = sample(num_confounder_vals, size = n_samples, replace = FALSE, prob = confounder_probs)
+
+        for(j in some_confounder_inds){
+            this_confounder_val = some_confounder_inds[[j]]
+
+            this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
+            this_prob = confounder_probs[j]
+
+            diag_terms = diag_terms + this_cov_ENCs_delta * this_prob / n_samples   # Note: Each summand has a squared probability. That's why we've got this formula that seems wrong.
+        }
+    }
+
+    return(diag_terms)
+}
+
+# Repeat function with input Theta instead of b_Y,...

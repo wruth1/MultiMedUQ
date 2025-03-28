@@ -13,15 +13,19 @@ mean_ENC_pars(
   theta_M,
   all_confounders,
   confounder_probs,
-  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
+  fast = FALSE,
+  n_samples = 5000
 )
 
 mean_ENC_Theta(
   Theta,
   all_confounders,
   confounder_probs,
-  which_REs,
-  len_par_vecs
+  len_par_vecs,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
+  fast = FALSE,
+  n_samples = 5000
 )
 }
 \arguments{
@@ -34,6 +38,10 @@ mean_ENC_Theta(
 \item{confounder_probs}{A vector of probabilities, with element `i` corresponding to the probability of the `i`th element of `all_confounders`.}
 
 \item{which_REs}{Which random effects to include in the calculation. Default is all. Shorthands are available. See details.}
+
+\item{fast}{Should the mean be approximated by Monte Carlo?}
+
+\item{n_samples}{Number of samples to use in the Monte Carlo approximation}
 
 \item{Theta}{Vector of parameters from both models. Order is b_Y, theta_Y, b_M, theta_M}
 

@@ -5,6 +5,7 @@
 \alias{all_covs_ENC}
 \alias{all_covs_ENC_Sigma}
 \alias{all_covs_ENC_pars}
+\alias{all_covs_ENC_Theta}
 \title{Covariance matrix of all ENC estimates}
 \usage{
 all_covs_ENC(
@@ -29,6 +30,13 @@ all_covs_ENC_pars(
   theta_Y,
   b_M,
   theta_M,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
+
+all_covs_ENC_Theta(
+  w,
+  Sigma,
+  Theta,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 }

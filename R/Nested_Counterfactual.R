@@ -734,6 +734,12 @@ all_covs_ENC_pars <- function(w, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs = 
   return(Jacob %*% Sigma %*% t(Jacob))
 }
 
+#' @rdname ENC_covariances
+#' @export
+all_covs_ENC_Theta <- function(w, Sigma, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  Jacob = Jacob_ENC_Theta(w, Theta, which_REs)
+  return(Jacob %*% Sigma %*% t(Jacob))
+}
 
 
 

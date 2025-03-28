@@ -247,7 +247,7 @@ MC_results_ENC = pblapply(1:num_datasets, function(i) {
 
         confounder_probs = freqs_confounders / sum(freqs_confounders)
 
-        mean_ENC_hat = mean_ENC_Theta(Theta_hat, all_confounders, confounder_probs, which_REs = which_REs, len_par_vecs = len_par_vecs)
+        mean_ENC_hat = mean_ENC_Theta(Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs)
 
 
         this_time = toc()
@@ -304,7 +304,7 @@ MC_results_ENC = pblapply(1:num_datasets, function(i) {
         some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
         some_ENC_tildes_raw = lapply(seq_len(nrow(some_Theta_tildes)), function(ii) {
             this_Theta_tilde = some_Theta_tildes[ii,]
-            tryCatch(mean_ENC_Theta(this_Theta_tilde, all_confounders, confounder_probs, which_REs = which_REs, len_par_vecs = len_par_vecs), error = function(e) NULL)}) 
+            tryCatch(mean_ENC_Theta(this_Theta_tilde, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs), error = function(e) NULL)}) 
         some_ENC_tildes = some_ENC_tildes_raw %>% Filter(Negate(is.null), .) %>% Reduce(rbind, .)   #? Remove NULLs and organize into an array
         cov_ENCs_MC_delta = cov(some_ENC_tildes)
 

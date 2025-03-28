@@ -284,7 +284,7 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
         confounder_probs = freqs_confounders / sum(freqs_confounders)
 
-        mean_ENC_hat = mean_ENC_Theta(Theta_hat, all_confounders, confounder_probs, which_REs = which_REs, len_par_vecs = len_par_vecs)
+        mean_ENC_hat = mean_ENC_Theta(Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs)
 
 
         this_time = toc()
@@ -298,18 +298,26 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
         cov_hat_mean_ENCs = matrix(0, nrow=4, ncol=4)
 
+        num_confounder_combinations = length(all_confounders)
+
 
         #* Diagonal elements
 
         diag_terms = matrix(0, nrow=4, ncol=4)
 
+        tic()
+        pb <- txtProgressBar(min = 0, max = num_confounder_combinations, initial = 0, style = 3)
         for(j in seq_along(all_confounders)){
             this_confounder_val = all_confounders[[j]]
 
             this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, cov_hat, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs =  which_REs)
 
             diag_terms = diag_terms + confounder_probs[j]^2 * this_cov_ENCs_delta
+
+            setTxtProgressBar(pb, j)
         }
+        close(pb)
+        toc()
 
         cov_hat_mean_ENCs = cov_hat_mean_ENCs + diag_terms
 
@@ -317,8 +325,13 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
         off_diag_terms = matrix(0, nrow=4, ncol=4)
 
-        num_confounder_combinations = length(all_confounders)
+        num_confounder_pairs = num_confounder_combinations*(num_confounder_combinations-1)/2
+
+        tic()
+        pb <- txtProgressBar(min = 0, max = num_confounder_pairs, initial = 0, style = 3)
         for(j1 in 1:(num_confounder_combinations-1)){
+            iterations_already_completed = j1*(j1-1)/2
+
             for(j2 in (j1+1):num_confounder_combinations){
                 this_confounder_val1 = all_confounders[[j1]]
                 this_confounder_val2 = all_confounders[[j2]]
@@ -326,8 +339,13 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
                 this_cross_cov = cross_cov_ENC_pars(this_confounder_val1, this_confounder_val2, cov_hat, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs =  which_REs)
 
                 off_diag_terms = off_diag_terms + 2 * confounder_probs[j1] * confounder_probs[j2] * this_cross_cov
+
+                this_iteration_number = iterations_already_completed + j2 - j1
+                setTxtProgressBar(pb, this_iteration_number)
             }
         }
+        close(pb)
+        toc()
 
         cov_hat_mean_ENCs = cov_hat_mean_ENCs + off_diag_terms
 
@@ -357,7 +375,7 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
         some_ME_tildes_raw = lapply(seq_len(nrow(some_Theta_tildes)), function(ii) {
             this_Theta_tilde = some_Theta_tildes[ii,]
             tryCatch({
-                this_averaged_ENCs = mean_ENC_Theta(this_Theta_tilde, all_confounders, confounder_probs, which_REs = which_REs, len_par_vecs = len_par_vecs)
+                this_averaged_ENCs = mean_ENC_Theta(this_Theta_tilde, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs)
                 this_averaged_MEs = all_MEs_ENCs(scale, this_averaged_ENCs, which_REs = which_REs)
             }, error = function(e) NULL)})
         some_ME_tildes = some_ME_tildes_raw %>% Filter(Negate(is.null), .) %>% Reduce(rbind, .)   #? Remove NULLs and organize into an array
