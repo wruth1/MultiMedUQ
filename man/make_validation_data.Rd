@@ -11,7 +11,8 @@ make_validation_data(
   theta_Y,
   b_M,
   theta_M,
-  num_confounders = 2,
+  num_bin_confounders = 1,
+  num_cont_confounders = 1,
   output_list = FALSE,
   return_REs = FALSE,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
@@ -25,6 +26,8 @@ make_validation_data(
 \item{b_Y, b_M}{Coefficient vectors for \eqn{Y}-model and \eqn{M}-model, respectively.}
 
 \item{theta_Y, theta_M}{Covariance parameters of random effects in \eqn{Y}-model and \eqn{M}-model, respectively. See details.}
+
+\item{num_bin_confounders, num_cont_confounders}{Number of binary and continuous confounders, respectively.}
 
 \item{output_list}{Should output be formatted as a list with one component per group (of size n-by-5) or a single data.frame of size (Kn)-by-6 with a column labelled `group`?}
 

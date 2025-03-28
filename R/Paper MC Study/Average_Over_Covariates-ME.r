@@ -43,8 +43,9 @@ devtools::load_all()
 
 # Set parameters
 
-# num_confounders = 3
-num_confounders = 5
+num_bin_confounders = 1
+num_cont_confounders = 1
+total_num_confounders = num_bin_confounders + num_cont_confounders
 
 B = 500     # Number of samples to generate for MC delta
 scale = c("diff", "rat", "OR")      # What scales should we compute mediation effects on?
@@ -65,13 +66,19 @@ N = 500
 n = N
 
 
+# Values of K and n for testing
+K = 74
+N = 432
+n = N
 
 
 
 
-# Vector of covariates
-## Note that mediation effects currently require us to specify values for the confounders. I think the next move is to average these conditional effects over the observed distribution of confounders.
-w = c(2,3)
+
+
+
+# Vector of confounders. Used as point at which to evaluate conditional effects
+w = rep(0.5, times = total_num_confounders)
 
 
 
@@ -85,7 +92,7 @@ set.seed(123)
 
 b_Y_X = 0.966486302988689
 b_Y_M = 1.99644760563721
-b_Y_Cs = sample(c(-1, 1), num_confounders, replace = T)
+b_Y_Cs = sample(c(-1, 1), total_num_confounders, replace = T)
 b_Y_int = - sum(b_Y_X, b_Y_M, b_Y_Cs) / 2       # ~ -1.48
 b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_Cs) * scale_factor
 
@@ -93,7 +100,7 @@ b_Y = c(b_Y_int, b_Y_X, b_Y_M, b_Y_Cs) * scale_factor
 set.seed(321)
 
 b_M_X = 1.76353928991247
-b_M_Cs = sample(c(-1, 1), num_confounders, replace = T)
+b_M_Cs = sample(c(-1, 1), total_num_confounders, replace = T)
 b_M_int = -sum(b_M_X, b_M_Cs) / 2       # ~ -0.89
 b_M = c(b_M_int, b_M_X, b_M_Cs) * scale_factor
 
@@ -115,7 +122,7 @@ p_M = length(b_M)
 p = p_Y + p_M
 
 
-folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_confounders)
+folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_bin_confounders, ",", num_cont_confounders)
 dir.create(paste0("R/Paper MC Study/Data/Data - ", folder_suffix), showWarnings = F)
 dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix), showWarnings = F)
 # dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix), showWarnings = F)
