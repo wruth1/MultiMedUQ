@@ -2,6 +2,7 @@
 # Covariances of mediation effects
 
 
+
 list_ME_hats = list()
 list_ME_cov_hats = list()
 
@@ -17,10 +18,10 @@ for(i in seq_along(all_Ks)){
 
         this_par_hat = list_par_hats[[i]][j,]
 
-        this_b_Y = this_par_hat[1:5]
-        this_theta_Y = this_par_hat[6:8]
-        this_b_M = this_par_hat[9:12]
-        this_theta_M = this_par_hat[13:15]
+        this_b_Y = list_par_hats[1:len_b_Y]
+        this_theta_Y = list_par_hats[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+        this_b_M = list_par_hats[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+        this_theta_M = list_par_hats[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
 
 
         this_ME_hat = all_MEs_pars(this_scale, w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)

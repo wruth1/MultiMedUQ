@@ -107,6 +107,13 @@ for(i in seq_along(all_Ks)){
 
 list_cov_ME_deltas = list()
 
+len_par_vecs = c(5, 6, 4, 3)
+
+len_b_Y = len_par_vecs[1]
+len_theta_Y = len_par_vecs[2]
+len_b_M = len_par_vecs[3]
+len_theta_M = len_par_vecs[4]
+
 for(i in seq_along(all_Ks)){
 
 
@@ -125,10 +132,13 @@ for(i in seq_along(all_Ks)){
 
                     
     # Extract parameters
-    b_Y = this_Theta_hat[1:5]
-    theta_Y = this_Theta_hat[6:(5 + len_theta_Y)]
-    b_M = this_Theta_hat[(6 + len_theta_Y):(9 + len_theta_Y)]
-    theta_M = this_Theta_hat[(10 + len_theta_Y):length(this_Theta_hat)]
+    
+
+    b_Y = Theta[1:len_b_Y]
+    theta_Y = Theta[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+    b_M = Theta[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+    theta_M = Theta[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
+
 
     # Compute covariance matrix for MEs
     cov_ME_delta = all_covs_MEs_pars(scale, w, this_cov_hat, b_Y, theta_Y, b_M, theta_M, which_REs)

@@ -284,7 +284,7 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
         confounder_probs = freqs_confounders / sum(freqs_confounders)
 
-        mean_ENC_hat = mean_ENC_Theta(Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs)
+        mean_ENC_hat = mean_ENC_Theta(Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
 
 
         this_time = toc()
@@ -296,27 +296,14 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
         tic()
 
-        cov_hat_mean_ENCs = matrix(0, nrow=4, ncol=4)
+        cov_hat_mean_ENCs = matrix(0, nrow = 4, ncol = 4)
 
-        num_confounder_combinations = length(all_confounders)
 
 
         #* Diagonal elements
 
-        diag_terms = matrix(0, nrow=4, ncol=4)
-
         tic()
-        pb <- txtProgressBar(min = 0, max = num_confounder_combinations, initial = 0, style = 3)
-        for(j in seq_along(all_confounders)){
-            this_confounder_val = all_confounders[[j]]
-
-            this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, cov_hat, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs =  which_REs)
-
-            diag_terms = diag_terms + confounder_probs[j]^2 * this_cov_ENCs_delta
-
-            setTxtProgressBar(pb, j)
-        }
-        close(pb)
+        diag_terms = marginal_cov_hat_diag_terms_Theta(cov_hat, Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
         toc()
 
         cov_hat_mean_ENCs = cov_hat_mean_ENCs + diag_terms

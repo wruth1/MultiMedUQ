@@ -145,6 +145,7 @@ data_err_norms %>% lm(log(err) ~ log(K), data=.) %>% abline()
 set.seed(1)
 
 w = c(1,2)
+len_par_vecs = c(5, 6, 4, 3)    # Lengths of b_Y, theta_Y, b_M, theta_M respectively
 
 list_err_norms = list()
 list_ENCs = list()
@@ -167,7 +168,7 @@ for(i in seq_along(all_Ks)){
     list_ENCs[[i]] = some_ENCs
 
     # Estimated covariances
-    some_Jacobs = lapply(seq_len(B), function(i) Jacob_ENC_Theta(w, some_Thetas[i,], which_REs = which_REs))
+    some_Jacobs = lapply(seq_len(B), function(i) Jacob_ENC_Theta(w, some_Thetas[i,], len_par_vecs, which_REs = which_REs))
     some_gamma_1_hats = lapply(some_Jacobs, function(x) x %*% Gamma_0 %*% t(x))
     list_ENC_covs[[i]] = some_gamma_1_hats
 

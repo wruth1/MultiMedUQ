@@ -662,16 +662,16 @@ Jacob_ENC_models <- function(w, fit_Y, fit_M, which_REs = c("Y.Int", "Y.X", "Y.M
 #' @param Theta Vector of parameters from both models. Order is b_Y, theta_Y, b_M, theta_M
 #'
 #' @export
-Jacob_ENC_Theta <- function(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
-  RE_names = expand_REs(which_REs)
-  num_Y_REs = sum(grepl("^Y\\.", RE_names))
+Jacob_ENC_Theta <- function(w, Theta, len_par_vecs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  len_b_Y = len_par_vecs[1]
+  len_theta_Y = len_par_vecs[2]
+  len_b_M = len_par_vecs[3]
+  len_theta_M = len_par_vecs[4]
 
-  len_theta_Y = num_REs2theta_length(num_Y_REs)
-
-  this_b_Y = Theta[1:5]
-  this_theta_Y = Theta[6:(5 + len_theta_Y)]
-  this_b_M = Theta[(6 + len_theta_Y):(9 + len_theta_Y)]
-  this_theta_M = Theta[(10 + len_theta_Y):length(Theta)]
+  this_b_Y = Theta[1:len_b_Y]
+  this_theta_Y = Theta[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+  this_b_M = Theta[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+  this_theta_M = Theta[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
 
   return(Jacob_ENC_pars(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs = which_REs))
 }
@@ -736,8 +736,8 @@ all_covs_ENC_pars <- function(w, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs = 
 
 #' @rdname ENC_covariances
 #' @export
-all_covs_ENC_Theta <- function(w, Sigma, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
-  Jacob = Jacob_ENC_Theta(w, Theta, which_REs)
+all_covs_ENC_Theta <- function(w, Sigma, Theta, len_par_vecs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")){
+  Jacob = Jacob_ENC_Theta(w, Theta, len_par_vecs, which_REs)
   return(Jacob %*% Sigma %*% t(Jacob))
 }
 

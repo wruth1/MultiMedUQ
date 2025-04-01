@@ -48,6 +48,8 @@ theta_M = c(1, 0.5, 2)
 
 w = c(0,0)
 
+len_par_vecs = c(length(b_Y), length(theta_Y), length(b_M), length(theta_M))
+
 
 
 load("Par_Hat_MC-Large_K_Pooled.RData", verbose = TRUE)
@@ -99,6 +101,11 @@ list_ENC_cov_hats = list()
 
 num_reps = nrow(list_par_hats[[1]])
 
+len_b_Y = len_par_vecs[1]
+len_theta_Y = len_par_vecs[2]
+len_b_M = len_par_vecs[3]
+len_theta_M = len_par_vecs[4]
+
 for(i in seq_along(all_Ks)){
 
     some_ENC_hats = data.frame()
@@ -111,10 +118,13 @@ for(i in seq_along(all_Ks)){
 
         this_par_hat = list_par_hats[[i]][j,]
 
-        this_b_Y = this_par_hat[1:5]
-        this_theta_Y = this_par_hat[6:8]
-        this_b_M = this_par_hat[9:12]
-        this_theta_M = this_par_hat[13:15]
+        
+
+        this_b_Y = this_par_hat[1:len_b_Y]
+        this_theta_Y = this_par_hat[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+        this_b_M = this_par_hat[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+        this_theta_M = this_par_hat[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
+
 
 
         this_ENC_hat = all_ENCs(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
@@ -314,6 +324,11 @@ list_ENC_Jacobians = list()
 
 num_reps = nrow(list_par_hats[[1]])
 
+len_b_Y = len_par_vecs[1]
+len_theta_Y = len_par_vecs[2]
+len_b_M = len_par_vecs[3]
+len_theta_M = len_par_vecs[4]
+
 for(i in seq_along(all_Ks)){
 
     some_ENC_Jacobians = list()
@@ -325,10 +340,10 @@ for(i in seq_along(all_Ks)){
 
         this_par_hat = list_par_hats[[i]][j,]
 
-        this_b_Y = this_par_hat[1:5]
-        this_theta_Y = this_par_hat[6:8]
-        this_b_M = this_par_hat[9:12]
-        this_theta_M = this_par_hat[13:15]
+        this_b_Y = this_par_hat[1:len_b_Y]
+        this_theta_Y = this_par_hat[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+        this_b_M = this_par_hat[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+        this_theta_M = this_par_hat[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
 
 
         this_ENC_Jacobian = Jacob_ENC_pars(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs=which_REs)
@@ -387,6 +402,11 @@ test_Ks = c(100, 200, 400, 800, 1600, 3200)
 
 list_all_errs = list()
 
+len_b_Y = len_par_vecs[1]
+len_theta_Y = len_par_vecs[2]
+len_b_M = len_par_vecs[3]
+len_theta_M = len_par_vecs[4]
+
 set.seed(1)
 
 tic()
@@ -405,10 +425,10 @@ for(ii in seq_along(test_Ks)){
     for(i in seq_len(B)){
         this_Theta = some_Thetas[i,]
 
-        this_b_Y = this_Theta[1:5]
-        this_theta_Y = this_Theta[6:8]
-        this_b_M = this_Theta[9:12]
-        this_theta_M = this_Theta[13:15]
+        this_b_Y = this_Theta[1:len_b_Y]
+        this_theta_Y = this_Theta[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+        this_b_M = this_Theta[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+        this_theta_M = this_Theta[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
 
         tryCatch({
 
@@ -432,10 +452,10 @@ for(ii in seq_along(test_Ks)){
         }
         this_Theta = some_Thetas[i,]
 
-        this_b_Y = this_Theta[1:5]
-        this_theta_Y = this_Theta[6:8]
-        this_b_M = this_Theta[9:12]
-        this_theta_M = this_Theta[13:15]
+        this_b_Y = this_Theta[1:len_b_Y]
+        this_theta_Y = this_Theta[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+        this_b_M = this_Theta[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+        this_theta_M = this_Theta[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
 
         this_Jacobian = Jacob_ENC_pars(w, this_b_Y, this_theta_Y, this_b_M, this_theta_M, which_REs = which_REs)
 
