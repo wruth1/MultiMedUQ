@@ -133,7 +133,7 @@ mean_ENC_Theta <- function(Theta, all_confounders, confounder_probs, len_par_vec
 
 # ------------------------- Variance (diagonal) terms ------------------------ #
 
-marginal_cov_hat_diag_terms <- function(Sigma, b_Y, theta_Y, b_M, theta_M, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 500) {
+marginal_cov_hat_var_terms_par <- function(Sigma, b_Y, theta_Y, b_M, theta_M, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 500) {
 
     num_confounder_vals = length(all_confounders)
 
@@ -145,7 +145,7 @@ marginal_cov_hat_diag_terms <- function(Sigma, b_Y, theta_Y, b_M, theta_M, all_c
         sampled = TRUE
     }
 
-    diag_terms = matrix(0, nrow = 4, ncol = 4)
+    var_terms = matrix(0, nrow = 4, ncol = 4)
 
     for (j in some_confounder_inds){
         this_confounder_val = all_confounders[[j]]
@@ -155,17 +155,17 @@ marginal_cov_hat_diag_terms <- function(Sigma, b_Y, theta_Y, b_M, theta_M, all_c
         this_prob = confounder_probs[j]
 
         if (sampled) {
-            diag_terms = diag_terms + this_cov_ENCs_delta * this_prob / n_samples   # Note: Each summand has a squared probability. That's why we've got this formula that seems wrong.
+            var_terms = var_terms + this_cov_ENCs_delta * this_prob / n_samples   # Note: Each summand has a squared probability. That's why we've got this formula that seems wrong.
         } else {
-            diag_terms = diag_terms + confounder_probs[j]^2 * this_cov_ENCs_delta
+            var_terms = var_terms + confounder_probs[j]^2 * this_cov_ENCs_delta
         }
     }
 
-    return(diag_terms)
+    return(var_terms)
 }
 
 #? As above,I chose to have this function depend on the other to avoid duplicating code. Specifically, to avoid having to remember to make changes to both functions.
-marginal_cov_hat_diag_terms_Theta <- function(Sigma, Theta, all_confounders, confounder_probs, len_par_vecs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 500) {
+marginal_cov_hat_var_terms_Theta <- function(Sigma, Theta, all_confounders, confounder_probs, len_par_vecs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 500) {
 
     len_b_Y = len_par_vecs[1]
     len_theta_Y = len_par_vecs[2]
@@ -177,41 +177,70 @@ marginal_cov_hat_diag_terms_Theta <- function(Sigma, Theta, all_confounders, con
     this_b_M = Theta[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
     this_theta_M = Theta[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
 
-    return(marginal_cov_hat_diag_terms(Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, all_confounders, confounder_probs, which_REs =  which_REs, fast = fast, n_samples = n_samples))
+    return(marginal_cov_hat_var_terms_par(Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, all_confounders, confounder_probs, which_REs =  which_REs, fast = fast, n_samples = n_samples))
 }
 
 
 
 # ---------------------- Covariance (off-diagonal) terms --------------------- #
 
-marginal_cov_hat_diag_terms <- function(Sigma, b_Y, theta_Y, b_M, theta_M, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 500) {
+marginal_cov_hat_cov_terms_par <- function(Sigma, b_Y, theta_Y, b_M, theta_M, all_confounders, confounder_probs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 500) {
 
+    # all_confounders_backup = all_confounders
+    # all_confounders = all_confounders[1:200]
+
+    all_confounder_inds = seq_along(all_confounders)
+    all_confounder_ind_pairs = combn(all_confounder_inds, 2, simplify = FALSE)
 
     num_confounder_vals = length(all_confounders)
+    num_confounder_pairs = num_confounder_vals * (num_confounder_vals - 1) / 2
 
-    if  (!fast || (num_confounder_vals <= n_samples)) {     # Compute expected value over confounder distribution exactly
-        some_confounder_inds = seq_along(all_confounders)
+    # Probability of each pair of confounder values
+    confounder_pair_probs = sapply(all_confounder_ind_pairs, function(x) confounder_probs[x[1]] * confounder_probs[x[2]])
+
+
+    if  (!fast || (num_confounder_pairs <= n_samples)) {     # Compute expected value over confounder distribution exactly
+        some_inds_for_confounder_pairs = seq_along(all_confounder_ind_pairs)
         sampled = FALSE
     } else {                                                # Compute expected value over confounder distribution by sampling
-        some_confounder_inds = sample(num_confounder_vals, size = n_samples, replace = FALSE, prob = confounder_probs)
+        some_inds_for_confounder_pairs = sample(num_confounder_pairs, size = n_samples, replace = FALSE, prob = confounder_pair_probs)
         sampled = TRUE
     }
 
-    diag_terms = matrix(0, nrow = 4, ncol = 4)
+    cov_terms = matrix(0, nrow = 4, ncol = 4)
 
-    for (j in some_confounder_inds){
-        this_confounder_val = all_confounders[[j]]
+    for (j in some_inds_for_confounder_pairs){
+        this_confounder_ind_pair = all_confounder_ind_pairs[[j]]
 
-        this_cov_ENCs_delta = all_covs_ENC_pars(this_confounder_val, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+        this_confounder_val_1 = all_confounders[[this_confounder_ind_pair[1]]]
+        this_confounder_val_2 = all_confounders[[this_confounder_ind_pair[2]]]
 
-        this_prob = confounder_probs[j]
+        this_cross_cov = cross_cov_ENC_pars(this_confounder_val_1, this_confounder_val_2, Sigma, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+
 
         if (sampled) {
-            diag_terms = diag_terms + this_cov_ENCs_delta * this_prob / n_samples   # Note: Each summand has a squared probability. That's why we've got this formula that seems wrong.
+            cov_terms = cov_terms + 2 * this_cross_cov / n_samples                    # Monte Carlo summation -> average
         } else {
-            diag_terms = diag_terms + confounder_probs[j]^2 * this_cov_ENCs_delta
+            cov_terms = cov_terms + 2 * this_cross_cov * confounder_pair_probs[j]     # Raw summation -> multiply by prob, then add (not average...technically, a weighted average)
         }
     }
 
-    return(diag_terms)
+    return(cov_terms)
+
+}
+
+
+marginal_cov_hat_cov_terms_Theta <- function(Sigma, Theta, all_confounders, confounder_probs, len_par_vecs, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"), fast = FALSE, n_samples = 500) {
+
+    len_b_Y = len_par_vecs[1]
+    len_theta_Y = len_par_vecs[2]
+    len_b_M = len_par_vecs[3]
+    len_theta_M = len_par_vecs[4]
+
+    this_b_Y = Theta[1:len_b_Y]
+    this_theta_Y = Theta[(len_b_Y + 1):(len_b_Y + len_theta_Y)]
+    this_b_M = Theta[(len_b_Y + len_theta_Y + 1):(len_b_Y + len_theta_Y + len_b_M)]
+    this_theta_M = Theta[(len_b_Y + len_theta_Y + len_b_M + 1):(len_b_Y + len_theta_Y + len_b_M + len_theta_M)]
+
+    return(marginal_cov_hat_cov_terms_par(Sigma, this_b_Y, this_theta_Y, this_b_M, this_theta_M, all_confounders, confounder_probs, which_REs =  which_REs, fast = fast, n_samples = n_samples))
 }

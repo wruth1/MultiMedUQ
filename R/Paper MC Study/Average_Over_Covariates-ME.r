@@ -300,26 +300,32 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
 
 
-        #* Diagonal elements
+        #* Variance terms
 
         tic()
-        diag_terms = marginal_cov_hat_diag_terms_Theta(cov_hat, Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
+        var_terms = marginal_cov_hat_var_terms_Theta(cov_hat, Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
         toc()
 
-        cov_hat_mean_ENCs = cov_hat_mean_ENCs + diag_terms
+        cov_hat_mean_ENCs = cov_hat_mean_ENCs + var_terms
 
-        #* Off-diagonal elements
+
+        #* Covariance terms
+
+        #! START HERE
+        # TODO: Compare sampled estimate with scaled sum of first few terms. They should be equivalent, but currently, they differ by an order of magnitude. I don't know why. It might actually be a numerical stability issue, since I'm multiplying the sum by a very large number and the sum has `sampling' variability due to which terms I choose to sum over. FIRST: Try summing over a few different chunks of 500 terms and check variability.
+
+        test = marginal_cov_hat_cov_terms_Theta(cov_hat, Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
 
         off_diag_terms = matrix(0, nrow=4, ncol=4)
 
-        num_confounder_pairs = num_confounder_combinations*(num_confounder_combinations-1)/2
+        num_confounder_pairs = num_confounder_vals*(num_confounder_vals-1)/2
 
         tic()
-        pb <- txtProgressBar(min = 0, max = num_confounder_pairs, initial = 0, style = 3)
-        for(j1 in 1:(num_confounder_combinations-1)){
-            iterations_already_completed = j1*(j1-1)/2
+        for(j1 in 1:(num_confounder_vals-1)){
+            iterations_already_completed = (j1 - 1) * (num_confounder_vals - j1 / 2)
 
-            for(j2 in (j1+1):num_confounder_combinations){
+            for(j2 in (j1+1):num_confounder_vals){
+                # print(paste0("j1 = ", j1, ", j2 = ", j2))
                 this_confounder_val1 = all_confounders[[j1]]
                 this_confounder_val2 = all_confounders[[j2]]
 
@@ -328,11 +334,16 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
                 off_diag_terms = off_diag_terms + 2 * confounder_probs[j1] * confounder_probs[j2] * this_cross_cov
 
                 this_iteration_number = iterations_already_completed + j2 - j1
-                setTxtProgressBar(pb, this_iteration_number)
+                print(this_iteration_number)
+                if(this_iteration_number == 500) break
             }
+            if(this_iteration_number == 500) break
         }
-        close(pb)
         toc()
+
+        total_num_confounders = length(all_confounders_backup)
+        total_num_confounder_pairs = total_num_confounders * (total_num_confounders - 1) / 2
+        off_diag_terms * total_num_confounder_pairs / 500
 
         cov_hat_mean_ENCs = cov_hat_mean_ENCs + off_diag_terms
 
