@@ -37,6 +37,7 @@ all_covs_ENC_Theta(
   w,
   Sigma,
   Theta,
+  len_par_vecs,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 }

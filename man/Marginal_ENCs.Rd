@@ -15,7 +15,7 @@ mean_ENC_pars(
   confounder_probs,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
   fast = FALSE,
-  n_samples = 5000
+  n_samples = 500
 )
 
 mean_ENC_Theta(
@@ -25,7 +25,7 @@ mean_ENC_Theta(
   len_par_vecs,
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
   fast = FALSE,
-  n_samples = 5000
+  n_samples = 500
 )
 }
 \arguments{

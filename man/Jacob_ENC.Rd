@@ -23,7 +23,12 @@ Jacob_ENC_models(
   which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
 )
 
-Jacob_ENC_Theta(w, Theta, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"))
+Jacob_ENC_Theta(
+  w,
+  Theta,
+  len_par_vecs,
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+)
 }
 \arguments{
 \item{w}{Level of covariates, \eqn{W}.}
