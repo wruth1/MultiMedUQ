@@ -197,6 +197,7 @@ marginal_cov_hat_cov_terms_par <- function(Sigma, b_Y, theta_Y, b_M, theta_M, al
 
     # Probability of each pair of confounder values
     confounder_pair_probs = sapply(all_confounder_ind_pairs, function(x) confounder_probs[x[1]] * confounder_probs[x[2]])
+    total_pair_prob = sum(confounder_pair_probs)
 
 
     if  (!fast || (num_confounder_pairs <= n_samples)) {     # Compute expected value over confounder distribution exactly
@@ -219,11 +220,17 @@ marginal_cov_hat_cov_terms_par <- function(Sigma, b_Y, theta_Y, b_M, theta_M, al
 
 
         if (sampled) {
-            cov_terms = cov_terms + 2 * this_cross_cov / n_samples                    # Monte Carlo summation -> average
+            cov_terms = cov_terms + this_cross_cov                                # Monte Carlo summation -> average (averaging will be done later)
         } else {
-            cov_terms = cov_terms + 2 * this_cross_cov * confounder_pair_probs[j]     # Raw summation -> multiply by prob, then add (not average...technically, a weighted average)
+            cov_terms = cov_terms + this_cross_cov * confounder_pair_probs[j]     # Raw summation -> multiply by prob, then add (not average)
         }
     }
+
+    if (sampled) {
+            cov_terms = cov_terms * 2 * total_pair_prob / n_samples
+        } else {
+            cov_terms = cov_terms * 2
+        }
 
     return(cov_terms)
 

@@ -316,9 +316,46 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
         test = marginal_cov_hat_cov_terms_Theta(cov_hat, Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
 
-        off_diag_terms = matrix(0, nrow=4, ncol=4)
+        off_diag_terms = matrix(0, nrow = 4, ncol = 4)
 
-        num_confounder_pairs = num_confounder_vals*(num_confounder_vals-1)/2
+        num_confounder_pairs = num_confounder_vals * (num_confounder_vals - 1) / 2
+
+
+
+        #! ---------------------------------------------------------------------------- #
+        #!                                 Experimental                                 #
+        #! ---------------------------------------------------------------------------- #
+
+        set.seed(1234)
+
+        num_ind_pairs = 1000
+        some_ind_pairs = sample(all_confounder_ind_pairs, num_ind_pairs, replace = FALSE)
+
+        off_diag_terms_small = matrix(0, nrow = 4, ncol = 4)
+
+        for (i in seq_along(some_ind_pairs)) {
+            if (i %% 50 == 0) print(i)
+
+            this_pair = some_ind_pairs[[i]]
+
+            j1 = this_pair[1]
+            j2 = this_pair[2]
+
+            this_confounder_val1 = all_confounders[[j1]]
+            this_confounder_val2 = all_confounders[[j2]]
+
+            this_cross_cov = cross_cov_ENC_pars(this_confounder_val1, this_confounder_val2, cov_hat, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs =  which_REs)
+
+            off_diag_terms_small = off_diag_terms + 2 * this_cross_cov / length(all_confounder_ind_pairs)
+        }
+
+        off_diag_terms = off_diag_terms_small * length(all_confounder_ind_pairs) / num_ind_pairs
+        off_diag_terms * length(all_confounder_ind_pairs) * 2
+
+
+
+        #! ----------------------------- End Experimental ----------------------------- #
+
 
         tic()
         for(j1 in 1:(num_confounder_vals-1)){
@@ -334,7 +371,7 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
                 off_diag_terms = off_diag_terms + 2 * confounder_probs[j1] * confounder_probs[j2] * this_cross_cov
 
                 this_iteration_number = iterations_already_completed + j2 - j1
-                print(this_iteration_number)
+                if(this_iteration_number %% 50 == 0) print(this_iteration_number)
                 if(this_iteration_number == 500) break
             }
             if(this_iteration_number == 500) break
