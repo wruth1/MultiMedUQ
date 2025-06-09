@@ -40,7 +40,7 @@ devtools::load_all()
 
 # Set parameters
 
-num_confounders = 3
+num_confounders = 2
 
 B = 500     # Number of samples to generate for MC delta
 scale = c("diff", "rat", "OR")      # What scales should we compute mediation effects on?
@@ -155,7 +155,7 @@ set.seed(1)
 
 # Generate and save datasets
 save_data = pbsapply(1:num_datasets, function(i) {
-    data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, num_bin_confounders = num_bin_confounders, num_cont_confounders = num_cont_confounders, output_list = F, which_REs = which_REs)
+    data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, num_bin_confounders = 1, num_cont_confounders = 1, output_list = F, which_REs = which_REs)
     save(data, file = paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"))
 })#, cl=cl)
 
@@ -309,7 +309,14 @@ rownames(data_cover) = names(true_MEs)
 data_cover
 
 
+#* Get mean of interval widths
+mean_widths_emp = mean_widths_one_cov_mat(all_ME_hats, emp_cov)
+mean_widths_delta = mean_widths_many_cov_mats(all_ME_hats, all_cov_hats_delta)
+mean_widths_MC_delta = mean_widths_many_cov_mats(all_ME_hats, all_cov_hats_MC_delta)
 
+data_widths = data.frame(emp = mean_widths_emp, delta = mean_widths_delta, MC_delta = mean_widths_MC_delta)
+rownames(data_widths) = names(true_MEs)
+data_widths
 
 
 
