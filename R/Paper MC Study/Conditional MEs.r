@@ -126,7 +126,7 @@ p = p_Y + p_M
 
 folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_bin_confounders, ",", num_cont_confounders)
 dir.create(paste0("R/Paper MC Study/Data/Data - ", folder_suffix), showWarnings = F)
-dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix), showWarnings = F)
+dir.create(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix), showWarnings = F)
 # dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix), showWarnings = F)
 
 
@@ -136,20 +136,6 @@ exposure_name = "X"
 mediator_name = "M"
 group_name = "group"
 
-
-# Takes a data frame. Extracts only the confounders.
-# Returns a list with two entries. First is a list of all unique values of the confounders. Second is a list of the frequencies of each unique value of the confounders.
-get_confounder_freq <- function(data, outcome_name, exposure_name, mediator_name, group_name){
-    data_confounders = data %>% dplyr::select(-all_of(c(outcome_name, exposure_name, mediator_name, group_name)))
-
-    info_confounders = data_confounders %>% dplyr::group_by(across(everything())) %>% dplyr::summarize(.freq = n(), .groups = "drop")
-
-    vals_confounders = info_confounders %>% dplyr::select(-.freq) %>% split(seq_len(nrow(.))) %>% lapply(unlist)
-    freqs_confounders = info_confounders$.freq
-
-    output = list(values = vals_confounders, freqs = freqs_confounders)
-    return(output)
-}
 
 
 
@@ -185,7 +171,20 @@ clusterSetRNGStream(cl = cl, 123)
 
 
 
+# -------------------------- Generate and save data -------------------------- #
 
+num_datasets = 200
+
+# # First, delete any datasets currently in the target directory
+# unlink(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/*"))
+
+# set.seed(1)
+
+# # Generate and save datasets
+# save_data = pbsapply(1:num_datasets, function(i) {
+#     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, num_bin_confounders = 1, num_cont_confounders = 1, output_list = F, which_REs = which_REs)
+#     save(data, file = paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"))
+# })#, cl=cl)
 
 
 
@@ -201,12 +200,12 @@ clusterSetRNGStream(cl = cl, 123)
 num_datasets = length(list.files(paste0("R/Paper MC Study/Data/Data - ", folder_suffix)))
 # num_datasets = 10
 
-unlink(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/*"))
+unlink(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/*"))
 # unlink(paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix, "/*"))
 
 # Fit models, extract ENCs, estimate covariance matrices and save results
 MC_results_ME = pblapply(1:num_datasets, function(i) {
-# MC_results_delta_MC_delta = pblapply(1:3, function(i) {
+# MC_results_ME = pblapply(1:10, function(i) {
     load(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
 
 
@@ -274,149 +273,26 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
         this_timings$get_pars = this_time$toc - this_time$tic
 
 
-        # --- Compute mediation effects, averaging over the EDF of the confounders --- #
 
-        # Also, estimate sampling covariance matrix of (wt) average mediation effect, averaging over the EDF of the confounders appropriately using the conditional variance decomposition formula.
 
+        # Compute mediation effects
         tic()
 
-        info_confounders = get_confounder_freq(data, outcome_name, exposure_name, mediator_name, group_name)
-        all_confounders = info_confounders$values
-        freqs_confounders = info_confounders$freq
-
-        confounder_probs = freqs_confounders / sum(freqs_confounders)
-
-        mean_ENC_hat = mean_ENC_Theta(Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
-
+        MEs = all_MEs_pars(scale, w, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs =  which_REs)
+        cov_MEs_delta = all_covs_MEs_pars(scale, w, cov_hat, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs =  which_REs)
 
         this_time = toc()
         this_timings$get_MEs = this_time$toc - this_time$tic
 
 
 
-        # ------------ Estimate sampling covariance of averaged estimator ------------ #
-
-        tic()
-
-        cov_hat_mean_ENCs = matrix(0, nrow = 4, ncol = 4)
-
-
-
-        #* Variance terms
-
-        tic()
-        var_terms = marginal_cov_hat_var_terms_Theta(cov_hat, Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
-        toc()
-
-        cov_hat_mean_ENCs = cov_hat_mean_ENCs + var_terms
-
-
-        #* Covariance terms
-
-        #! START HERE
-        # TODO: Compare sampled estimate with scaled sum of first few terms. They should be equivalent, but currently, they differ by an order of magnitude. I don't know why. It might actually be a numerical stability issue, since I'm multiplying the sum by a very large number and the sum has `sampling' variability due to which terms I choose to sum over. FIRST: Try summing over a few different chunks of 500 terms and check variability.
-
-        test = marginal_cov_hat_cov_terms_Theta(cov_hat, Theta_hat, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs, fast = TRUE)
-
-        off_diag_terms = matrix(0, nrow = 4, ncol = 4)
-
-        num_confounder_pairs = num_confounder_vals * (num_confounder_vals - 1) / 2
-
-
-
-        #! ---------------------------------------------------------------------------- #
-        #!                                 Experimental                                 #
-        #! ---------------------------------------------------------------------------- #
-
-        set.seed(1234)
-
-        num_ind_pairs = 1000
-        some_ind_pairs = sample(all_confounder_ind_pairs, num_ind_pairs, replace = FALSE)
-
-        off_diag_terms_small = matrix(0, nrow = 4, ncol = 4)
-
-        for (i in seq_along(some_ind_pairs)) {
-            if (i %% 50 == 0) print(i)
-
-            this_pair = some_ind_pairs[[i]]
-
-            j1 = this_pair[1]
-            j2 = this_pair[2]
-
-            this_confounder_val1 = all_confounders[[j1]]
-            this_confounder_val2 = all_confounders[[j2]]
-
-            this_cross_cov = cross_cov_ENC_pars(this_confounder_val1, this_confounder_val2, cov_hat, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs =  which_REs)
-
-            off_diag_terms_small = off_diag_terms + 2 * this_cross_cov / length(all_confounder_ind_pairs)
-        }
-
-        off_diag_terms = off_diag_terms_small * length(all_confounder_ind_pairs) / num_ind_pairs
-        off_diag_terms * length(all_confounder_ind_pairs) * 2
-
-
-
-        #! ----------------------------- End Experimental ----------------------------- #
-
-
-        tic()
-        for(j1 in 1:(num_confounder_vals-1)){
-            iterations_already_completed = (j1 - 1) * (num_confounder_vals - j1 / 2)
-
-            for(j2 in (j1+1):num_confounder_vals){
-                # print(paste0("j1 = ", j1, ", j2 = ", j2))
-                this_confounder_val1 = all_confounders[[j1]]
-                this_confounder_val2 = all_confounders[[j2]]
-
-                this_cross_cov = cross_cov_ENC_pars(this_confounder_val1, this_confounder_val2, cov_hat, b_Y_hat, theta_Y_hat, b_M_hat, theta_M_hat, which_REs =  which_REs)
-
-                off_diag_terms = off_diag_terms + 2 * confounder_probs[j1] * confounder_probs[j2] * this_cross_cov
-
-                this_iteration_number = iterations_already_completed + j2 - j1
-                if(this_iteration_number %% 50 == 0) print(this_iteration_number)
-                if(this_iteration_number == 500) break
-            }
-            if(this_iteration_number == 500) break
-        }
-        toc()
-
-        total_num_confounders = length(all_confounders_backup)
-        total_num_confounder_pairs = total_num_confounders * (total_num_confounders - 1) / 2
-        off_diag_terms * total_num_confounder_pairs / 500
-
-        cov_hat_mean_ENCs = cov_hat_mean_ENCs + off_diag_terms
-
-
-
-        this_time = toc()
-        this_timings$delta = this_time$toc - this_time$tic
-
-
-        # ---------------- Estimate MEs and their sampling covariances --------------- #
-
-        tic()
-
-        averaged_ME_hats = all_MEs_ENCs(scale, mean_ENC_hat, which_REs = which_REs)
-        averaged_ME_hats_cov = all_covs_MEs_ENCs(scale, mean_ENC_hat, cov_hat_mean_ENCs, which_REs = which_REs)
-
-        this_time = toc()
-        this_timings$MEs_and_cov = this_time$toc - this_time$tic
-
 
         # ------------------------------ MC Delta Method ----------------------------- #
-        
         tic()
-
-        #* Note: It's important to use lapply instead of apply(., 1) here, because the latter sometimes returns a list and sometimes returns a vector, whereas the former always returns a list. Therefore, `lapply` is always compatible with the subsequent post-processing line (`apply` sometimes gave a 1x1 covariance matrix)
         some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
-        some_ME_tildes_raw = lapply(seq_len(nrow(some_Theta_tildes)), function(ii) {
-            this_Theta_tilde = some_Theta_tildes[ii,]
-            tryCatch({
-                this_averaged_ENCs = mean_ENC_Theta(this_Theta_tilde, all_confounders, confounder_probs, len_par_vecs = len_par_vecs, which_REs = which_REs)
-                this_averaged_MEs = all_MEs_ENCs(scale, this_averaged_ENCs, which_REs = which_REs)
-            }, error = function(e) NULL)})
-        some_ME_tildes = some_ME_tildes_raw %>% Filter(Negate(is.null), .) %>% Reduce(rbind, .)   #? Remove NULLs and organize into an array
+        some_ME_tildes = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
         cov_MEs_MC_delta = cov(some_ME_tildes)
+
 
 
         this_time = toc()
@@ -424,46 +300,17 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
 
 
 
-        # # ----------------------------- mediation Package ---------------------------- #
 
-        # tic()
-
-        # fit_Y_lme4 = glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        # fit_M_lme4 = glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
-
-        # this_time = toc()
-        # this_timings$mediation_fit_models = this_time$toc - this_time$tic
-
-
-        # tic()
-
-        # MC_delta_info = mediate(fit_M_lme4, fit_Y_lme4, treat = "X", mediator = "M", sims = B)
-
-        # #* Extract relevant results from mediation output, bypassing the table produced by `summarise`
-        # ME_hats_mediate = with(MC_delta_info, c(total = tau.coef, direct = z0, indirect = d1))
-        # ME_CIs_mediate = with(MC_delta_info, list(total = tau.ci, direct = z0.ci, indirect = d1.ci))
-
-        # this_time = toc()
-        # this_timings$mediation_get_cov = this_time$toc - this_time$tic
-
-
-
+        
         # ------------------------ Compile and return results ------------------------ #
-        #* With mediation package
-        # output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, cov_MEs_MC_delta = cov_MEs_MC_delta, mediation_estimates = ME_hats_mediate, mediation_CIs = ME_CIs_mediate, this_timings = this_timings)
-        #* Without mediation package
-        output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings, model_fit_warnings = model_fit_warnings, dataset_index = i)
-        #* Only delta
-        # output = list(this_MEs = averaged_ME_hats, cov_hat_MEs = averaged_ME_hats_cov, this_timings = this_timings, model_fit_warnings = model_fit_warnings, dataset_index = i)
+        output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
 
-        save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/", i, ".RData"))
-        # save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     }, error = function(e){
-        output = e
+        output = NULL
 
-        save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/", i, ".RData"))
-        # save(output, file = paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     })
 
@@ -487,14 +334,14 @@ stopCluster(cl)
 
 
 
-K = 100
-N = 500
-folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_confounders)
+K = 74
+N = 432
+folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_bin_confounders, ",", num_cont_confounders)
 
 # ------------------------------ Read-in Results ----------------------------- #
-output_names = list.files(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/"))
+output_names = list.files(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/"))
 MC_results_ME = pblapply(output_names, function(x) {
-    load(paste0("R/Paper MC Study/Results/Marginal_MEs/Results - ", folder_suffix, "/", x))
+    load(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", x))
     return(output)
 })
 
@@ -502,10 +349,10 @@ MC_results_ME = pblapply(output_names, function(x) {
 
 # ----------------------------- Clean-up Results ----------------------------- #
 
-check_lengths = sapply(MC_results_ME, length)
-which(check_lengths < 6)
-MC_results_ME = remove_indices(MC_results_ME, which(check_lengths < 6))
-length(MC_results_ME)
+# check_lengths = sapply(MC_results_ME, length)
+# which(check_lengths < 4)
+# MC_results_ME = remove_indices(MC_results_ME, which(check_lengths < 4))
+# length(MC_results_ME)
 
 #* Backup raw output from simulation
 MC_results_ME_raw = MC_results_ME
@@ -520,7 +367,7 @@ MC_results_ME = MC_results_ME %>% Filter(Negate(is.null), .)
 length(MC_results_ME)
 
 #* Remove iterations with negative variances
-all_covs_raw = lapply(MC_results_ME, function(x) x$cov_hat_MEs)
+all_covs_raw = lapply(MC_results_ME, function(x) x$cov_MEs_delta)
 inds_remove = sapply(all_covs_raw, function(x) any(diag(x) < 0))
 any(inds_remove)
 MC_results_ME = MC_results_ME[!inds_remove]
@@ -546,7 +393,7 @@ MC_results_ME = MC_results_ME[!warnings_check]
 
 
 all_MEs_raw = sapply(MC_results_ME, function(x) x$this_MEs) %>% t()
-all_covs_raw = lapply(MC_results_ME, function(x) x$cov_hat_MEs)
+all_covs_raw = lapply(MC_results_ME, function(x) x$cov_MEs_delta)
 all_cov_tildes_raw = lapply(MC_results_ME, function(x) x$cov_MEs_MC_delta)
 
 
@@ -558,17 +405,17 @@ mean_times
 sd_times = apply(all_timings, 2, sd)
 sd_times
 
-## Group timings by method
-both_methods_timings = all_timings[,1] + all_timings[,2] + all_timings[,3]
-delta_only_timings = all_timings[,4] + all_timings[,5]
-MC_delta_only_timings = all_timings[,6]
+# ## Group timings by method
+# both_methods_timings = all_timings[,1] + all_timings[,2] + all_timings[,3]
+# delta_only_timings = all_timings[,4] + all_timings[,5]
+# MC_delta_only_timings = all_timings[,6]
 
-mean_both_methods_timings = mean(both_methods_timings)
-mean_delta_only_timings = mean(delta_only_timings)
-mean_MC_delta_only_timings = mean(MC_delta_only_timings)
-mean_timings = c(mean_both_methods_timings, mean_delta_only_timings, mean_MC_delta_only_timings)
-names(mean_timings) = c("Both Methods", "Delta Only", "MC-Delta Only")
-mean_timings
+# mean_both_methods_timings = mean(both_methods_timings)
+# mean_delta_only_timings = mean(delta_only_timings)
+# mean_MC_delta_only_timings = mean(MC_delta_only_timings)
+# mean_timings = c(mean_both_methods_timings, mean_delta_only_timings, mean_MC_delta_only_timings)
+# names(mean_timings) = c("Both Methods", "Delta Only", "MC-Delta Only")
+# mean_timings
 
 
 
@@ -626,52 +473,11 @@ hist(all_cov_tilde_errs)
 # all_cov_tilde_errs %>% Filter(function(x) x < 3, .) %>% hist(breaks = 20)
 
 
-#* mediation package
-
-# Estimates
-all_mediation_ME_hats = sapply(MC_results_ME, function(x) x$mediation_estimates) %>% t()
-
-# CIs
-##? Note: CI output from mediation package differs structurally from how we get CIs. The work here is to get their output to line-up with the input formatting to our coverage rate checking function.
-all_mediation_CIs_raw = lapply(MC_results_ME, function(x) x$mediation_CIs)
-
-all_mediation_CIs = list()
-for(i in 1:3){
-    this_lcls = sapply(all_mediation_CIs_raw, function(x) x[[i]][1]) %>% unname()
-    this_ucls = sapply(all_mediation_CIs_raw, function(x) x[[i]][2]) %>% unname()
-
-    this_intervals = list(lcl = this_lcls, ucl = this_ucls)
-    all_mediation_CIs[[i]] = this_intervals
-}
-
-
 
 
 # ---------------------------- Get Coverage Rates ---------------------------- #
 
-#* Compute true averaged MEs (i.e. using ENCs that have been averaged over the confounder distribution)
-# Super inelegant way of doing this, but for now I'm just going to make it work
-
-load(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/1.RData"), verbose = T)
-
-info_confounders = get_confounder_freq(data, outcome_name, exposure_name, mediator_name, group_name)
-all_confounders = info_confounders$values
-probs_confounders = rep(1 / length(all_confounders), times=length(all_confounders))
-
-len_par_vecs = sapply(list(b_Y, theta_Y, b_M, theta_M), length)
-
-
-
-
-
-all_true_conditional_ENCs = lapply(all_confounders, function(this_confounder_val) all_ENCs_Theta(this_confounder_val, all_reg_pars, which_REs = which_REs, len_par_vecs = len_par_vecs))
-
-true_ENCs = rep(0, times=4)
-for(i in seq_along(all_true_conditional_ENCs)){
-    true_ENCs = true_ENCs + probs_confounders[i] * all_true_conditional_ENCs[[i]]
-}
-
-true_MEs = all_MEs_ENCs(scale, true_ENCs, which_REs = which_REs)
+true_MEs = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs = which_REs)
 
 
 
@@ -694,6 +500,8 @@ colMeans(data_cover_rate_raw)
 data_cover_rate_rel_raw = data_cover_rate_raw / cover_rate_emp_raw
 data_cover_rate_rel_raw
 
+delta_vs_MC_delta_cover_rate_raw = cover_rate_cov_hat_raw / cover_rate_cov_tilde_raw
+delta_vs_MC_delta_cover_rate_raw
 
 
 
@@ -715,14 +523,8 @@ data_cover_rate
 data_cover_rate_rel = data_cover_rate / cover_rate_emp
 data_cover_rate_rel
 
-
-#* Incorporate mediation package
-data_cover_rate_mediation = data_cover_rate[c(1,4,7),]
-
-true_MEs_mediation = true_MEs[c(1,4,7)]
-cover_rate_mediation = many_coverage_checks(true_MEs_mediation, all_mediation_CIs) %>% coverage_checks_2_rates()
-data_cover_rate_mediation$mediation = cover_rate_mediation
-data_cover_rate_mediation
+delta_vs_MC_delta_cover_rate = cover_rate_cov_hat / cover_rate_cov_tilde
+delta_vs_MC_delta_cover_rate
 
 
 
@@ -764,14 +566,4 @@ data_CI_width
 data_CI_rel_widths = data_CI_width / mean_CI_width_emp
 data_CI_rel_widths
 apply(data_CI_rel_widths, 2, function(x) max(abs(x - 1)))
-
-
-#* mediation package
-data_CI_width_mediation = data_CI_width[c(1,4,7),]
-
-all_CI_widths_mediation = many_widths(all_mediation_CIs)
-mean_CI_widths_mediation = sapply(all_CI_widths_mediation, mean)
-data_CI_width_mediation$mediation = mean_CI_widths_mediation
-data_CI_width_mediation
-
 

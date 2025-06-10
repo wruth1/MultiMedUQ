@@ -148,16 +148,16 @@ clusterSetRNGStream(cl = cl, 123)
 
 num_datasets = 200
 
-# First, delete any datasets currently in the target directory
-unlink(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/*"))
+# # First, delete any datasets currently in the target directory
+# unlink(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/*"))
 
-set.seed(1)
+# set.seed(1)
 
-# Generate and save datasets
-save_data = pbsapply(1:num_datasets, function(i) {
-    data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, num_bin_confounders = 1, num_cont_confounders = 1, output_list = F, which_REs = which_REs)
-    save(data, file = paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"))
-})#, cl=cl)
+# # Generate and save datasets
+# save_data = pbsapply(1:num_datasets, function(i) {
+#     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, num_bin_confounders = 1, num_cont_confounders = 1, output_list = F, which_REs = which_REs)
+#     save(data, file = paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"))
+# })#, cl=cl)
 
 
 
@@ -320,96 +320,96 @@ data_widths
 
 
 
-# ---------------------------------------------------------------------------- #
-#                               mediation Package                              #
-# ---------------------------------------------------------------------------- #
+# # ---------------------------------------------------------------------------- #
+# #                               mediation Package                              #
+# # ---------------------------------------------------------------------------- #
 
-library(mediation)
+# library(mediation)
 
-MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
-# MC_results_delta_MC_delta = pblapply(1:3, function(i) {
-    load(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
-
-
-    tryCatch({
-
-        # ----------------------------- mediation Package ---------------------------- #
-
-        fit_Y_lme4 = glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M_lme4 = glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
+# MC_results_delta_MC_delta = pblapply(1:num_datasets, function(i) {
+# # MC_results_delta_MC_delta = pblapply(1:3, function(i) {
+#     load(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
 
 
-        MC_delta_info = mediate(fit_M_lme4, fit_Y_lme4, treat = "X", mediator = "M", sims = B)
-        summary(MC_delta_info)
+#     tryCatch({
 
-        covariate_values = list(C1 = w[1], C2 = w[2])
-        MC_delta_info_fixed_covariates = mediate(fit_M_lme4, fit_Y_lme4, treat = "X", mediator = "M", sims = B, covariates = covariate_values)
-        summary(MC_delta_info_fixed_covariates)
+#         # ----------------------------- mediation Package ---------------------------- #
 
-
+#         fit_Y_lme4 = glmer(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+#         fit_M_lme4 = glmer(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
 
 
-        # --------------------------------- My Method -------------------------------- #
+#         MC_delta_info = mediate(fit_M_lme4, fit_Y_lme4, treat = "X", mediator = "M", sims = B)
+#         summary(MC_delta_info)
+
+#         covariate_values = list(C1 = w[1], C2 = w[2])
+#         MC_delta_info_fixed_covariates = mediate(fit_M_lme4, fit_Y_lme4, treat = "X", mediator = "M", sims = B, covariates = covariate_values)
+#         summary(MC_delta_info_fixed_covariates)
+
+
+
+
+#         # --------------------------------- My Method -------------------------------- #
     
-        #* Fit models. glmmTMB is much faster than glmer
-        fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
+#         #* Fit models. glmmTMB is much faster than glmer
+#         fit_Y = glmmTMB(Y ~ X + M + C1 + C2 + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+#         fit_M = glmmTMB(M ~ X + C1 + C2 + (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
 
-        # #* Fit models. glmmTMB is much faster than glmer
-        # fit_Y = glmmTMB(Y ~ X + M + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
-        # fit_M = glmmTMB(M ~ X +  (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
-
-
-        #* Extract fitted parameters
-        theta_hat_Y = get_model_pars_TMB(fit_Y)
-        theta_hat_M = get_model_pars_TMB(fit_M)
-        Theta_hat = c(unlist(theta_hat_Y), unlist(theta_hat_M))
-        cov_hat = all_pars_cov_mat_TMB(fit_Y, fit_M)
+#         # #* Fit models. glmmTMB is much faster than glmer
+#         # fit_Y = glmmTMB(Y ~ X + M + (X + M | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e10)))
+#         # fit_M = glmmTMB(M ~ X +  (X | group), data = data, family = binomial) #, control = glmmTMBControl(optimizer = "optim", optArgs = list(method = "BFGS", eval.max = 1e8)))
 
 
-        b_Y = theta_hat_Y[["b"]]
-        theta_Y = theta_hat_Y[["theta"]]
-        b_M = theta_hat_M[["b"]]
-        theta_M = theta_hat_M[["theta"]]
-        len_par_vecs = sapply(list(b_Y, theta_Y, b_M, theta_M), length)
+#         #* Extract fitted parameters
+#         theta_hat_Y = get_model_pars_TMB(fit_Y)
+#         theta_hat_M = get_model_pars_TMB(fit_M)
+#         Theta_hat = c(unlist(theta_hat_Y), unlist(theta_hat_M))
+#         cov_hat = all_pars_cov_mat_TMB(fit_Y, fit_M)
+
+
+#         b_Y = theta_hat_Y[["b"]]
+#         theta_Y = theta_hat_Y[["theta"]]
+#         b_M = theta_hat_M[["b"]]
+#         theta_M = theta_hat_M[["theta"]]
+#         len_par_vecs = sapply(list(b_Y, theta_Y, b_M, theta_M), length)
 
 
 
-        #* Compute mediation effects
-        MEs = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
+#         #* Compute mediation effects
+#         MEs = all_MEs_pars(scale, w, b_Y, theta_Y, b_M, theta_M, which_REs =  which_REs)
 
 
-        #* My MC-delta
-        some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
-        some_ME_tildes = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
-        cov_MEs_MC_delta = cov(some_ME_tildes)
+#         #* My MC-delta
+#         some_Theta_tildes = sim_Theta_tildes(B, Theta_hat, cov_hat)
+#         some_ME_tildes = Theta_tildes_2_MEs(scale, w, some_Theta_tildes, which_REs, len_par_vecs = len_par_vecs)
+#         cov_MEs_MC_delta = cov(some_ME_tildes)
 
-        MC_delta_SEs = cov_mat_2_SEs(cov_MEs_MC_delta)
-        MC_delta_CIs = build_CIs_one_par(MEs, MC_delta_SEs) %>% as.data.frame() %>% mutate(estimate = MEs) %>%
-            rownames_to_column() %>% 
-            filter(str_detect(rowname, "diff")) %>%                                    # Keep only effects on difference scale
-            mutate(effect = str_extract(rowname, "^\\w+(?=_)"), .keep = "unused") %>%  # Shorten effects' names
-            dplyr::select(effect, estimate, lcl, ucl)                                            # Re-arrange columns
-
-
-    # A regular expression selecting all letters before the first underscore
+#         MC_delta_SEs = cov_mat_2_SEs(cov_MEs_MC_delta)
+#         MC_delta_CIs = build_CIs_one_par(MEs, MC_delta_SEs) %>% as.data.frame() %>% mutate(estimate = MEs) %>%
+#             rownames_to_column() %>% 
+#             filter(str_detect(rowname, "diff")) %>%                                    # Keep only effects on difference scale
+#             mutate(effect = str_extract(rowname, "^\\w+(?=_)"), .keep = "unused") %>%  # Shorten effects' names
+#             dplyr::select(effect, estimate, lcl, ucl)                                            # Re-arrange columns
 
 
+#     # A regular expression selecting all letters before the first underscore
 
 
 
 
-        # ------------------------ Compile and return results ------------------------ #
-        output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
-
-        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
-        return(output)
-    }, error = function(e){
-        output = NULL
-
-        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
-        return(output)
-    })
 
 
-}, cl = cl)
+#         # ------------------------ Compile and return results ------------------------ #
+#         output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
+
+#         save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
+#         return(output)
+#     }, error = function(e){
+#         output = NULL
+
+#         save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
+#         return(output)
+#     })
+
+
+# }, cl = cl)
