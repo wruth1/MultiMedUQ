@@ -119,6 +119,8 @@ list_2_data_make_labels <- function(X_list, group_labels = NULL){
 #' @param output_list Should output be formatted as a list with one component per group (of size n-by-5) or a single data.frame of size (Kn)-by-6 with a column labelled `group`?
 #' @param return_REs Should random effects also be returned? If TRUE, output is a list containing two components: `data` and `REs`.
 #' @param which_REs Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.
+#' @param Y_type,M_type Variable types for outcome and mediator, respectively. Options include "bin" (binary) and "cont" (continuous). Default is "bin" for both.
+#' @param Y_resid_SD,M_resid_SD Standard deviations of residuals for outcome and mediator, respectively. Default is 1 for both. Ignored if corresponding variable type is "bin".
 #'
 #' @return A simulated dataset, optionally inside a list which also contains random effects.
 #' @export
@@ -138,7 +140,8 @@ make_validation_data <-
            num_bin_confounders = 1, num_cont_confounders = 1,
            output_list = FALSE,
            return_REs = FALSE,
-           which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+           which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
+           Y_type = "bin", M_type = "bin", Y_resid_SD = 1, M_resid_SD = 1) {
     # all_reg_pars = make_all_reg_pars()
 
     # Check that the number of variance parameters supplied matches which_REs
@@ -155,7 +158,7 @@ make_validation_data <-
 
 
     # Generate data as a list
-    data_list_output = make_validation_data_list(n, K, all_reg_pars, num_bin_confounders = num_bin_confounders, num_cont_confounders = num_cont_confounders, return_REs = return_REs, which_REs = which_REs)
+    data_list_output = make_validation_data_list(n, K, all_reg_pars, num_bin_confounders = num_bin_confounders, num_cont_confounders = num_cont_confounders, return_REs = return_REs, which_REs = which_REs, Y_type = Y_type, M_type = M_type, Y_resid_SD = Y_resid_SD, M_resid_SD = M_resid_SD)
     if (!return_REs) {
       data_list = data_list_output
     } else{
@@ -183,11 +186,13 @@ make_validation_data <-
 make_validation_data_list <-
   function(n, K, all_reg_pars, 
             num_bin_confounders = 1, num_cont_confounders = 1, 
-            return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+            return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
+           Y_type = "bin", M_type = "bin", Y_resid_SD = 1, M_resid_SD = 1) {
     output_list = purrr::map(1:K,
                              ~ make_one_group_validation(n, all_reg_pars, 
                              num_bin_confounders = num_bin_confounders, num_cont_confounders = num_cont_confounders, 
-                             return_REs = return_REs, which_REs = which_REs))
+                             return_REs = return_REs, which_REs = which_REs, Y_type = Y_type, M_type = M_type,
+                             Y_resid_SD = Y_resid_SD, M_resid_SD = M_resid_SD))
 
     if (!return_REs) {
       return(output_list)
@@ -202,11 +207,12 @@ make_validation_data_list <-
 make_one_group_validation <-
   function(n, all_reg_pars, 
             num_bin_confounders = 1, num_cont_confounders = 1, 
-            return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+            return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
+           Y_type = "bin", M_type = "bin", Y_resid_SD = 1, M_resid_SD = 1) {
     X = make_X_validation(n)
     all_Cs = make_C_validation(n, num_bin_confounders = num_bin_confounders, num_cont_confounders = num_cont_confounders) 
 
-    M_info = make_M_validation(X, all_Cs, all_reg_pars, return_REs, which_REs)
+    M_info = make_M_validation(X, all_Cs, all_reg_pars, return_REs, which_REs, M_type = M_type, M_resid_SD = M_resid_SD)
 
     if (!return_REs) {
       M = M_info
@@ -217,7 +223,7 @@ make_one_group_validation <-
 
 
 
-    Y_info = make_Y_validation(M, X, all_Cs, all_reg_pars, return_REs, which_REs)
+    Y_info = make_Y_validation(M, X, all_Cs, all_reg_pars, return_REs, which_REs, Y_type = Y_type, Y_resid_SD = Y_resid_SD)
 
     if (!return_REs) {
       Y = Y_info
@@ -270,7 +276,8 @@ make_C_validation <- function(n, num_bin_confounders = 1, num_cont_confounders =
 
 
 make_M_validation <-
-  function(X, all_Cs, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+  function(X, all_Cs, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
+           M_type = "bin", M_resid_SD = 1) {
     beta_M = all_reg_pars$beta_M    # Coefficient vector for fixed effects
     Gamma_M = all_reg_pars$Gamma_M  # Covariance matrix of random effects
 
@@ -311,9 +318,17 @@ make_M_validation <-
       REs = lin_pred_info[["REs"]]
     }
 
-    all_probs = boot::inv.logit(lin_preds)
+    if(M_type == "bin"){
+      all_probs = boot::inv.logit(lin_preds)
 
-    M = stats::rbinom(n, 1, all_probs)
+      M = stats::rbinom(n, 1, all_probs)
+    } else if(M_type == "cont") {
+      all_means = lin_preds
+      all_epsilons = stats::rnorm(n, 0, M_resid_SD)
+      M = all_means + all_epsilons
+    } else{
+      stop("In make_M_validation: M_type must be either 'bin' or 'cont'.")
+    }
 
     if (!return_REs) {
       return(M)
@@ -333,7 +348,8 @@ make_M_validation <-
 # plot(all_Cs$C2, all_probs)
 
 make_Y_validation <-
-  function(M, X, all_Cs, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")) {
+  function(M, X, all_Cs, all_reg_pars, return_REs = FALSE, which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
+           Y_type = "bin", Y_resid_SD = 1) {
     beta_Y = all_reg_pars$beta_Y    # Coefficient vector for fixed effects
     Gamma_Y = all_reg_pars$Gamma_Y  # Covariance matrix of random effects
 
@@ -378,9 +394,18 @@ make_Y_validation <-
       REs = lin_pred_info[["REs"]]
     }
 
+    if(Y_type == "bin"){
+
     all_probs = boot::inv.logit(lin_preds)
 
     Y = stats::rbinom(n, 1, all_probs)
+    } else if(Y_type == "cont") {
+      all_means = lin_preds
+      all_epsilons = stats::rnorm(n, 0, Y_resid_SD)
+      Y = all_means + all_epsilons
+    } else{
+      stop("In make_Y_validation: Y_type must be either 'bin' or 'cont'.")
+    }
 
     if (!return_REs) {
       return(Y)

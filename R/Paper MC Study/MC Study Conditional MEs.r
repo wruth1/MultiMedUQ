@@ -25,20 +25,6 @@ source("R/Paper MC Study/Outlier Functions.r")
 devtools::load_all()
 
 
-# ---------------------------------------------------------------------------- #
-#                            Setup Parameter Values                            #
-# ---------------------------------------------------------------------------- #
-
-
-all_Y_types = c("bin", "cont")
-all_M_types = c("bin", "cont")
-
-all_Ks = c(10, 100, 500)
-all_ns = c(50, 200, 1000)
-
-
-
-
 
 
 
@@ -47,22 +33,41 @@ all_ns = c(50, 200, 1000)
 # ---------------------------------------------------------------------------- #
 
 
-# ----------------------------------- Note ----------------------------------- #
 
-#? I denote regression coefficients for Y as b_Y and for M as b_M
-#? Random effect parameters for Y are theta_Y and for M as theta_M
-    #? These RE parameters are SDs and correlations. They are organized as, e.g. with 3 REs, SD_1, corr_12, corr_13, SD_2, corr_23, SD_3
-#? We denote the single vector containing all parameters by Theta = (c(b_Y, theta_Y, b_M, theta_M))
-    #? I.e. Capital Theta contains both small theta vectors
+# ------------------------ Grid of parameters to vary ------------------------ #
+#? I still need to work out the ENC formulas for the continuous case, so for now I will only use binary outcomes and mediators.
+# all_Y_types = c("bin", "cont")
+# all_M_types = c("bin", "cont")
+all_Y_types = c("bin")
+all_M_types = c("bin")
+
+all_Ks = c(10, 100, 500)
+all_Ns = c(100, 500, 1000)
+
+
+all_par_combs = expand.grid(
+    Y_type = all_Y_types,
+    M_type = all_M_types,
+    K = all_Ks,
+    N = all_Ns
+)
 
 
 
 
-# Set parameters
+# --------------------------- Confounder Parameters -------------------------- #
+
 
 num_bin_confounders = 1
 num_cont_confounders = 1
 total_num_confounders = num_bin_confounders + num_cont_confounders
+
+
+# Vector of confounders. Used as point at which to evaluate conditional effects
+w = rep(0.5, times = total_num_confounders)
+
+# ---------------------------- Analysis Parameters --------------------------- #
+
 
 B = 500     # Number of samples to generate for MC delta
 scale = c("diff", "rat", "OR")      # What scales should we compute mediation effects on?
@@ -71,13 +76,13 @@ which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")        # Which variables ha
 # Number of groups
 # K = 10
 # K = 50
-K = 100
+# K = 100
 # K = 200
 # K = 500
 
 # Observations per group
 # N = 100
-N = 500
+# N = 500
 # N=1000
 # N = 10000
 n = N
@@ -89,20 +94,25 @@ n = N
 # n = N
 
 
+# --------------------------- Regression Parameters -------------------------- #
 
+#? I denote regression coefficients for Y as b_Y and for M as b_M
+#? Random effect parameters for Y are theta_Y and for M as theta_M
+    #? These RE parameters are SDs and correlations. They are organized as, e.g. with 3 REs, SD_1, corr_12, corr_13, SD_2, corr_23, SD_3
+#? We denote the single vector containing all parameters by Theta = (c(b_Y, theta_Y, b_M, theta_M))
+    #? I.e. Capital Theta contains both small theta vectors
 
-
-
-
-# Vector of confounders. Used as point at which to evaluate conditional effects
-w = rep(0.5, times = total_num_confounders)
-
+outcome_name = "Y"
+exposure_name = "X"
+mediator_name = "M"
+group_name = "group"
 
 
 ## Non-trivial values for the b's and theta's. Former based on output from another MC study. Latter chosen arbitrarily.
 ## Crucially, no parameters are equal to zero.
 ##? We choose the intercepts to that the mean of the linear predictor is zero. Doing this for M makes it easier to do so for Y.
-#! Scale factor for coefficients and SDs
+
+#* Scale factor for coefficients and SDs
 scale_factor = 1
 
 set.seed(123)
@@ -123,8 +133,8 @@ b_M = c(b_M_int, b_M_X, b_M_Cs) * scale_factor
 
 
 
-
-# Choose theta_Y and theta_M based on the values of b_Y and b_M
+#* Covariance parameters for the random effects
+# Choosen based on the values of b_Y and b_M
 theta_Y = c(scale_factor*sqrt(0.5), 0.3, 0.4, scale_factor, 0.5, scale_factor*sqrt(0.8)) / 3
 theta_M = c(scale_factor*sqrt(0.5), -0.5, scale_factor) / 3
 
@@ -132,24 +142,44 @@ theta_M = c(scale_factor*sqrt(0.5), -0.5, scale_factor) / 3
 all_reg_pars = c(b_Y, theta_Y, b_M, theta_M)
 
 
+# TODO: Delete this if noting breaks
+# p_Y = length(b_Y)
+# p_M = length(b_M)
+# p = p_Y + p_M
 
 
-p_Y = length(b_Y)
-p_M = length(b_M)
-p = p_Y + p_M
 
 
-folder_suffix = paste0("K=", K, ", N=", N, ", conf=", num_bin_confounders, ",", num_cont_confounders)
-dir.create(paste0("R/Paper MC Study/Data/Data - ", folder_suffix), showWarnings = F)
-dir.create(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix), showWarnings = F)
+
+
+
+
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                         Single parameter combination                         #
+# ---------------------------------------------------------------------------- #
+
+
+this_comb_index = 1
+this_comb = all_par_combs[this_comb_index, ]
+
+K = this_comb$K
+N = this_comb$N
+Y_type = this_comb$Y_type
+M_type = this_comb$M_type
+
+
+folder_suffix = paste0("K=", K, ", N=", N, ", Y-", Y_type, ", M-", M_type, ", conf=", num_bin_confounders, ",", num_cont_confounders)
+dir.create(paste0("R/Paper MC Study/Paper Data/Data - ", folder_suffix), showWarnings = F)
+dir.create(paste0("R/Paper MC Study/Paper Results/Results - ", folder_suffix), showWarnings = F)
 # dir.create(paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix), showWarnings = F)
 
-
-
-outcome_name = "Y"
-exposure_name = "X"
-mediator_name = "M"
-group_name = "group"
 
 
 
@@ -188,17 +218,18 @@ clusterSetRNGStream(cl = cl, 123)
 
 # -------------------------- Generate and save data -------------------------- #
 
-num_datasets = 200
+num_datasets = 20
+# num_datasets = 200
 
 # First, delete any datasets currently in the target directory
-unlink(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/*"))
+unlink(paste0("R/Paper MC Study/Paper Data/Data - ", folder_suffix, "/*"))
 
 set.seed(1)
 
 # Generate and save datasets
 save_data = pbsapply(1:num_datasets, function(i) {
     data = make_validation_data(N, K, b_Y, theta_Y, b_M, theta_M, num_bin_confounders = 1, num_cont_confounders = 1, output_list = F, which_REs = which_REs)
-    save(data, file = paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"))
+    save(data, file = paste0("R/Paper MC Study/Paper Data/Data - ", folder_suffix, "/", i, ".RData"))
 })#, cl=cl)
 
 
@@ -209,19 +240,22 @@ save_data = pbsapply(1:num_datasets, function(i) {
 #                                     ENCs                                     #
 # ---------------------------------------------------------------------------- #
 
+#! TODO: I'd really like to simulate Theta tildes on the scale used by glmmTMB, so that correlations are always between -1 and 1 and SDs are always positive. I know I explored this earlier and had problems, but I think it's worth trying again.
+
+
 clusterSetRNGStream(cl = cl, 123)
 
 
-num_datasets = length(list.files(paste0("R/Paper MC Study/Data/Data - ", folder_suffix)))
+num_datasets = length(list.files(paste0("R/Paper MC Study/Paper Data/Data - ", folder_suffix)))
 # num_datasets = 10
 
-unlink(paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/*"))
+unlink(paste0("R/Paper MC Study/Paper Results/Results - ", folder_suffix, "/*"))
 # unlink(paste0("R/Paper MC Study/Results/Marginal_MEs_only_delta/Results - ", folder_suffix, "/*"))
 
 # Fit models, extract ENCs, estimate covariance matrices and save results
 MC_results_ME = pblapply(1:num_datasets, function(i) {
 # MC_results_ME = pblapply(1:10, function(i) {
-    load(paste0("R/Paper MC Study/Data/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
+    load(paste0("R/Paper MC Study/Paper Data/Data - ", folder_suffix, "/", i, ".RData"), verbose = T)
 
 
 
@@ -320,12 +354,12 @@ MC_results_ME = pblapply(1:num_datasets, function(i) {
         # ------------------------ Compile and return results ------------------------ #
         output = list(this_MEs = MEs, cov_MEs_delta = cov_MEs_delta, cov_MEs_MC_delta = cov_MEs_MC_delta, this_timings = this_timings)
 
-        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/Paper MC Study/Paper Results/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     }, error = function(e){
         output = NULL
 
-        save(output, file = paste0("R/Paper MC Study/Results/Conditional_MEs/Results - ", folder_suffix, "/", i, ".RData"))
+        save(output, file = paste0("R/Paper MC Study/Paper Results/Results - ", folder_suffix, "/", i, ".RData"))
         return(output)
     })
 

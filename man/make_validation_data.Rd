@@ -15,7 +15,11 @@ make_validation_data(
   num_cont_confounders = 1,
   output_list = FALSE,
   return_REs = FALSE,
-  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X")
+  which_REs = c("Y.Int", "Y.X", "Y.M", "M.Int", "M.X"),
+  Y_type = "bin",
+  M_type = "bin",
+  Y_resid_SD = 1,
+  M_resid_SD = 1
 )
 }
 \arguments{
@@ -34,6 +38,10 @@ make_validation_data(
 \item{return_REs}{Should random effects also be returned? If TRUE, output is a list containing two components: `data` and `REs`.}
 
 \item{which_REs}{Which random effects to include in the calculation. Default is all. See the \href{../vignettes/which_REs.Rmd}{vignette} for more details.}
+
+\item{Y_type, M_type}{Variable types for outcome and mediator, respectively. Options include "bin" (binary) and "cont" (continuous). Default is "bin" for both.}
+
+\item{Y_resid_SD, M_resid_SD}{Standard deviations of residuals for outcome and mediator, respectively. Default is 1 for both. Ignored if corresponding variable type is "bin".}
 }
 \value{
 A simulated dataset, optionally inside a list which also contains random effects.
